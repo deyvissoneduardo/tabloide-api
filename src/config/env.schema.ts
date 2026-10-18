@@ -1,0 +1,45 @@
+import { z } from 'zod';
+
+const booleano = z
+  .enum(['true', 'false'])
+  .default('false')
+  .transform((v) => v === 'true');
+
+const inteiro = (padrao: number) => z.coerce.number().int().default(padrao);
+
+export const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  PORT: inteiro(3000),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  DATABASE_URL: z.string().regex(/^postgres(ql)?:\/\/.+/, 'deve ser uma URL postgres:// ou postgresql://'),
+  DB_POOL_MAX: z.coerce.number().int().min(1).max(50).default(10),
+  DB_SSL: booleano,
+  JWT_SECRET: z.string().min(32),
+  JWT_EXPIRES_IN: z
+    .string()
+    .regex(/^\d+[smhd]$/, 'use o formato <número><s|m|h|d>, ex.: 8h')
+    .default('8h'),
+  ADMIN_API_KEY: z.string().min(32),
+  LOGIN_RATE_LIMIT: inteiro(5),
+  LOGIN_RATE_TTL_SECONDS: inteiro(900),
+  TENANT_STATUS_CACHE_TTL_MS: inteiro(30000),
+});
+
+export type Env = z.infer<typeof envSchema>;
+
+export function validarEnv(raw: Record<string, unknown>): Env {
+  const resultado = envSchema.safeParse(raw);
+  if (!resultado.success) {
+    const linhas = resultado.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
+    throw new Error(`Variáveis de ambiente inválidas:\n${linhas.join('\n')}`);
+  }
+  return resultado.data;
+}
+
+const UNIDADES_MS = { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 } as const;
+
+/** Converte "8h", "30m" etc. em milissegundos. O formato já foi validado pelo envSchema. */
+export function duracaoParaMs(duracao: string): number {
+  const unidade = duracao.slice(-1) as keyof typeof UNIDADES_MS;
+  return Number(duracao.slice(0, -1)) * UNIDADES_MS[unidade];
+}

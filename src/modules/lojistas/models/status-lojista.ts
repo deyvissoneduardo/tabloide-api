@@ -1,0 +1,5 @@
+export enum StatusLojista {
+  AGUARDANDO_ATIVACAO = 'AGUARDANDO_ATIVACAO',
+  ATIVO = 'ATIVO',
+  DESATIVADO = 'DESATIVADO',
+}

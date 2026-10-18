@@ -1,0 +1,56 @@
+# Tabloide Digital API — Fase 1
+# Funciona com a extensão REST Client (VS Code) ou o cliente HTTP do JetBrains.
+# @adminKey é segredo: preencha localmente com o ADMIN_API_KEY do .env e não versione o valor.
+
+@base = http://localhost:3000/v1
+@adminKey = {{$dotenv ADMIN_API_KEY}}
+
+### Cadastro do lojista (RN01, RN02): já devolve o token
+# @name cadastro
+POST {{base}}/auth/cadastro
+Content-Type: application/json
+
+{
+  "nomeFantasia": "Mercado Bom Preço",
+  "nomeResponsavel": "Ana Souza",
+  "email": "ana@bompreco.com.br",
+  "senha": "senhaForte1",
+  "whatsapp": "(11) 98765-4321",
+  "cnpj": "11.222.333/0001-81"
+}
+
+### Login (RN05): 5 tentativas a cada 15 min por IP + e-mail
+# @name login
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "ana@bompreco.com.br",
+  "senha": "senhaForte1"
+}
+
+@token = {{login.response.body.token}}
+@lojistaId = {{login.response.body.lojista.id}}
+
+### Dados do lojista no painel
+GET {{base}}/painel/lojista
+Authorization: Bearer {{token}}
+
+### Editar dados do lojista (lojista desativado recebe 403 LOJISTA_DESATIVADO)
+PATCH {{base}}/painel/lojista
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nomeFantasia": "Mercado Bom Preço Centro",
+  "cnpj": null
+}
+
+### Admin: redefinir a senha do lojista (RN36). Sem a chave certa responde 404.
+PATCH {{base}}/admin/lojistas/{{lojistaId}}/senha
+X-Admin-Key: {{adminKey}}
+Content-Type: application/json
+
+{
+  "novaSenha": "novaSenha123"
+}
