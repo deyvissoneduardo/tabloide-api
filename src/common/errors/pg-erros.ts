@@ -6,6 +6,7 @@ export const UNIQUE_PARA_CODIGO: Record<string, CodigoErro> = {
   lojistas_email_key: CodigoErro.EMAIL_JA_CADASTRADO,
   // tratada com nova tentativa no FiliaisService; se chegar aqui é bug
   filiais_codigo_publico_uk: CodigoErro.ERRO_INTERNO,
+  categorias_filial_nome_uk: CodigoErro.CATEGORIA_JA_EXISTE,
 };
 
 /** Constraints EXCLUDE com código de negócio próprio. */
@@ -21,6 +22,12 @@ export const CONSTRAINT_PARA_CODIGO: Record<string, CodigoErro> = {
   filiais_codigo_publico_formato_ck: CodigoErro.ERRO_INTERNO,
   auditoria_entidade_ck: CodigoErro.ERRO_INTERNO,
   panfletos_datas_validas: CodigoErro.DATA_LIMITE_INVALIDA,
+  categorias_nome_nao_vazio_ck: CodigoErro.VALIDACAO_INVALIDA,
+  produtos_nome_nao_vazio_ck: CodigoErro.VALIDACAO_INVALIDA,
+  produtos_preco_promocional_ck: CodigoErro.VALIDACAO_INVALIDA,
+  produtos_preco_original_ck: CodigoErro.PRECO_ORIGINAL_INVALIDO,
+  produtos_preco_original_max_ck: CodigoErro.VALIDACAO_INVALIDA,
+  produtos_datas_ck: CodigoErro.DATA_LIMITE_INVALIDA,
 };
 
 interface ErroPg {

@@ -51,6 +51,18 @@ describe('Funcionalidade: Contrato de erros', () => {
     it('Cenário: unique sem mapeamento → VALIDACAO_INVALIDA', () =>
       expect(traduzirErroPg(erroPg('23505', 'outra_key'))?.codigo).toBe(CodigoErro.VALIDACAO_INVALIDA));
 
+    it.each([
+      ['23505', 'categorias_filial_nome_uk', CodigoErro.CATEGORIA_JA_EXISTE],
+      ['23514', 'produtos_preco_original_ck', CodigoErro.PRECO_ORIGINAL_INVALIDO],
+      ['23514', 'produtos_preco_promocional_ck', CodigoErro.VALIDACAO_INVALIDA],
+      ['23514', 'produtos_preco_original_max_ck', CodigoErro.VALIDACAO_INVALIDA],
+      ['23514', 'produtos_nome_nao_vazio_ck', CodigoErro.VALIDACAO_INVALIDA],
+      ['23514', 'categorias_nome_nao_vazio_ck', CodigoErro.VALIDACAO_INVALIDA],
+      ['23514', 'produtos_datas_ck', CodigoErro.DATA_LIMITE_INVALIDA],
+    ])('Cenário: constraint de categorias/produtos (%s %s) → %s', (code, constraint, codigo) =>
+      expect(traduzirErroPg(erroPg(code, constraint))?.codigo).toBe(codigo),
+    );
+
     it('Cenário: exclusion de panfleto → PANFLETO_PERIODO_SOBREPOSTO', () =>
       expect(traduzirErroPg(erroPg('23P01', 'panfletos_periodo_sem_sobreposicao'))?.codigo).toBe(
         CodigoErro.PANFLETO_PERIODO_SOBREPOSTO,
