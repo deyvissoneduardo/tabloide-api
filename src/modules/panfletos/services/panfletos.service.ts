@@ -19,7 +19,7 @@ import { filtroSituacao } from '../../vigencia/consultas/filtro-situacao';
 import { validarCriacao } from '../../vigencia/domain/datas';
 import { validarEdicaoDeDatas } from '../../vigencia/domain/edicao';
 import { calcularSituacao } from '../../vigencia/domain/situacao';
-import type { ResultadoValidacao } from '../../vigencia/domain/vigencia.types';
+import { valorOuErro } from '../../vigencia/domain/valor-ou-erro';
 import { VigenciaService } from '../../vigencia/services/vigencia.service';
 import { encontrarConflito, type PeriodoPanfleto } from '../domain/conflito-periodo';
 import type { CriarPanfletoDto } from '../dtos/criar-panfleto.dto';
@@ -29,12 +29,6 @@ import { Panfleto } from '../models/panfleto.model';
 import { panfletoView, type PanfletoView } from '../views/panfleto.view';
 
 const ATRIBUTOS_PERIODO = ['id', 'dataInicio', 'dataLimite'];
-
-/** Converte o resultado das regras puras de vigência em erro HTTP. */
-function valorOuErro<T>(resultado: ResultadoValidacao<T>): T {
-  if (!resultado.ok) throw new AppError(CodigoErro[resultado.codigo], undefined, { campo: resultado.campo });
-  return resultado.valor;
-}
 
 @Injectable()
 export class PanfletosService {

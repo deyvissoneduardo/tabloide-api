@@ -1,21 +1,5 @@
-import { Transform } from 'class-transformer';
-import { IsIn, IsOptional } from 'class-validator';
-import { PaginacaoQueryDto } from '../../../common/dtos/paginacao-query.dto';
-import type { Situacao } from '../../vigencia/domain/vigencia.types';
+import { ListarPorSituacaoQueryDto } from '../../vigencia/dtos/listar-por-situacao-query.dto';
 
-export const SITUACOES: readonly Situacao[] = ['AGENDADO', 'VIGENTE', 'VENCIDO', 'EXCLUIDO'];
+export { SITUACOES } from '../../vigencia/dtos/listar-por-situacao-query.dto';
 
-/** situacao em CSV (ex.: "VIGENTE,AGENDADO"); ausente lista todos os não excluídos. */
-export class ListarPanfletosQueryDto extends PaginacaoQueryDto {
-  @IsOptional()
-  @Transform(({ value }) =>
-    typeof value === 'string'
-      ? value
-          .split(',')
-          .map((s) => s.trim().toUpperCase())
-          .filter(Boolean)
-      : value,
-  )
-  @IsIn(SITUACOES, { each: true, message: 'situacao deve conter AGENDADO, VIGENTE, VENCIDO ou EXCLUIDO' })
-  situacao?: Situacao[];
-}
+export class ListarPanfletosQueryDto extends ListarPorSituacaoQueryDto {}
