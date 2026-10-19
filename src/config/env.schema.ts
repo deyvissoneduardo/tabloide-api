@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { normalizarFuso } from '../modules/vigencia/domain/fuso';
 
 const booleano = z
   .enum(['true', 'false'])
@@ -23,6 +24,14 @@ export const envSchema = z.object({
   LOGIN_RATE_LIMIT: inteiro(5),
   LOGIN_RATE_TTL_SECONDS: inteiro(900),
   TENANT_STATUS_CACHE_TTL_MS: inteiro(30000),
+  PUBLIC_BASE_URL: z
+    .url({ protocol: /^https?$/ })
+    .refine((u) => !u.endsWith('/'), 'informe a URL sem barra no final'),
+  FUSO_HORARIO_PADRAO: z
+    .string()
+    .default('America/Sao_Paulo')
+    .refine((f) => normalizarFuso(f) !== null, 'fuso horário IANA inválido')
+    .transform((f) => normalizarFuso(f) as string),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -38,7 +47,6 @@ export function validarEnv(raw: Record<string, unknown>): Env {
 
 const UNIDADES_MS = { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 } as const;
 
-/** Converte "8h", "30m" etc. em milissegundos. O formato já foi validado pelo envSchema. */
 export function duracaoParaMs(duracao: string): number {
   const unidade = duracao.slice(-1) as keyof typeof UNIDADES_MS;
   return Number(duracao.slice(0, -1)) * UNIDADES_MS[unidade];

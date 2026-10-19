@@ -13,12 +13,15 @@ const envValido = () => ({
   LOGIN_RATE_LIMIT: '3',
   LOGIN_RATE_TTL_SECONDS: '60',
   TENANT_STATUS_CACHE_TTL_MS: '1000',
+  PUBLIC_BASE_URL: 'https://tabloide.app',
+  FUSO_HORARIO_PADRAO: 'America/Manaus',
 });
 
 const minimo = () => ({
   DATABASE_URL: 'postgresql://u:s@localhost/db',
   JWT_SECRET: 'x'.repeat(32),
   ADMIN_API_KEY: 'k'.repeat(32),
+  PUBLIC_BASE_URL: 'http://localhost:5173',
 });
 
 describe('Funcionalidade: Validação das variáveis de ambiente', () => {
@@ -43,6 +46,7 @@ describe('Funcionalidade: Validação das variáveis de ambiente', () => {
         LOGIN_RATE_TTL_SECONDS: 900,
         TENANT_STATUS_CACHE_TTL_MS: 30000,
         LOG_LEVEL: 'info',
+        FUSO_HORARIO_PADRAO: 'America/Sao_Paulo',
       });
     });
   });
@@ -54,10 +58,22 @@ describe('Funcionalidade: Validação das variáveis de ambiente', () => {
     ['JWT_EXPIRES_IN em formato inválido', { JWT_EXPIRES_IN: '8 horas' }, 'JWT_EXPIRES_IN'],
     ['DB_POOL_MAX zero', { DB_POOL_MAX: '0' }, 'DB_POOL_MAX'],
     ['DB_POOL_MAX acima de 50', { DB_POOL_MAX: '51' }, 'DB_POOL_MAX'],
+    ['PUBLIC_BASE_URL ausente', { PUBLIC_BASE_URL: undefined }, 'PUBLIC_BASE_URL'],
+    ['PUBLIC_BASE_URL com barra final', { PUBLIC_BASE_URL: 'https://tabloide.app/' }, 'PUBLIC_BASE_URL'],
+    ['PUBLIC_BASE_URL sem http', { PUBLIC_BASE_URL: 'ftp://tabloide.app' }, 'PUBLIC_BASE_URL'],
+    ['FUSO_HORARIO_PADRAO inválido', { FUSO_HORARIO_PADRAO: 'Marte/Olympus' }, 'FUSO_HORARIO_PADRAO'],
+    ['FUSO_HORARIO_PADRAO não geográfico', { FUSO_HORARIO_PADRAO: 'UTC' }, 'FUSO_HORARIO_PADRAO'],
   ])('Cenário: %s', (_nome, sobrescrita, variavel) => {
     it(`Então lança erro citando ${variavel}`, () => {
       expect(() => validarEnv({ ...envValido(), ...sobrescrita })).toThrow(variavel);
     });
+  });
+
+  describe('Cenário: fuso padrão normalizado', () => {
+    it('Então "america/manaus" vira "America/Manaus"', () =>
+      expect(validarEnv({ ...envValido(), FUSO_HORARIO_PADRAO: 'america/manaus' }).FUSO_HORARIO_PADRAO).toBe(
+        'America/Manaus',
+      ));
   });
 
   describe('Cenário: vários erros de uma vez', () => {

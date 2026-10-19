@@ -9,6 +9,7 @@ import { destinoDeLogs } from '../../src/config/logger.config';
 
 export const AGORA_FIXO = new Date('2026-10-18T12:00:00Z');
 export const ADMIN_KEY = 'chave-admin-de-teste-com-mais-de-32-caracteres';
+export const PUBLIC_BASE_URL = 'https://tabloide.app';
 
 export interface AppDeTeste {
   app: INestApplication;
@@ -33,6 +34,8 @@ export async function criarApp(
     LOGIN_RATE_LIMIT: '5',
     LOGIN_RATE_TTL_SECONDS: '900',
     TENANT_STATUS_CACHE_TTL_MS: '0',
+    PUBLIC_BASE_URL: 'https://tabloide.app',
+    FUSO_HORARIO_PADRAO: 'America/Sao_Paulo',
     ...env,
   });
 
