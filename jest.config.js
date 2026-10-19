@@ -23,7 +23,12 @@ module.exports = {
     './src/modules/vigencia/domain/': { lines: 100, branches: 100 },
   },
   projects: [
-    { ...base, displayName: 'unit', testMatch: ['<rootDir>/src/**/*.spec.ts'] },
+    {
+      ...base,
+      displayName: 'unit',
+      testMatch: ['<rootDir>/src/**/*.spec.ts'],
+      setupFilesAfterEnv: ['<rootDir>/test/helpers/jest-unit.setup.ts'],
+    },
     {
       ...base,
       displayName: 'integration',
