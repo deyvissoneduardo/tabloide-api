@@ -26,6 +26,7 @@ import { FiliaisModule } from './modules/filiais/filiais.module';
 import { LojistasModule } from './modules/lojistas/lojistas.module';
 import { MidiaLocalModule } from './modules/midia/midia-local.module';
 import { PanfletosModule } from './modules/panfletos/panfletos.module';
+import { ProdutosModule } from './modules/produtos/produtos.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { PanfletosModule } from './modules/panfletos/panfletos.module';
     FiliaisModule,
     PanfletosModule,
     CategoriasModule,
+    ProdutosModule,
     MidiaLocalModule,
   ],
   providers: [
