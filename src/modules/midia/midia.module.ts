@@ -1,7 +1,11 @@
 import { Module } from '@nestjs/common';
 import { createClient } from '@supabase/supabase-js';
 import { AppConfig } from '../../config/app.config';
-import { UploadImagemInterceptor } from './interceptors/upload-imagem.interceptor';
+import {
+  UploadFotoInterceptor,
+  UploadFotoOpcionalInterceptor,
+  UploadImagemInterceptor,
+} from './interceptors/upload-imagem.interceptor';
 import { ImageProcessor } from './services/image-processor.service';
 import { MidiaService } from './services/midia.service';
 import { DiskStorageAdapter } from './storage/disk-storage.adapter';
@@ -24,8 +28,10 @@ export function criarStorage(config: AppConfig): StoragePort {
     ImageProcessor,
     MidiaService,
     UploadImagemInterceptor,
+    UploadFotoOpcionalInterceptor,
+    UploadFotoInterceptor,
     { provide: STORAGE_PORT, inject: [AppConfig], useFactory: criarStorage },
   ],
-  exports: [MidiaService, UploadImagemInterceptor],
+  exports: [MidiaService, UploadImagemInterceptor, UploadFotoOpcionalInterceptor, UploadFotoInterceptor],
 })
 export class MidiaModule {}

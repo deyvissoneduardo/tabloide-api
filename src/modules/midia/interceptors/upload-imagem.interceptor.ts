@@ -2,9 +2,12 @@ import {
   BadRequestException,
   CallHandler,
   ExecutionContext,
+  Inject,
   Injectable,
+  mixin,
   NestInterceptor,
   PayloadTooLargeException,
+  type Type,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -14,45 +17,88 @@ import { CodigoErro } from '../../../common/errors/codigos-erro';
 import { AppConfig } from '../../../config/app.config';
 
 export const CAMPO_IMAGEM = 'imagem';
+export const CAMPO_FOTO = 'foto';
 
-const erroNoCampoImagem = (mensagem: string) =>
-  new AppError(CodigoErro.VALIDACAO_INVALIDA, undefined, { campos: { [CAMPO_IMAGEM]: [mensagem] } });
+interface OpcoesUpload {
+  campo: string;
+  /** false: sem arquivo o handler recebe undefined; com JSON o multer nem atua (D4.1). */
+  obrigatorio: boolean;
+  /** Campos de texto aceitos junto com o arquivo. */
+  maxCampos: number;
+}
 
 /**
- * Recebe exatamente um arquivo no campo "imagem", em memória, com o teto de MAX_IMAGEM_BYTES.
- * Traduz os erros do multer para o contrato de erros e exige o arquivo.
+ * Recebe no máximo um arquivo no campo indicado, em memória, com o teto de MAX_IMAGEM_BYTES.
+ * Traduz os erros do multer para o contrato de erros e, se obrigatório, exige o arquivo.
  */
-@Injectable()
-export class UploadImagemInterceptor implements NestInterceptor {
-  private readonly multer: NestInterceptor;
+export function criarUploadInterceptor({
+  campo,
+  obrigatorio,
+  maxCampos,
+}: OpcoesUpload): Type<NestInterceptor> {
+  const erroNoCampo = (mensagem: string) =>
+    new AppError(CodigoErro.VALIDACAO_INVALIDA, undefined, { campos: { [campo]: [mensagem] } });
 
-  constructor(private readonly config: AppConfig) {
-    const Interceptor = FileInterceptor(CAMPO_IMAGEM, {
-      storage: memoryStorage(),
-      limits: { fileSize: config.maxImagemBytes, files: 1, fields: 5, fieldSize: 1024, parts: 7 },
-    });
-    this.multer = new Interceptor();
-  }
+  @Injectable()
+  class UploadInterceptor implements NestInterceptor {
+    private readonly multer: NestInterceptor;
 
-  async intercept(ctx: ExecutionContext, next: CallHandler): Promise<Observable<unknown>> {
-    try {
-      await this.multer.intercept(ctx, { handle: () => undefined as never });
-    } catch (err) {
-      throw this.traduzir(err);
-    }
-    const req = ctx.switchToHttp().getRequest<{ file?: Express.Multer.File }>();
-    if (!req.file) throw erroNoCampoImagem('Envie a imagem no campo "imagem".');
-    return next.handle();
-  }
-
-  private traduzir(err: unknown): unknown {
-    if (err instanceof PayloadTooLargeException) {
-      return new AppError(CodigoErro.IMAGEM_MUITO_GRANDE, undefined, {
-        maxBytes: this.config.maxImagemBytes,
+    constructor(@Inject(AppConfig) private readonly config: AppConfig) {
+      const Interceptor = FileInterceptor(campo, {
+        storage: memoryStorage(),
+        limits: {
+          fileSize: config.maxImagemBytes,
+          files: 1,
+          fields: maxCampos,
+          fieldSize: 1024,
+          parts: maxCampos + 2,
+        },
       });
+      this.multer = new Interceptor();
     }
-    if (err instanceof BadRequestException)
-      return erroNoCampoImagem('Envie um único arquivo no campo "imagem".');
-    return err;
+
+    async intercept(ctx: ExecutionContext, next: CallHandler): Promise<Observable<unknown>> {
+      try {
+        await this.multer.intercept(ctx, { handle: () => undefined as never });
+      } catch (err) {
+        throw this.traduzir(err);
+      }
+      const req = ctx.switchToHttp().getRequest<{ file?: Express.Multer.File }>();
+      if (obrigatorio && !req.file) throw erroNoCampo(`Envie a imagem no campo "${campo}".`);
+      return next.handle();
+    }
+
+    private traduzir(err: unknown): unknown {
+      if (err instanceof PayloadTooLargeException) {
+        return new AppError(CodigoErro.IMAGEM_MUITO_GRANDE, undefined, {
+          maxBytes: this.config.maxImagemBytes,
+        });
+      }
+      if (err instanceof BadRequestException)
+        return erroNoCampo(`Envie um único arquivo no campo "${campo}".`);
+      return err;
+    }
   }
+  return mixin(UploadInterceptor);
 }
+
+/** Panfleto e logo: arquivo obrigatório no campo "imagem". */
+export const UploadImagemInterceptor = criarUploadInterceptor({
+  campo: CAMPO_IMAGEM,
+  obrigatorio: true,
+  maxCampos: 5,
+});
+
+/** Cadastro de produto: foto opcional junto com os campos do formulário (D4.1). */
+export const UploadFotoOpcionalInterceptor = criarUploadInterceptor({
+  campo: CAMPO_FOTO,
+  obrigatorio: false,
+  maxCampos: 20,
+});
+
+/** Troca da foto do produto: arquivo obrigatório no campo "foto". */
+export const UploadFotoInterceptor = criarUploadInterceptor({
+  campo: CAMPO_FOTO,
+  obrigatorio: true,
+  maxCampos: 0,
+});
