@@ -1,16 +1,7 @@
-import {
-  Body,
-  Controller,
-  HttpCode,
-  HttpStatus,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Param, Patch, UseGuards } from '@nestjs/common';
 import { Public } from '../../../common/decorators/public.decorator';
-import { naoEncontrado } from '../../../common/errors/errors';
 import { AdminKeyGuard } from '../../../common/guards/admin-key.guard';
+import { ParseUuidOu404Pipe } from '../../../common/pipes/parse-uuid-ou-404.pipe';
 import { LimitarRequisicoes } from '../../../common/throttle/limites-de-requisicao';
 import { LojistasService } from '../../lojistas/services/lojistas.service';
 import { RedefinirSenhaDto } from '../dtos/redefinir-senha.dto';
@@ -25,7 +16,7 @@ export class AdminLojistasController {
   @Patch(':id/senha')
   @HttpCode(HttpStatus.NO_CONTENT)
   async redefinirSenha(
-    @Param('id', new ParseUUIDPipe({ version: '7', exceptionFactory: () => naoEncontrado() })) id: string,
+    @Param('id', ParseUuidOu404Pipe) id: string,
     @Body() dto: RedefinirSenhaDto,
   ): Promise<void> {
     await this.lojistas.redefinirSenha(id, dto.novaSenha);
