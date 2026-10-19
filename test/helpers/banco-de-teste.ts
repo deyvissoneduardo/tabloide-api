@@ -6,7 +6,7 @@ import { SequelizeStorage, Umzug } from 'umzug';
 const PASTA_MIGRATIONS = path.resolve(__dirname, '../../src/database/migrations');
 
 /** Tabelas limpas entre testes. Cresce nas fases seguintes. */
-export const TABELAS = ['auditoria_alteracoes', 'filiais', 'lojista_ativacoes', 'lojistas'];
+export const TABELAS = ['panfletos', 'auditoria_alteracoes', 'filiais', 'lojista_ativacoes', 'lojistas'];
 
 export interface BancoDeTeste {
   container: StartedPostgreSqlContainer;
