@@ -1,3 +1,6 @@
+import { mkdtempSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { Writable } from 'node:stream';
 import type { DynamicModule, INestApplication, Type } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -15,6 +18,8 @@ export interface AppDeTeste {
   app: INestApplication;
   http: () => ReturnType<typeof request>;
   logs: string[];
+  /** Raiz do DiskStorageAdapter deste app (diretório temporário). */
+  midiaDir: string;
   fechar: () => Promise<void>;
 }
 
@@ -24,6 +29,7 @@ export async function criarApp(
   env: Record<string, string> = {},
   modulosExtras: Array<Type | DynamicModule> = [],
 ): Promise<AppDeTeste> {
+  const midiaDir = mkdtempSync(path.join(os.tmpdir(), 'tabloide-midia-'));
   Object.assign(process.env, {
     NODE_ENV: 'test',
     LOG_LEVEL: 'info',
@@ -36,6 +42,9 @@ export async function criarApp(
     TENANT_STATUS_CACHE_TTL_MS: '0',
     PUBLIC_BASE_URL: 'https://tabloide.app',
     FUSO_HORARIO_PADRAO: 'America/Sao_Paulo',
+    STORAGE_DRIVER: 'disco',
+    MIDIA_DIR_LOCAL: midiaDir,
+    MIDIA_URL_BASE_LOCAL: 'http://localhost/v1/midia-local',
     ...env,
   });
 
@@ -61,6 +70,7 @@ export async function criarApp(
     app,
     http: () => request(app.getHttpServer()),
     logs,
+    midiaDir,
     fechar: async () => {
       await app.close();
       destinoDeLogs.stream = undefined;

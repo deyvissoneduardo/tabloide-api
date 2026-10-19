@@ -8,7 +8,7 @@ const booleano = z
 
 const inteiro = (padrao: number) => z.coerce.number().int().default(padrao);
 
-export const envSchema = z.object({
+const envBase = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: inteiro(3000),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
@@ -32,6 +32,32 @@ export const envSchema = z.object({
     .default('America/Sao_Paulo')
     .refine((f) => normalizarFuso(f) !== null, 'fuso horário IANA inválido')
     .transform((f) => normalizarFuso(f) as string),
+  STORAGE_DRIVER: z.enum(['supabase', 'disco']).default('disco'),
+  SUPABASE_URL: z.url({ protocol: /^https?$/ }).optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+  SUPABASE_BUCKET: z.string().min(1).default('midia'),
+  MIDIA_DIR_LOCAL: z.string().min(1).default('./.midia'),
+  MIDIA_URL_BASE_LOCAL: z.url({ protocol: /^https?$/ }).default('http://localhost:3000/v1/midia-local'),
+  MAX_IMAGEM_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(10 * 1024 * 1024),
+  IMAGEM_MAX_PIXELS: z.coerce.number().int().positive().default(50_000_000),
+  IMAGEM_CONCORRENCIA: z.coerce.number().int().min(1).max(16).default(2),
+});
+
+export const envSchema = envBase.superRefine((env, ctx) => {
+  // em produção as imagens precisam ficar no Supabase Storage, nunca no disco do container
+  if (env.NODE_ENV === 'production' && env.STORAGE_DRIVER !== 'supabase') {
+    ctx.addIssue({ code: 'custom', path: ['STORAGE_DRIVER'], message: 'em production use supabase' });
+  }
+  if (env.STORAGE_DRIVER === 'supabase') {
+    for (const chave of ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'] as const) {
+      if (!env[chave])
+        ctx.addIssue({ code: 'custom', path: [chave], message: 'obrigatório com STORAGE_DRIVER=supabase' });
+    }
+  }
 });
 
 export type Env = z.infer<typeof envSchema>;
