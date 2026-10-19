@@ -21,6 +21,7 @@ import { DatabaseModule } from './database/database.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { CategoriasModule } from './modules/categorias/categorias.module';
 import { FiliaisModule } from './modules/filiais/filiais.module';
 import { LojistasModule } from './modules/lojistas/lojistas.module';
 import { MidiaLocalModule } from './modules/midia/midia-local.module';
@@ -55,6 +56,7 @@ import { PanfletosModule } from './modules/panfletos/panfletos.module';
     AuditoriaModule,
     FiliaisModule,
     PanfletosModule,
+    CategoriasModule,
     MidiaLocalModule,
   ],
   providers: [
