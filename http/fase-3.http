@@ -1,0 +1,151 @@
+# Tabloide Digital API — Fase 3: mídia, panfletos e identidade visual
+# Os uploads usam multipart com o arquivo no campo "imagem" (JPEG, PNG ou WebP; até MAX_IMAGEM_BYTES).
+# Ajuste o caminho do arquivo em "< ./folheto.jpg" para uma imagem local.
+
+@base = http://localhost:3000/v1
+
+### Login
+# @name login
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "ana@bompreco.com.br", "senha": "senhaForte1" }
+
+@token = {{login.response.body.token}}
+
+### Filial para os panfletos
+# @name filial
+POST {{base}}/painel/filiais
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Centro", "endereco": "Rua A, 100" }
+
+@filialId = {{filial.response.body.id}}
+
+### Criar panfleto vigente até 31/10 (sem dataInicio vale a partir de hoje, RN40)
+# @name panfleto
+POST {{base}}/painel/filiais/{{filialId}}/panfletos
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=LIMITE
+
+--LIMITE
+Content-Disposition: form-data; name="imagem"; filename="folheto.jpg"
+Content-Type: image/jpeg
+
+< ./folheto.jpg
+--LIMITE
+Content-Disposition: form-data; name="dataLimite"
+
+2026-10-31
+--LIMITE--
+
+@panfletoId = {{panfleto.response.body.id}}
+
+### Agendar o próximo, de 01/11 a 15/11
+POST {{base}}/painel/filiais/{{filialId}}/panfletos
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=LIMITE
+
+--LIMITE
+Content-Disposition: form-data; name="imagem"; filename="folheto.jpg"
+Content-Type: image/jpeg
+
+< ./folheto.jpg
+--LIMITE
+Content-Disposition: form-data; name="dataInicio"
+
+2026-11-01
+--LIMITE
+Content-Disposition: form-data; name="dataLimite"
+
+2026-11-15
+--LIMITE--
+
+### Erro: período sobreposto → 409 PANFLETO_PERIODO_SOBREPOSTO
+POST {{base}}/painel/filiais/{{filialId}}/panfletos
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=LIMITE
+
+--LIMITE
+Content-Disposition: form-data; name="imagem"; filename="folheto.jpg"
+Content-Type: image/jpeg
+
+< ./folheto.jpg
+--LIMITE
+Content-Disposition: form-data; name="dataInicio"
+
+2026-11-10
+--LIMITE--
+
+### Listar (padrão: todos os não excluídos)
+GET {{base}}/painel/filiais/{{filialId}}/panfletos
+Authorization: Bearer {{token}}
+
+### Listar só vigentes e agendados
+GET {{base}}/painel/filiais/{{filialId}}/panfletos?situacao=VIGENTE,AGENDADO
+Authorization: Bearer {{token}}
+
+### Detalhar
+GET {{base}}/painel/filiais/{{filialId}}/panfletos/{{panfletoId}}
+Authorization: Bearer {{token}}
+
+### Editar data limite (auditado)
+PATCH {{base}}/painel/filiais/{{filialId}}/panfletos/{{panfletoId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "dataLimite": "2026-10-30" }
+
+### Erro: início de panfleto vigente é imutável → 409 DATA_INICIO_IMUTAVEL
+PATCH {{base}}/painel/filiais/{{filialId}}/panfletos/{{panfletoId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "dataInicio": "2026-10-20" }
+
+### Trocar a imagem (auditado; o arquivo anterior fica no storage)
+PUT {{base}}/painel/filiais/{{filialId}}/panfletos/{{panfletoId}}/imagem
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=LIMITE
+
+--LIMITE
+Content-Disposition: form-data; name="imagem"; filename="folheto.jpg"
+Content-Type: image/jpeg
+
+< ./folheto.jpg
+--LIMITE--
+
+### Excluir (lógico)
+DELETE {{base}}/painel/filiais/{{filialId}}/panfletos/{{panfletoId}}
+Authorization: Bearer {{token}}
+
+### Identidade visual
+GET {{base}}/painel/lojista/identidade
+Authorization: Bearer {{token}}
+
+### Editar cores (normalizadas para maiúsculas) e nome
+PATCH {{base}}/painel/lojista/identidade
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "corPrimaria": "#c8102e", "corSecundaria": "#FFD100" }
+
+### Remover a cor secundária
+PATCH {{base}}/painel/lojista/identidade
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "corSecundaria": null }
+
+### Trocar o logo
+PUT {{base}}/painel/lojista/logo
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=LIMITE
+
+--LIMITE
+Content-Disposition: form-data; name="imagem"; filename="logo.png"
+Content-Type: image/png
+
+< ./logo.png
+--LIMITE--
