@@ -1,0 +1,92 @@
+# Tabloide Digital API — Fase 2: filiais, QR Code e auditoria
+# Rode antes o login de http/fase-1.http (ou ajuste @token abaixo).
+
+@base = http://localhost:3000/v1
+
+### Login
+# @name login
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "ana@bompreco.com.br", "senha": "senhaForte1" }
+
+@token = {{login.response.body.token}}
+
+### Criar filial com o fuso padrão (America/Sao_Paulo)
+# @name filial
+POST {{base}}/painel/filiais
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Centro", "endereco": "Rua A, 100 — Centro" }
+
+@filialId = {{filial.response.body.id}}
+
+### Criar filial em Manaus (o fuso é normalizado: america/manaus → America/Manaus)
+POST {{base}}/painel/filiais
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Manaus", "endereco": "Av. Eduardo Ribeiro, 500", "fusoHorario": "america/manaus" }
+
+### Listar (ordem alfabética pt-BR, paginada)
+GET {{base}}/painel/filiais?pagina=1&porPagina=50
+Authorization: Bearer {{token}}
+
+### Detalhar
+GET {{base}}/painel/filiais/{{filialId}}
+Authorization: Bearer {{token}}
+
+### Editar nome
+PATCH {{base}}/painel/filiais/{{filialId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Centro Histórico" }
+
+### Editar fuso (gera auditoria)
+PATCH {{base}}/painel/filiais/{{filialId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "fusoHorario": "America/Belem" }
+
+### QR Code em SVG
+GET {{base}}/painel/filiais/{{filialId}}/qrcode
+Authorization: Bearer {{token}}
+
+### QR Code em PNG 1024 px para download
+# @name qr
+GET {{base}}/painel/filiais/{{filialId}}/qrcode?formato=png&tamanho=1024&download=1
+Authorization: Bearer {{token}}
+
+### QR Code com If-None-Match → 304
+GET {{base}}/painel/filiais/{{filialId}}/qrcode?formato=png&tamanho=1024&download=1
+Authorization: Bearer {{token}}
+If-None-Match: {{qr.response.headers.ETag}}
+
+### Auditoria da filial
+GET {{base}}/painel/auditoria?entidade=FILIAL&entidadeId={{filialId}}
+Authorization: Bearer {{token}}
+
+### Erro: fuso inválido → 422 FUSO_HORARIO_INVALIDO
+POST {{base}}/painel/filiais
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "X", "endereco": "Y", "fusoHorario": "Marte/Olympus" }
+
+### Erro: código público é imutável → 400 VALIDACAO_INVALIDA
+PATCH {{base}}/painel/filiais/{{filialId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "codigoPublico": "AAAAAAAA" }
+
+### Erro: id de outro lojista (ou inexistente) → 404 RECURSO_NAO_ENCONTRADO
+GET {{base}}/painel/filiais/01a1515d-b305-743a-95f9-d8d6c26afe23
+Authorization: Bearer {{token}}
+
+### Excluir (exclusão lógica em cascata; o front pede confirmação antes)
+DELETE {{base}}/painel/filiais/{{filialId}}
+Authorization: Bearer {{token}}

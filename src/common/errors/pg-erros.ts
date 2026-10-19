@@ -4,6 +4,8 @@ import { CodigoErro } from './codigos-erro';
 /** Constraints UNIQUE com código de negócio próprio. */
 export const UNIQUE_PARA_CODIGO: Record<string, CodigoErro> = {
   lojistas_email_key: CodigoErro.EMAIL_JA_CADASTRADO,
+  // tratada com nova tentativa no FiliaisService; se chegar aqui é bug
+  filiais_codigo_publico_uk: CodigoErro.ERRO_INTERNO,
 };
 
 /** Constraints EXCLUDE com código de negócio próprio. */
@@ -12,7 +14,13 @@ export const EXCLUSAO_PARA_CODIGO: Record<string, CodigoErro> = {
 };
 
 /** Constraints CHECK com código de negócio próprio. As fases seguintes acrescentam entradas. */
-export const CONSTRAINT_PARA_CODIGO: Record<string, CodigoErro> = {};
+export const CONSTRAINT_PARA_CODIGO: Record<string, CodigoErro> = {
+  filiais_nome_nao_vazio_ck: CodigoErro.VALIDACAO_INVALIDA,
+  filiais_endereco_nao_vazio_ck: CodigoErro.VALIDACAO_INVALIDA,
+  // bugs do gerador de código ou do service de auditoria, não do usuário
+  filiais_codigo_publico_formato_ck: CodigoErro.ERRO_INTERNO,
+  auditoria_entidade_ck: CodigoErro.ERRO_INTERNO,
+};
 
 interface ErroPg {
   parent?: { code?: string; constraint?: string };
