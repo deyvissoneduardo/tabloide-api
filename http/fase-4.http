@@ -1,0 +1,191 @@
+# Tabloide Digital API — Fase 4: categorias e produtos
+# Preços em centavos inteiros (D4.7). O cadastro de produto aceita JSON sem foto ou multipart
+# com a foto opcional no campo "foto" (D4.1). Ajuste "< ./arroz.jpg" para uma imagem local.
+
+@base = http://localhost:3000/v1
+
+### Login
+# @name login
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "ana@bompreco.com.br", "senha": "senhaForte1" }
+
+@token = {{login.response.body.token}}
+
+### Filial para o catálogo
+# @name filial
+POST {{base}}/painel/filiais
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Centro", "endereco": "Rua A, 100" }
+
+@filialId = {{filial.response.body.id}}
+
+### Criar categoria (o nome é aparado; repetido na filial → 409 CATEGORIA_JA_EXISTE)
+# @name categoria
+POST {{base}}/painel/filiais/{{filialId}}/categorias
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "  Mercearia  " }
+
+@categoriaId = {{categoria.response.body.id}}
+
+### Outra categoria, para testar a troca
+# @name categoria2
+POST {{base}}/painel/filiais/{{filialId}}/categorias
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Bebidas" }
+
+@categoria2Id = {{categoria2.response.body.id}}
+
+### Listar categorias com contagens por situação e podeExcluir (RN20)
+GET {{base}}/painel/filiais/{{filialId}}/categorias
+Authorization: Bearer {{token}}
+
+### Renomear categoria
+PATCH {{base}}/painel/filiais/{{filialId}}/categorias/{{categoriaId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Mercearia e Grãos" }
+
+### Cadastro mínimo em JSON (sem dataInicio, vale a partir de hoje — RN40)
+# @name produto
+POST {{base}}/painel/filiais/{{filialId}}/produtos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Leite Integral", "categoriaId": "{{categoriaId}}", "precoPromocionalCentavos": 499 }
+
+@produtoId = {{produto.response.body.id}}
+
+### Cadastro completo com foto (multipart, uma requisição só — D4.1)
+POST {{base}}/painel/filiais/{{filialId}}/produtos
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=LIMITE
+
+--LIMITE
+Content-Disposition: form-data; name="nome"
+
+Arroz Tipo 1
+--LIMITE
+Content-Disposition: form-data; name="categoriaId"
+
+{{categoriaId}}
+--LIMITE
+Content-Disposition: form-data; name="quantidade"
+
+5kg
+--LIMITE
+Content-Disposition: form-data; name="precoPromocionalCentavos"
+
+2199
+--LIMITE
+Content-Disposition: form-data; name="precoOriginalCentavos"
+
+2649
+--LIMITE
+Content-Disposition: form-data; name="observacao"
+
+Limite 3 por cliente
+--LIMITE
+Content-Disposition: form-data; name="dataLimite"
+
+2026-10-25
+--LIMITE
+Content-Disposition: form-data; name="foto"; filename="arroz.jpg"
+Content-Type: image/jpeg
+
+< ./arroz.jpg
+--LIMITE--
+
+### Agendar um produto
+POST {{base}}/painel/filiais/{{filialId}}/produtos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Açúcar Refinado",
+  "categoriaId": "{{categoriaId}}",
+  "precoPromocionalCentavos": 399,
+  "precoOriginalCentavos": 549,
+  "dataInicio": "2026-11-01",
+  "dataLimite": "2026-11-15"
+}
+
+### Preço original menor que o promocional → 422 PRECO_ORIGINAL_INVALIDO (RN21)
+POST {{base}}/painel/filiais/{{filialId}}/produtos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Café", "categoriaId": "{{categoriaId}}", "precoPromocionalCentavos": 1000, "precoOriginalCentavos": 900 }
+
+### Listar produtos: busca sem acento, filtro de situação e paginação
+GET {{base}}/painel/filiais/{{filialId}}/produtos?situacao=VIGENTE,AGENDADO&busca=acucar&pagina=1&porPagina=50
+Authorization: Bearer {{token}}
+
+### Listar produtos de uma categoria, incluindo excluídos
+GET {{base}}/painel/filiais/{{filialId}}/produtos?categoriaId={{categoriaId}}&situacao=VIGENTE,AGENDADO,VENCIDO,EXCLUIDO
+Authorization: Bearer {{token}}
+
+### Detalhar produto (inclui excluídos, para consulta)
+GET {{base}}/painel/filiais/{{filialId}}/produtos/{{produtoId}}
+Authorization: Bearer {{token}}
+
+### Editar preço e data limite (auditado — RNF07)
+PATCH {{base}}/painel/filiais/{{filialId}}/produtos/{{produtoId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "precoPromocionalCentavos": 459, "dataLimite": "2026-10-31" }
+
+### Limpar campos opcionais com null (D4.8) e trocar de categoria
+PATCH {{base}}/painel/filiais/{{filialId}}/produtos/{{produtoId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "dataLimite": null, "observacao": null, "categoriaId": "{{categoria2Id}}" }
+
+### Alterar o início de um vigente → 409 DATA_INICIO_IMUTAVEL (RN26)
+PATCH {{base}}/painel/filiais/{{filialId}}/produtos/{{produtoId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "dataInicio": "2026-12-01" }
+
+### Histórico de auditoria do produto
+GET {{base}}/painel/auditoria?entidade=PRODUTO&entidadeId={{produtoId}}
+Authorization: Bearer {{token}}
+
+### Trocar a foto (a anterior continua no storage — D4.5)
+PUT {{base}}/painel/filiais/{{filialId}}/produtos/{{produtoId}}/foto
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=LIMITE
+
+--LIMITE
+Content-Disposition: form-data; name="foto"; filename="arroz.jpg"
+Content-Type: image/jpeg
+
+< ./arroz.jpg
+--LIMITE--
+
+### Remover a foto
+DELETE {{base}}/painel/filiais/{{filialId}}/produtos/{{produtoId}}/foto
+Authorization: Bearer {{token}}
+
+### Excluir categoria com produto vigente → 409 CATEGORIA_COM_PRODUTOS_ATIVOS
+DELETE {{base}}/painel/filiais/{{filialId}}/categorias/{{categoria2Id}}
+Authorization: Bearer {{token}}
+
+### Excluir produto (exclusão lógica — RN25)
+DELETE {{base}}/painel/filiais/{{filialId}}/produtos/{{produtoId}}
+Authorization: Bearer {{token}}
+
+### Excluir categoria (os vencidos vão junto)
+DELETE {{base}}/painel/filiais/{{filialId}}/categorias/{{categoria2Id}}
+Authorization: Bearer {{token}}
