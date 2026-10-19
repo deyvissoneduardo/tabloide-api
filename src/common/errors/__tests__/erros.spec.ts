@@ -7,6 +7,7 @@ import { AppExceptionFilter } from '../app-exception.filter';
 import { AppError } from '../app.error';
 import { CodigoErro, MENSAGEM_POR_CODIGO, STATUS_POR_CODIGO } from '../codigos-erro';
 import { CONSTRAINT_PARA_CODIGO, traduzirErroPg } from '../pg-erros';
+import { mensagemDeErro } from '../mensagem-de-erro';
 import { errosDeValidacaoParaAppError } from '../validacao';
 
 const erroPg = (code: string, constraint?: string) => ({ parent: { code, constraint } });
@@ -164,4 +165,12 @@ describe('Funcionalidade: Contrato de erros', () => {
       log.mockRestore();
     });
   });
+});
+
+describe('Funcionalidade: mensagemDeErro', () => {
+  it.each<[unknown, string]>([
+    [new Error('falhou'), 'falhou'],
+    ['texto', 'texto'],
+    [42, '42'],
+  ])('Cenário: %p vira "%s"', (erro, esperado) => expect(mensagemDeErro(erro)).toBe(esperado));
 });
