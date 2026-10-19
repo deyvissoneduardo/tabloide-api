@@ -20,6 +20,7 @@ module.exports = {
     './src/**/services/**': { lines: 90, branches: 90 },
     './src/common/utils/**': { lines: 90, branches: 90 },
     './src/database/tenant-scope.hooks.ts': { lines: 90, branches: 90 },
+    './src/modules/vigencia/domain/': { lines: 100, branches: 100 },
   },
   projects: [
     { ...base, displayName: 'unit', testMatch: ['<rootDir>/src/**/*.spec.ts'] },

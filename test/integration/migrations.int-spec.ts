@@ -1,6 +1,12 @@
+import { readdirSync } from 'node:fs';
+import path from 'node:path';
 import { encerrarBanco, iniciarBanco, limparBanco, type BancoDeTeste } from '../helpers/banco-de-teste';
 
-describe('Funcionalidade: Migrations da Fase 1', () => {
+const TOTAL_MIGRATIONS = readdirSync(path.resolve(__dirname, '../../src/database/migrations')).filter((f) =>
+  f.endsWith('.js'),
+).length;
+
+describe('Funcionalidade: Migrations', () => {
   let banco: BancoDeTeste;
   const sql = (q: string, replacements?: Record<string, unknown>) =>
     banco.sequelize.query(q, { replacements });
@@ -81,7 +87,7 @@ describe('Funcionalidade: Migrations da Fase 1', () => {
         `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename LIKE 'lojista%'`,
       );
       expect(tabelas).toEqual([]);
-      await expect(banco.migrador.up()).resolves.toHaveLength(3);
+      await expect(banco.migrador.up()).resolves.toHaveLength(TOTAL_MIGRATIONS);
     });
   });
 });
