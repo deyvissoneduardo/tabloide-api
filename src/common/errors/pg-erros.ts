@@ -20,6 +20,7 @@ export const CONSTRAINT_PARA_CODIGO: Record<string, CodigoErro> = {
   // bugs do gerador de código ou do service de auditoria, não do usuário
   filiais_codigo_publico_formato_ck: CodigoErro.ERRO_INTERNO,
   auditoria_entidade_ck: CodigoErro.ERRO_INTERNO,
+  panfletos_datas_validas: CodigoErro.DATA_LIMITE_INVALIDA,
 };
 
 interface ErroPg {

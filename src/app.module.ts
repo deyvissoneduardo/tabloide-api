@@ -23,6 +23,8 @@ import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { FiliaisModule } from './modules/filiais/filiais.module';
 import { LojistasModule } from './modules/lojistas/lojistas.module';
+import { MidiaLocalModule } from './modules/midia/midia-local.module';
+import { PanfletosModule } from './modules/panfletos/panfletos.module';
 
 @Module({
   imports: [
@@ -52,6 +54,8 @@ import { LojistasModule } from './modules/lojistas/lojistas.module';
     AdminModule,
     AuditoriaModule,
     FiliaisModule,
+    PanfletosModule,
+    MidiaLocalModule,
   ],
   providers: [
     { provide: APP_PIPE, useFactory: criarValidationPipe },
