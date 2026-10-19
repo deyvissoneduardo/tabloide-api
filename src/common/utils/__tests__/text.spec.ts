@@ -1,8 +1,10 @@
 import {
   compararTextoPtBr,
+  escaparLike,
   normalizarCnpj,
   normalizarEmail,
   normalizarEspacos,
+  normalizarParaBusca,
   normalizarWhatsappBr,
   somenteDigitos,
 } from '../text';
@@ -92,5 +94,29 @@ describe('Funcionalidade: Normalização de texto', () => {
     it.each(['1122233300018', '112223330001811'])('Então "%s" devolve null', (v) =>
       expect(normalizarCnpj(v)).toBeNull(),
     );
+  });
+
+  describe('Esquema do Cenário: normalizar para busca e ordenação (D4.2)', () => {
+    it.each([
+      ['Açúcar Refinado', 'acucar refinado'],
+      ['ÁGUA   MINERAL', 'agua mineral'],
+      ['  Pão de Queijo', 'pao de queijo'],
+      ['Café 3 Corações', 'cafe 3 coracoes'],
+      ['Hortifrúti', 'hortifruti'],
+    ])('Dado "%s", então obtenho "%s"', (entrada, saida) => expect(normalizarParaBusca(entrada)).toBe(saida));
+  });
+
+  describe('Cenário: a ordem pelo texto normalizado segue o alfabeto pt-BR', () => {
+    it('Então "Ábacate", "Arroz", "Banana", "Óleo"', () => {
+      const chave = (s: string) => normalizarParaBusca(s);
+      const ordenado = ['Óleo', 'Arroz', 'Ábacate', 'Banana'].sort((a, b) =>
+        chave(a) < chave(b) ? -1 : chave(a) > chave(b) ? 1 : 0,
+      );
+      expect(ordenado).toEqual(['Ábacate', 'Arroz', 'Banana', 'Óleo']);
+    });
+  });
+
+  describe('Cenário: escapar curingas do LIKE', () => {
+    it('Então %, _ e \\ ganham barra', () => expect(escaparLike('100%_a\\b')).toBe('100\\%\\_a\\\\b'));
   });
 });

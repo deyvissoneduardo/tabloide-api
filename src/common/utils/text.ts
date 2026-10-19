@@ -43,3 +43,13 @@ export function normalizarCnpj(s: string): string | null {
   const dv2 = digitoVerificador(digitos, PESOS_DV2);
   return Number(digitos[12]) === dv1 && Number(digitos[13]) === dv2 ? digitos : null;
 }
+
+/** Chave de busca e de ordenação (D4.2): minúsculas, sem acento, espaços colapsados. */
+export function normalizarParaBusca(s: string): string {
+  return normalizarEspacos(s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase());
+}
+
+/** Escapa os curingas do LIKE (o Postgres usa "\" como escape por padrão). */
+export function escaparLike(s: string): string {
+  return s.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
