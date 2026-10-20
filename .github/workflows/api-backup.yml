@@ -1,0 +1,54 @@
+name: api-backup
+
+# RNF08: backup próprio diário com retenção de 30 dias (regra de ciclo de vida no bucket),
+# fora do Supabase, além do backup nativo do plano. 06:00 UTC = 03:00 em São Paulo.
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    container: postgres:16
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+      BACKUP_BUCKET: ${{ vars.BACKUP_BUCKET || 'tabloide-backups' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ferramentas
+        run: |
+          apt-get update -qq && apt-get install -y -qq age awscli rclone > /dev/null
+
+      - name: pg_dump (porta 5432; não funciona no transaction pooler)
+        run: |
+          DATA=$(date -u +%F)
+          pg_dump "${{ secrets.DATABASE_URL_MIGRATIONS }}" -Fc --no-owner -f "tabloide-$DATA.dump"
+          echo "DATA=$DATA" >> "$GITHUB_ENV"
+
+      - name: Criptografar com a chave pública (a privada fica fora do CI)
+        run: age -r "${{ secrets.BACKUP_AGE_PUBLIC_KEY }}" -o "tabloide-$DATA.dump.age" "tabloide-$DATA.dump"
+
+      - name: Enviar para o bucket fora do Supabase
+        run: |
+          CAMINHO="db/$(date -u +%Y/%m/%d).dump.age"
+          aws s3 cp "tabloide-$DATA.dump.age" "s3://$BACKUP_BUCKET/$CAMINHO" --endpoint-url "$BACKUP_S3_ENDPOINT"
+
+      - name: Mídia (bucket midia) com versões
+        env:
+          RCLONE_CONFIG_SUPABASE_TYPE: s3
+          RCLONE_CONFIG_SUPABASE_PROVIDER: Other
+          RCLONE_CONFIG_SUPABASE_ENDPOINT: ${{ secrets.SUPABASE_S3_ENDPOINT }}
+          RCLONE_CONFIG_SUPABASE_ACCESS_KEY_ID: ${{ secrets.SUPABASE_S3_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_SUPABASE_SECRET_ACCESS_KEY: ${{ secrets.SUPABASE_S3_SECRET_ACCESS_KEY }}
+          RCLONE_CONFIG_DESTINO_TYPE: s3
+          RCLONE_CONFIG_DESTINO_PROVIDER: Cloudflare
+          RCLONE_CONFIG_DESTINO_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+          RCLONE_CONFIG_DESTINO_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_DESTINO_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+        run: |
+          rclone sync supabase:midia "destino:$BACKUP_BUCKET/midia" \
+            --backup-dir "destino:$BACKUP_BUCKET/midia-versoes/$DATA"
