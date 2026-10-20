@@ -1,0 +1,13 @@
+node_modules
+dist
+coverage
+test
+plans
+http
+docs
+scripts
+.github
+.git
+.midia
+.env*
+*.log
