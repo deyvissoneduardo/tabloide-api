@@ -11,7 +11,32 @@ export const CAMPOS_OMITIDOS_NO_LOG = [
   'req.headers["x-admin-key"]',
   'req.body.senha',
   'req.body.novaSenha',
+  'req.headers.cookie',
+  'res.headers["set-cookie"]',
 ];
+
+/** Fração das respostas 2xx/3xx da página pública que viram log de acesso. */
+export const AMOSTRA_LOG_PUBLICO = 0.01;
+
+interface ReqLog {
+  url?: string;
+  originalUrl?: string;
+}
+
+const caminho = (req: ReqLog) => req.originalUrl ?? req.url ?? '';
+
+/**
+ * Saúde não gera log de acesso. Na página pública só erros e uma amostra das respostas boas,
+ * para o volume do QR Code não afogar os logs.
+ */
+export function nivelDoLogDeAcesso(sortear: () => number = Math.random) {
+  return (req: ReqLog, res: { statusCode: number }, err?: unknown): string => {
+    if (err || res.statusCode >= 500) return 'error';
+    if (res.statusCode >= 400) return caminho(req).startsWith('/v1/publico/') ? 'info' : 'warn';
+    if (caminho(req).startsWith('/v1/publico/') && sortear() >= AMOSTRA_LOG_PUBLICO) return 'silent';
+    return 'info';
+  };
+}
 
 export const destinoDeLogs: { stream?: DestinationStream } = {};
 
@@ -25,6 +50,8 @@ export function opcoesDoLogger(config: ConfigService<Env, true>): Params {
       return id;
     },
     redact: { paths: CAMPOS_OMITIDOS_NO_LOG, censor: '[omitido]' },
+    autoLogging: { ignore: (req: ReqLog) => caminho(req).startsWith('/v1/saude') },
+    customLogLevel: nivelDoLogDeAcesso(),
     transport:
       config.get('NODE_ENV', { infer: true }) === 'development' && !destinoDeLogs.stream
         ? { target: 'pino-pretty' }

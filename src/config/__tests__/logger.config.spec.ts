@@ -1,6 +1,6 @@
 import { Writable } from 'node:stream';
 import type { ConfigService } from '@nestjs/config';
-import { CAMPOS_OMITIDOS_NO_LOG, destinoDeLogs, opcoesDoLogger } from '../logger.config';
+import { CAMPOS_OMITIDOS_NO_LOG, destinoDeLogs, nivelDoLogDeAcesso, opcoesDoLogger } from '../logger.config';
 
 type OpcoesPino = {
   level: string;
@@ -66,5 +66,38 @@ describe('Funcionalidade: Configuração do logger', () => {
       expect(params[1]).toBe(destinoDeLogs.stream);
       expect(params[0].transport).toBeUndefined();
     });
+  });
+
+  describe('Esquema do Cenário: dados sensíveis são omitidos', () => {
+    it.each([
+      'req.headers.authorization',
+      'req.headers["x-admin-key"]',
+      'req.body.senha',
+      'req.body.novaSenha',
+      'req.headers.cookie',
+      'res.headers["set-cookie"]',
+    ])('Então %s está na lista de redaction', (campo) => expect(CAMPOS_OMITIDOS_NO_LOG).toContain(campo));
+  });
+
+  describe('Cenário: rotas de saúde não geram log de acesso', () => {
+    it('Então autoLogging.ignore pega /v1/saude e deixa o resto', () => {
+      const { autoLogging } = opcoes({}) as unknown as { autoLogging: { ignore: (r: object) => boolean } };
+      expect(autoLogging.ignore({ url: '/v1/saude/vivo' })).toBe(true);
+      expect(autoLogging.ignore({ url: '/v1/painel/filiais' })).toBe(false);
+    });
+  });
+
+  describe('Esquema do Cenário: nível do log de acesso', () => {
+    it.each([
+      ['/v1/painel/filiais', 200, 0.5, undefined, 'info'],
+      ['/v1/painel/filiais', 404, 0.5, undefined, 'warn'],
+      ['/v1/painel/filiais', 500, 0.5, undefined, 'error'],
+      ['/v1/painel/filiais', 200, 0.5, new Error('x'), 'error'],
+      ['/v1/publico/filiais/x', 404, 0.5, undefined, 'info'],
+      ['/v1/publico/filiais/x', 200, 0.5, undefined, 'silent'],
+      ['/v1/publico/filiais/x', 200, 0.001, undefined, 'info'],
+    ])('Dado %s com status %i e sorteio %d, então %s', (url, statusCode, sorteio, err, nivel) =>
+      expect(nivelDoLogDeAcesso(() => sorteio)({ originalUrl: url }, { statusCode }, err)).toBe(nivel),
+    );
   });
 });

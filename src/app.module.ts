@@ -12,6 +12,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { TenantStatusGuard } from './common/guards/tenant-status.guard';
 import { criarValidationPipe } from './common/pipes/validation.pipe';
 import { LimitesModule } from './common/limites/limites.module';
+import { ObservabilidadeModule } from './common/observabilidade/observabilidade.module';
 import { TenantModule } from './common/tenant/tenant.module';
 import { limitesDeRequisicao } from './common/throttle/limites-de-requisicao';
 import { AppConfigModule } from './config/app-config.module';
@@ -48,6 +49,7 @@ import { ProdutosModule } from './modules/produtos/produtos.module';
     EventEmitterModule.forRoot(),
     AppConfigModule,
     ClockModule,
+    ObservabilidadeModule,
     TenantModule,
     LimitesModule,
     DatabaseModule,
