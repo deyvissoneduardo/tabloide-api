@@ -7,6 +7,7 @@ const PASTA_MIGRATIONS = path.resolve(__dirname, '../../src/database/migrations'
 
 /** Tabelas limpas entre testes. Cresce nas fases seguintes. */
 export const TABELAS = [
+  'lojista_limites',
   'produtos',
   'categorias',
   'panfletos',
