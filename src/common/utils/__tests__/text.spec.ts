@@ -119,4 +119,19 @@ describe('Funcionalidade: Normalização de texto', () => {
   describe('Cenário: escapar curingas do LIKE', () => {
     it('Então %, _ e \\ ganham barra', () => expect(escaparLike('100%_a\\b')).toBe('100\\%\\_a\\\\b'));
   });
+
+  describe('Funcionalidade: Ordenação alfabética em português (RN30)', () => {
+    it('Cenário: acentos e maiúsculas não alteram a ordem primária', () =>
+      expect(['Água', 'Açúcar', 'abacate'].sort(compararTextoPtBr)).toEqual(['abacate', 'Açúcar', 'Água']));
+
+    it('Cenário: números são comparados pelo valor', () =>
+      expect(['Arroz 10kg', 'Arroz 2kg', 'Arroz 5kg'].sort(compararTextoPtBr)).toEqual([
+        'Arroz 2kg',
+        'Arroz 5kg',
+        'Arroz 10kg',
+      ]));
+
+    it('Cenário: nomes iguais ignorando acento e caixa', () =>
+      expect(compararTextoPtBr('Cafe', 'Café')).toBe(0));
+  });
 });

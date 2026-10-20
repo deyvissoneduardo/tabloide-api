@@ -6,6 +6,7 @@ import {
   formatarDiaMes,
   hojeNoFuso,
   paraDataISO,
+  segundosAteMeiaNoite,
   type DataISO,
 } from '../date-only';
 
@@ -94,5 +95,33 @@ describe('Funcionalidade: Datas sem hora', () => {
 
   describe('Cenário: formatar dia e mês', () => {
     it('Então "2026-03-05" vira "05/03"', () => expect(formatarDiaMes(d('2026-03-05'))).toBe('05/03'));
+  });
+
+  describe('Esquema do Cenário: segundos até a virada do dia no fuso (RN24, RNF06)', () => {
+    it.each([
+      ['2026-10-18T15:00:00Z', 'America/Sao_Paulo', 43200],
+      ['2026-10-19T02:59:30Z', 'America/Sao_Paulo', 30],
+      ['2026-10-19T03:00:00Z', 'America/Sao_Paulo', 86400],
+      ['2026-10-19T03:59:59Z', 'America/Manaus', 1],
+      ['2026-10-19T04:30:00Z', 'America/Rio_Branco', 1800],
+      ['2026-10-19T05:30:00Z', 'America/Rio_Branco', 84600],
+    ])('Dado %s em %s, então %i', (agora, fuso, segundos) =>
+      expect(segundosAteMeiaNoite(fuso, new Date(agora))).toBe(segundos),
+    );
+
+    it('E nunca devolve zero (meia-noite menos 0,4 s)', () =>
+      expect(
+        segundosAteMeiaNoite('America/Sao_Paulo', new Date('2026-10-19T02:59:59.600Z')),
+      ).toBeGreaterThanOrEqual(1));
+  });
+
+  describe('Cenário: mesmo instante, dias diferentes por fuso', () => {
+    it('Então São Paulo já está em 19/10 e Manaus ainda em 18/10', () => {
+      const agora = new Date('2026-10-19T03:30:00Z');
+      expect([hojeNoFuso('America/Sao_Paulo', agora), hojeNoFuso('America/Manaus', agora)]).toEqual([
+        '2026-10-19',
+        '2026-10-18',
+      ]);
+    });
   });
 });

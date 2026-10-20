@@ -40,6 +40,38 @@ export function hojeNoFuso(fuso: string, agora: Date): DataISO {
   return formatadorDoFuso(fuso).format(agora) as DataISO;
 }
 
+const relogiosPorFuso = new Map<string, Intl.DateTimeFormat>();
+
+function relogioDoFuso(fuso: string): Intl.DateTimeFormat {
+  let formatador = relogiosPorFuso.get(fuso);
+  if (!formatador) {
+    formatador = new Intl.DateTimeFormat('en-US', {
+      timeZone: fuso,
+      hourCycle: 'h23',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+    relogiosPorFuso.set(fuso, formatador);
+  }
+  return formatador;
+}
+
+/**
+ * Segundos até a próxima meia-noite no fuso, no mínimo 1. Limita o TTL do cache público à
+ * virada do dia; em dia de horário de verão pode errar 1 h, e a checagem de "hoje" a cada
+ * leitura do cache garante a correção.
+ */
+export function segundosAteMeiaNoite(fuso: string, agora: Date): number {
+  // hourCycle h23 formata "HH:MM:SS" de 00:00:00 a 23:59:59
+  const [hora, minuto, segundo] = relogioDoFuso(fuso).format(agora).split(':').map(Number) as [
+    number,
+    number,
+    number,
+  ];
+  return Math.max(1, 86_400 - (hora * 3600 + minuto * 60 + segundo));
+}
+
 export function ehFusoValido(fuso: string): boolean {
   try {
     new Intl.DateTimeFormat('en-US', { timeZone: fuso });
