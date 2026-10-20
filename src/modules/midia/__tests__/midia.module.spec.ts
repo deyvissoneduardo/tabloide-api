@@ -51,6 +51,7 @@ describe('Funcionalidade: Escolha do adapter de armazenamento', () => {
           STORAGE_DRIVER: 'supabase',
           SUPABASE_URL: 'https://xyz.supabase.co',
           SUPABASE_SERVICE_ROLE_KEY: 'k',
+          CORS_ORIGENS_PAINEL: 'https://painel.tabloide.app',
         }).STORAGE_DRIVER,
       ).toBe('supabase'));
   });

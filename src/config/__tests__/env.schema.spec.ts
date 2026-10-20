@@ -90,4 +90,46 @@ describe('Funcionalidade: Validação das variáveis de ambiente', () => {
       ]);
     });
   });
+
+  describe('Cenário: padrões da Fase 5', () => {
+    it('Então cache público, rate limit, trust proxy e desligamento têm valores seguros', () =>
+      expect(validarEnv(minimo())).toMatchObject({
+        TRUST_PROXY: 1,
+        CORS_ORIGENS_PAINEL: [],
+        PUBLICO_CACHE_MAX: 5000,
+        PUBLICO_CACHE_TTL_MAX_SEG: 60,
+        PUBLICO_CACHE_NEGATIVO_SEG: 10,
+        PUBLICO_CACHE_DESATIVADO: false,
+        PUBLICO_RATE_LIMIT_POR_MIN: 300,
+        SHUTDOWN_DRENAGEM_MS: 5000,
+        SHUTDOWN_TIMEOUT_MS: 10000,
+      }));
+
+    it('E CORS_ORIGENS_PAINEL vira lista sem espaços', () =>
+      expect(
+        validarEnv({ ...minimo(), CORS_ORIGENS_PAINEL: ' https://a.app , https://b.app ' })
+          .CORS_ORIGENS_PAINEL,
+      ).toEqual(['https://a.app', 'https://b.app']));
+  });
+
+  describe('Esquema do Cenário: CORS do painel em produção', () => {
+    const producao = (cors?: string) => ({
+      ...minimo(),
+      NODE_ENV: 'production',
+      STORAGE_DRIVER: 'supabase',
+      SUPABASE_URL: 'https://x.supabase.co',
+      SUPABASE_SERVICE_ROLE_KEY: 'chave',
+      ...(cors === undefined ? {} : { CORS_ORIGENS_PAINEL: cors }),
+    });
+
+    it.each([undefined, '*', 'http://painel.tabloide.app', 'https://painel.tabloide.app,*'])(
+      'Dado CORS_ORIGENS_PAINEL %p, então a subida falha',
+      (cors) => expect(() => validarEnv(producao(cors))).toThrow('CORS_ORIGENS_PAINEL'),
+    );
+
+    it('E só HTTPS explícito é aceito', () =>
+      expect(validarEnv(producao('https://painel.tabloide.app')).CORS_ORIGENS_PAINEL).toEqual([
+        'https://painel.tabloide.app',
+      ]));
+  });
 });

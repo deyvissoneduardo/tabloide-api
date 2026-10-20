@@ -7,6 +7,10 @@ import type { Env } from './env.schema';
 export class AppConfig {
   constructor(private readonly config: ConfigService<Env, true>) {}
 
+  get porta(): number {
+    return this.config.get('PORT', { infer: true });
+  }
+
   get publicBaseUrl(): string {
     return this.config.get('PUBLIC_BASE_URL', { infer: true });
   }
@@ -44,6 +48,31 @@ export class AppConfig {
     return {
       diretorio: this.config.get('MIDIA_DIR_LOCAL', { infer: true }),
       urlBase: this.config.get('MIDIA_URL_BASE_LOCAL', { infer: true }),
+    };
+  }
+
+  get corsOrigensPainel(): string[] {
+    return this.config.get('CORS_ORIGENS_PAINEL', { infer: true });
+  }
+
+  get trustProxy(): number {
+    return this.config.get('TRUST_PROXY', { infer: true });
+  }
+
+  /** Cache em memória da página pública (seção 7 da Fase 5). */
+  get publicoCache(): { max: number; ttlMaxSeg: number; negativoSeg: number; desativado: boolean } {
+    return {
+      max: this.config.get('PUBLICO_CACHE_MAX', { infer: true }),
+      ttlMaxSeg: this.config.get('PUBLICO_CACHE_TTL_MAX_SEG', { infer: true }),
+      negativoSeg: this.config.get('PUBLICO_CACHE_NEGATIVO_SEG', { infer: true }),
+      desativado: this.config.get('PUBLICO_CACHE_DESATIVADO', { infer: true }),
+    };
+  }
+
+  get desligamento(): { drenagemMs: number; timeoutMs: number } {
+    return {
+      drenagemMs: this.config.get('SHUTDOWN_DRENAGEM_MS', { infer: true }),
+      timeoutMs: this.config.get('SHUTDOWN_TIMEOUT_MS', { infer: true }),
     };
   }
 }
