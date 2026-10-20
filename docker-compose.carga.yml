@@ -1,0 +1,32 @@
+services:
+  postgres-carga:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: tabloide
+      POSTGRES_USER: tabloide
+      POSTGRES_PASSWORD: tabloide
+    ports: ['55432:5432']
+    cpus: 1
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tabloide']
+      interval: 5s
+      retries: 10
+
+  api-carga:
+    build: .
+    depends_on:
+      postgres-carga: { condition: service_healthy }
+    ports: ['3300:3000']
+    cpus: 1
+    mem_limit: 512m
+    environment:
+      # "test": storage em disco permitido e logs em JSON (pino-pretty não vai na imagem)
+      NODE_ENV: test
+      LOG_LEVEL: warn
+      DATABASE_URL: postgres://tabloide:tabloide@postgres-carga:5432/tabloide
+      JWT_SECRET: segredo-do-teste-de-carga-com-mais-de-32-caracteres
+      ADMIN_API_KEY: chave-admin-do-teste-de-carga-com-mais-de-32-caracteres
+      PUBLIC_BASE_URL: http://localhost:5173
+      STORAGE_DRIVER: disco
+      PUBLICO_RATE_LIMIT_POR_MIN: '1000000'
+      PUBLICO_CACHE_DESATIVADO: ${PUBLICO_CACHE_DESATIVADO:-false}

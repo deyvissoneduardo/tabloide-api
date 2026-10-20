@@ -5,3 +5,4 @@ coverage/
 *.log
 plans/
 .midia/
+test/carga/codigos.json
