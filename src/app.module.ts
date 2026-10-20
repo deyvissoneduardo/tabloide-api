@@ -28,6 +28,7 @@ import { LojistasModule } from './modules/lojistas/lojistas.module';
 import { MidiaLocalModule } from './modules/midia/midia-local.module';
 import { PanfletosModule } from './modules/panfletos/panfletos.module';
 import { ProdutosModule } from './modules/produtos/produtos.module';
+import { PublicoModule } from './modules/publico/publico.module';
 import { SaudeModule } from './modules/saude/saude.module';
 
 @Module({
@@ -64,6 +65,7 @@ import { SaudeModule } from './modules/saude/saude.module';
     PanfletosModule,
     CategoriasModule,
     ProdutosModule,
+    PublicoModule,
     SaudeModule,
     MidiaLocalModule,
   ],

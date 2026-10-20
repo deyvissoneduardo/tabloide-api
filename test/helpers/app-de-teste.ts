@@ -11,6 +11,9 @@ import { ClockService } from '../../src/common/clock/clock.service';
 import { destinoDeLogs } from '../../src/config/logger.config';
 
 export const AGORA_FIXO = new Date('2026-10-18T12:00:00Z');
+
+/** Relógio dos apps de teste: começa em AGORA_FIXO e pode ser avançado pelo teste. */
+export const relogio = { agora: AGORA_FIXO };
 export const ADMIN_KEY = 'chave-admin-de-teste-com-mais-de-32-caracteres';
 export const PUBLIC_BASE_URL = 'https://tabloide.app';
 
@@ -61,7 +64,7 @@ export async function criarApp(
   const { AppModule } = await import('../../src/app.module');
   const modulo = await Test.createTestingModule({ imports: [AppModule, ...modulosExtras] })
     .overrideProvider(ClockService)
-    .useValue({ agora: () => AGORA_FIXO })
+    .useValue({ agora: () => relogio.agora })
     .compile();
   const app = configurarApp(modulo.createNestApplication<NestExpressApplication>({ bufferLogs: true }));
   await app.init();
