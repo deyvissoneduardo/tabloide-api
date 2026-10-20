@@ -1,15 +1,23 @@
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { configurarApp } from './app.setup';
-import type { Env } from './config/env.schema';
+import { AppConfig } from './config/app.config';
+import { configurarTimeouts } from './config/http.config';
 
 async function bootstrap(): Promise<void> {
   const app = configurarApp(
     await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true }),
   );
-  await app.listen(app.get(ConfigService<Env, true>).get('PORT', { infer: true }));
+  const config = app.get(AppConfig);
+  await app.listen(config.porta);
+  configurarTimeouts(app.getHttpServer());
+
+  // rede de segurança: se a drenagem travar, o processo sai mesmo assim
+  const { drenagemMs, timeoutMs } = config.desligamento;
+  for (const sinal of ['SIGTERM', 'SIGINT'] as const) {
+    process.once(sinal, () => setTimeout(() => process.exit(1), drenagemMs + timeoutMs).unref());
+  }
 }
 
 void bootstrap();

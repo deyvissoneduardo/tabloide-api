@@ -12,7 +12,7 @@ import { errosDeValidacaoParaAppError } from '../validacao';
 
 const erroPg = (code: string, constraint?: string) => ({ parent: { code, constraint } });
 
-function hostFalso(reqId = 'req-1') {
+function hostFalso(reqId = 'req-1', originalUrl = '/v1/painel/x') {
   const res = {
     status: jest.fn().mockReturnThis(),
     json: jest.fn(),
@@ -21,7 +21,7 @@ function hostFalso(reqId = 'req-1') {
     getHeader: jest.fn(() => 900),
   };
   const host = {
-    switchToHttp: () => ({ getRequest: () => ({ id: reqId }), getResponse: () => res }),
+    switchToHttp: () => ({ getRequest: () => ({ id: reqId, originalUrl }), getResponse: () => res }),
   } as unknown as ArgumentsHost;
   return { host, res };
 }
@@ -126,6 +126,25 @@ describe('Funcionalidade: Contrato de erros', () => {
       const { host, res } = hostFalso();
       filtro.catch(new AppError(CodigoErro.VALIDACAO_INVALIDA, undefined, { campos: {} }), host);
       expect(res.json.mock.calls[0][0].erro.detalhes).toEqual({ campos: {} });
+    });
+
+    it.each([
+      [413, 'entity.too.large', 413, 'CORPO_MUITO_GRANDE'],
+      [400, 'entity.parse.failed', 400, 'VALIDACAO_INVALIDA'],
+    ])('Cenário: erro do body-parser %i %s → %i %s', (status, type, esperado, codigo) => {
+      const { host, res } = hostFalso();
+      filtro.catch(Object.assign(new Error('parser'), { status, type }), host);
+      expect(res.status).toHaveBeenCalledWith(esperado);
+      expect(res.json.mock.calls[0][0].erro.codigo).toBe(codigo);
+    });
+
+    it('Cenário: 404 da página pública tem cache curto; o do painel não', () => {
+      const publico = hostFalso('a', '/v1/publico/filiais/abc');
+      filtro.catch(new AppError(CodigoErro.RECURSO_NAO_ENCONTRADO), publico.host);
+      expect(publico.res.setHeader).toHaveBeenCalledWith('Cache-Control', 'public, max-age=10');
+      const painel = hostFalso();
+      filtro.catch(new AppError(CodigoErro.RECURSO_NAO_ENCONTRADO), painel.host);
+      expect(painel.res.setHeader).not.toHaveBeenCalledWith('Cache-Control', expect.anything());
     });
 
     it('Cenário: 404 de rota do Nest → RECURSO_NAO_ENCONTRADO', () => {

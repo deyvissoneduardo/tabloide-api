@@ -21,6 +21,7 @@ export enum CodigoErro {
   MUITAS_TENTATIVAS = 'MUITAS_TENTATIVAS',
   ERRO_INTERNO = 'ERRO_INTERNO',
   ARMAZENAMENTO_INDISPONIVEL = 'ARMAZENAMENTO_INDISPONIVEL',
+  CORPO_MUITO_GRANDE = 'CORPO_MUITO_GRANDE',
 }
 
 export const STATUS_POR_CODIGO: Record<CodigoErro, number> = {
@@ -46,6 +47,7 @@ export const STATUS_POR_CODIGO: Record<CodigoErro, number> = {
   [CodigoErro.MUITAS_TENTATIVAS]: 429,
   [CodigoErro.ERRO_INTERNO]: 500,
   [CodigoErro.ARMAZENAMENTO_INDISPONIVEL]: 503,
+  [CodigoErro.CORPO_MUITO_GRANDE]: 413,
 };
 
 export const MENSAGEM_POR_CODIGO: Record<CodigoErro, string> = {
@@ -73,4 +75,5 @@ export const MENSAGEM_POR_CODIGO: Record<CodigoErro, string> = {
   [CodigoErro.MUITAS_TENTATIVAS]: 'Muitas tentativas. Aguarde e tente novamente.',
   [CodigoErro.ERRO_INTERNO]: 'Erro interno. Tente novamente em instantes.',
   [CodigoErro.ARMAZENAMENTO_INDISPONIVEL]: 'Não foi possível salvar a imagem agora. Tente novamente.',
+  [CodigoErro.CORPO_MUITO_GRANDE]: 'A requisição é maior que o tamanho permitido.',
 };

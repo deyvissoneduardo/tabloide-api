@@ -44,6 +44,8 @@ import { SaudeModule } from './modules/saude/saude.module';
         throttlers: limitesDeRequisicao({
           LOGIN_RATE_LIMIT: config.get('LOGIN_RATE_LIMIT', { infer: true }),
           LOGIN_RATE_TTL_SECONDS: config.get('LOGIN_RATE_TTL_SECONDS', { infer: true }),
+          PUBLICO_RATE_LIMIT_POR_MIN: config.get('PUBLICO_RATE_LIMIT_POR_MIN', { infer: true }),
+          PAINEL_RATE_LIMIT_POR_MIN: config.get('PAINEL_RATE_LIMIT_POR_MIN', { infer: true }),
         }),
       }),
     }),

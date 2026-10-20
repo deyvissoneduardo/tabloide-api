@@ -10,9 +10,19 @@ const CODIGO_POR_STATUS_HTTP: Partial<Record<number, CodigoErro>> = {
   [HttpStatus.UNAUTHORIZED]: CodigoErro.NAO_AUTENTICADO,
   [HttpStatus.NOT_FOUND]: CodigoErro.RECURSO_NAO_ENCONTRADO,
   [HttpStatus.METHOD_NOT_ALLOWED]: CodigoErro.RECURSO_NAO_ENCONTRADO,
-  [HttpStatus.PAYLOAD_TOO_LARGE]: CodigoErro.VALIDACAO_INVALIDA,
+  [HttpStatus.PAYLOAD_TOO_LARGE]: CodigoErro.CORPO_MUITO_GRANDE,
   [HttpStatus.TOO_MANY_REQUESTS]: CodigoErro.MUITAS_TENTATIVAS,
 };
+
+/** Erros do body-parser (http-errors): JSON malformado, corpo acima do limite (100 KB). */
+function erroDoBodyParser(exception: unknown): AppError | null {
+  if (typeof exception !== 'object' || exception === null) return null;
+  const { status, type } = exception as { status?: unknown; type?: unknown };
+  if (typeof status !== 'number' || typeof type !== 'string' || status < 400 || status >= 500) return null;
+  return new AppError(
+    status === HttpStatus.PAYLOAD_TOO_LARGE ? CodigoErro.CORPO_MUITO_GRANDE : CodigoErro.VALIDACAO_INVALIDA,
+  );
+}
 
 @Catch()
 export class AppExceptionFilter implements ExceptionFilter {
@@ -26,6 +36,10 @@ export class AppExceptionFilter implements ExceptionFilter {
 
     if (req?.id) res.setHeader('x-request-id', String(req.id));
     if (erro.codigo === CodigoErro.MUITAS_TENTATIVAS) this.copiarRetryAfter(res);
+    // página pública: o 404 também é cacheável, mas por pouco tempo (lojista recém-ativado)
+    if (erro.codigo === CodigoErro.RECURSO_NAO_ENCONTRADO && req?.originalUrl?.startsWith('/v1/publico/')) {
+      res.setHeader('Cache-Control', 'public, max-age=10');
+    }
     res.status(erro.status).json({
       erro: {
         codigo: erro.codigo,
@@ -48,6 +62,8 @@ export class AppExceptionFilter implements ExceptionFilter {
       const codigo = CODIGO_POR_STATUS_HTTP[exception.getStatus()];
       if (codigo) return new AppError(codigo);
     }
+    const doParser = erroDoBodyParser(exception);
+    if (doParser) return doParser;
     const traduzido = traduzirErroPg(exception);
     if (traduzido) return traduzido;
 
