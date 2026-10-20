@@ -1,0 +1,38 @@
+# Tabloide Digital API — Fase 5: página pública, saúde e métricas
+# A página pública não tem autenticação. Troque @codigo pelo codigoPublico de uma filial
+# (devolvido em POST/GET /painel/filiais) de um lojista ATIVO.
+
+@base = http://localhost:3000/v1
+@codigo = k7Qm2xPa
+@adminKey = troque-por-uma-chave-longa-de-no-minimo-32-caracteres
+
+### Página pública (200 com ETag e Cache-Control: public, max-age=30, stale-while-revalidate=300)
+# @name pagina
+GET {{base}}/publico/filiais/{{codigo}}
+Accept-Encoding: gzip
+
+### Revalidação com o ETag recebido → 304 sem corpo
+GET {{base}}/publico/filiais/{{codigo}}
+If-None-Match: {{pagina.response.headers.ETag}}
+
+### HEAD (mesmos headers, sem corpo)
+HEAD {{base}}/publico/filiais/{{codigo}}
+
+### Formato inválido → 404 "Página não encontrada." com Cache-Control: public, max-age=10
+GET {{base}}/publico/filiais/abc
+
+### Código válido inexistente → o mesmo 404 (também para filial excluída e lojista não ativo)
+GET {{base}}/publico/filiais/zzzzzzzz
+
+### Rate limit: acima de 300 requisições por minuto do mesmo IP → 429 MUITAS_TENTATIVAS com Retry-After
+# Repita a requisição acima em loop (ex.: autocannon -a 301 {{base}}/publico/filiais/{{codigo}})
+
+### Liveness (não depende do banco)
+GET {{base}}/saude/vivo
+
+### Readiness (banco em até 1 s; 503 durante o desligamento)
+GET {{base}}/saude/pronto
+
+### Métricas Prometheus (sem a chave → 404)
+GET {{base}}/admin/metricas
+X-Admin-Key: {{adminKey}}
