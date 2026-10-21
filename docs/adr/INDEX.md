@@ -1,0 +1,22 @@
+# Architecture Decision Records — INDEX
+
+> Ultima atualizacao: 2026-10-21 (14 ADRs)
+
+<!-- ADR-INDEX-START -->
+| ID | Titulo | Status | Tags | Problema (1-linha) | Decisao (1-linha) |
+|----|--------|--------|------|---------------------|--------------------|
+| 0001 | Isolamento multi-tenant em três camadas com trava no ORM | accepted | security, data, architecture | Todos os lojistas compartilham as mesmas tabelas. Um único where sem tenantId vaza dados de um lo... | O tenantId vem só do JWT e é o primeiro parâmetro de todo service do painel. Models @TenantScoped... |
+| 0002 | Camada View (presenters) e dependências de camada impostas por ESLint | accepted | architecture | Os models Sequelize carregam campos que não podem sair na resposta (tenantId, deletedAt, senhaHas... | Cada módulo segue Model → Service → Controller, e toda resposta passa por uma função de views/.vi... |
+| 0003 | Migrations em SQL, reversíveis e compatíveis com a versão anterior | accepted | data, build | O schema usa recursos do Postgres que o Sequelize não modela bem (EXCLUDE com GiST, índices parci... | Migrations são arquivos JS do sequelize-cli em src/database/migrations/, com DDL em SQL cru e up/... |
+| 0004 | Exclusão lógica com cascata no service via registry | accepted | data, architecture | Toda exclusão é lógica (RN25): o histórico e a auditoria precisam continuar consultáveis. Excluir... | Models de tenant usam paranoid: true (deletedat). A cascata é feita no service, em transação, por... |
+| 0005 | Transação explícita por parâmetro, sem Sequelize.useCLS | accepted | data | Muitas escritas tocam várias linhas e gravam auditoria. O projeto já usa nestjs-cls para tenantId... | Toda escrita que toca mais de uma linha ou grava auditoria usa sequelize.transaction() gerenciada... |
+| 0006 | Datas de vigência como DATEONLY e fuso por filial | accepted | data | Panfletos e produtos têm vigência por dia (RN24), e filiais podem estar em fusos diferentes. "Hoj... | Datas de vigência são DATEONLY no banco e string YYYY-MM-DD (tipo DataISO) no TypeScript, compara... |
+| 0007 | Contrato de erros único com códigos de negócio | accepted | error-handling, http | O painel e a página pública precisam distinguir erros de negócio (período sobreposto, categoria c... | Todo erro sai no formato { erro: { codigo, mensagem, detalhes } } pelo AppExceptionFilter. Erros ... |
+| 0008 | Constraints do banco como garantia final, traduzidas no filtro | accepted | data, validation, error-handling | Regras como e-mail único, panfletos sem sobreposição de período e preço original maior que o prom... | As restrições do banco (CHECK, UNIQUE, EXCLUDE) duplicam as validações do service de propósito. E... |
+| 0009 | Dinheiro como inteiro em centavos, inclusive na API | accepted | data, http | Produtos têm preço promocional e preço original, com regras de comparação (RN21) e teto. Valores ... | Dinheiro é sempre inteiro em centavos: INTEGER no banco, number inteiro no domínio e campos Centa... |
+| 0010 | IDs UUID v7 gerados na aplicação | accepted | data, security | IDs aparecem em URLs do painel e não podem ser enumeráveis (RNF05). As tabelas principais são con... | Toda PK é uuid versão 7, gerada no service com v7() da lib uuid antes do insert. |
+| 0011 | Storage de mídia atrás de StoragePort, sem remoção | accepted | architecture | Panfletos, fotos de produto e logos são imagens. Em produção ficam no Supabase Storage, mas o des... | O armazenamento fica atrás de StoragePort, com adapter de disco em dev e de Supabase em produção ... |
+| 0012 | JWT HS256 de 8 h sem refresh token | accepted | auth, security | Cada lojista tem um único login (RN05) e usa o painel em sessões de trabalho. O MVP precisa de au... | A autenticação usa um access token JWT HS256 com expiração de 8 h, sem refresh token. Trocar a se... |
+| 0013 | Rate limit e caches em memória por instância | accepted | performance, security | A API roda em 2 máquinas no Fly.io e precisa de rate limit (login, cadastro, admin, página públic... | O rate limit (@nestjs/throttler) e os caches (status do lojista, página pública) ficam em memória... |
+| 0014 | Testes de integração com Postgres real e cenários de vazamento obrigatórios | accepted | testing | Várias regras dependem do Postgres: EXCLUDE com GiST, citext, índices parciais, triggers e a trad... | Os testes de integração (test//.int-spec.ts) rodam contra Postgres 16 real via Testcontainers, co... |
+<!-- ADR-INDEX-END -->
