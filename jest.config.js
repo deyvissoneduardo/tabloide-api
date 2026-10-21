@@ -2,7 +2,15 @@ const base = {
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: '.',
   testEnvironment: 'node',
-  transform: { '^.+\\.ts$': ['ts-jest', { tsconfig: 'tsconfig.json' }] },
+  transform: {
+    '^.+\\.ts$': [
+      'ts-jest',
+      {
+        tsconfig: 'tsconfig.json',
+        astTransformers: { before: ['<rootDir>/test/helpers/swagger-transformer.js'] },
+      },
+    ],
+  },
 };
 
 module.exports = {
