@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsOptional } from 'class-validator';
+import { ApiDataISO } from '../../../common/swagger/data-iso.decorator';
 import type { DataISO } from '../../../common/utils/date-only';
 import { IsDataISO } from '../../../common/validators/is-data-iso.validator';
 
@@ -11,10 +12,12 @@ export class CriarPanfletoDto {
   @vazioParaUndefined()
   @IsOptional()
   @IsDataISO()
+  @ApiDataISO({ obrigatorio: false })
   dataInicio?: DataISO;
 
   @vazioParaUndefined()
   @IsOptional()
   @IsDataISO()
+  @ApiDataISO({ obrigatorio: false })
   dataLimite?: DataISO;
 }

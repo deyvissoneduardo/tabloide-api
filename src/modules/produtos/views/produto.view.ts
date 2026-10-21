@@ -1,27 +1,35 @@
+import { ApiDataISO } from '../../../common/swagger/data-iso.decorator';
 import type { DataISO } from '../../../common/utils/date-only';
 import { calcularSituacao } from '../../vigencia/domain/situacao';
 import type { Situacao } from '../../vigencia/domain/vigencia.types';
 import type { Produto } from '../models/produto.model';
 
-export interface ProdutoView {
-  id: string;
-  filialId: string;
-  categoria: { id: string; nome: string };
-  nome: string;
-  quantidade: string | null;
-  precoPromocionalCentavos: number;
-  precoOriginalCentavos: number | null;
-  descricao: string | null;
-  observacao: string | null;
-  urlFoto: string | null;
-  dataInicio: DataISO;
-  dataLimite: DataISO | null;
-  situacao: Situacao;
-  editavel: boolean;
-  dataInicioEditavel: boolean;
-  criadoEm: string;
-  atualizadoEm: string;
-  excluidoEm: string | null;
+export class CategoriaDoProdutoView {
+  id!: string;
+  nome!: string;
+}
+
+export class ProdutoView {
+  id!: string;
+  filialId!: string;
+  categoria!: CategoriaDoProdutoView;
+  nome!: string;
+  quantidade!: string | null;
+  precoPromocionalCentavos!: number;
+  precoOriginalCentavos!: number | null;
+  descricao!: string | null;
+  observacao!: string | null;
+  urlFoto!: string | null;
+  @ApiDataISO()
+  dataInicio!: DataISO;
+  @ApiDataISO({ anulavel: true })
+  dataLimite!: DataISO | null;
+  situacao!: Situacao;
+  editavel!: boolean;
+  dataInicioEditavel!: boolean;
+  criadoEm!: string;
+  atualizadoEm!: string;
+  excluidoEm!: string | null;
 }
 
 /**

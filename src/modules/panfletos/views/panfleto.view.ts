@@ -1,20 +1,23 @@
+import { ApiDataISO } from '../../../common/swagger/data-iso.decorator';
 import type { DataISO } from '../../../common/utils/date-only';
 import { calcularSituacao } from '../../vigencia/domain/situacao';
 import type { Situacao } from '../../vigencia/domain/vigencia.types';
 import type { Panfleto } from '../models/panfleto.model';
 
-export interface PanfletoView {
-  id: string;
-  filialId: string;
-  urlImagem: string;
-  largura: number;
-  altura: number;
-  dataInicio: DataISO;
-  dataLimite: DataISO | null;
-  situacao: Situacao;
-  editavel: boolean;
-  criadoEm: string;
-  excluidoEm: string | null;
+export class PanfletoView {
+  id!: string;
+  filialId!: string;
+  urlImagem!: string;
+  largura!: number;
+  altura!: number;
+  @ApiDataISO()
+  dataInicio!: DataISO;
+  @ApiDataISO({ anulavel: true })
+  dataLimite!: DataISO | null;
+  situacao!: Situacao;
+  editavel!: boolean;
+  criadoEm!: string;
+  excluidoEm!: string | null;
 }
 
 /**

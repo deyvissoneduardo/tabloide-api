@@ -1,4 +1,6 @@
+import { ApiHideProperty } from '@nestjs/swagger';
 import { IsInt, IsString, IsUUID, Length, Max, Min, ValidateIf } from 'class-validator';
+import { ApiDataISO } from '../../../common/swagger/data-iso.decorator';
 import { CENTAVOS_MAXIMO } from '../../../common/utils/money';
 import type { DataISO } from '../../../common/utils/date-only';
 import { IsDataISO } from '../../../common/validators/is-data-iso.validator';
@@ -58,12 +60,15 @@ export class EditarProdutoDto {
   /** null não é aceito: todo produto tem início (RN40). */
   @presente('dataInicio')
   @IsDataISO()
+  @ApiDataISO({ obrigatorio: false })
   dataInicio?: DataISO;
 
   @presente('dataLimite')
   @IsDataISO({ anulavel: true })
+  @ApiDataISO({ obrigatorio: false, anulavel: true })
   dataLimite?: DataISO | null;
 
   @AoMenosUmCampo()
+  @ApiHideProperty()
   readonly corpo?: never;
 }

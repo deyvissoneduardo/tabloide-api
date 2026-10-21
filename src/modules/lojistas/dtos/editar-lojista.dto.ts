@@ -1,3 +1,4 @@
+import { ApiHideProperty } from '@nestjs/swagger';
 import { IsOptional, IsString, Length } from 'class-validator';
 import {
   NormalizarCnpj,
@@ -32,5 +33,6 @@ export class EditarLojistaDto {
   cnpj?: string | null;
 
   @AoMenosUmCampo()
+  @ApiHideProperty()
   readonly corpo?: never;
 }

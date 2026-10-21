@@ -9,13 +9,19 @@ export interface CategoriaComContagem {
   updatedAt: Date;
 }
 
-export interface CategoriaView {
-  id: string;
-  nome: string;
-  produtos: { vigentes: number; agendados: number; vencidos: number };
-  podeExcluir: boolean;
-  criadoEm: string;
-  atualizadoEm: string;
+export class ContagemProdutosView {
+  vigentes!: number;
+  agendados!: number;
+  vencidos!: number;
+}
+
+export class CategoriaView {
+  id!: string;
+  nome!: string;
+  produtos!: ContagemProdutosView;
+  podeExcluir!: boolean;
+  criadoEm!: string;
+  atualizadoEm!: string;
 }
 
 /** podeExcluir antecipa a RN20 para o front; os vencidos são excluídos junto com a categoria. */

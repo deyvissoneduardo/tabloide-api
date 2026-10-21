@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsInt, IsOptional, IsString, IsUUID, Length, Max, Min } from 'class-validator';
+import { ApiDataISO } from '../../../common/swagger/data-iso.decorator';
 import { CENTAVOS_MAXIMO } from '../../../common/utils/money';
 import type { DataISO } from '../../../common/utils/date-only';
 import { IsDataISO } from '../../../common/validators/is-data-iso.validator';
@@ -59,10 +60,12 @@ export class CriarProdutoDto {
   @vazioParaUndefined()
   @IsOptional()
   @IsDataISO()
+  @ApiDataISO({ obrigatorio: false })
   dataInicio?: DataISO;
 
   @vazioParaUndefined()
   @IsOptional()
   @IsDataISO()
+  @ApiDataISO({ obrigatorio: false })
   dataLimite?: DataISO;
 }

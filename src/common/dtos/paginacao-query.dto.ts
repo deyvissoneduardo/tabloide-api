@@ -1,3 +1,4 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
 
@@ -5,12 +6,15 @@ export const POR_PAGINA_PADRAO = 50;
 export const POR_PAGINA_MAXIMO = 100;
 
 export class PaginacaoQueryDto {
+  // têm default: o plugin os marcaria como obrigatórios
+  @ApiPropertyOptional({ type: 'integer' })
   @IsOptional()
   @Type(() => Number)
   @IsInt({ message: 'pagina deve ser inteiro ≥ 1' })
   @Min(1, { message: 'pagina deve ser inteiro ≥ 1' })
   pagina: number = 1;
 
+  @ApiPropertyOptional({ type: 'integer' })
   @IsOptional()
   @Type(() => Number)
   @IsInt({ message: `porPagina deve estar entre 1 e ${POR_PAGINA_MAXIMO}` })

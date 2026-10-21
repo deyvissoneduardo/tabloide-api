@@ -2,15 +2,15 @@ import type { Pagina } from '../../../common/dtos/paginacao-query.dto';
 import { urlPublicaDaFilial } from '../domain/url-publica';
 import type { Filial } from '../models/filial.model';
 
-export interface FilialView {
-  id: string;
-  nome: string;
-  endereco: string;
-  fusoHorario: string;
-  codigoPublico: string;
-  urlPublica: string;
-  criadaEm: string;
-  atualizadaEm: string;
+export class FilialView {
+  id!: string;
+  nome!: string;
+  endereco!: string;
+  fusoHorario!: string;
+  codigoPublico!: string;
+  urlPublica!: string;
+  criadaEm!: string;
+  atualizadaEm!: string;
 }
 
 /** Nunca expõe tenantId nem deletedAt. */

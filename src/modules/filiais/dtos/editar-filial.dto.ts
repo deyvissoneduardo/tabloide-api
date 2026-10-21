@@ -1,3 +1,4 @@
+import { ApiHideProperty } from '@nestjs/swagger';
 import { IsOptional, IsString, Length, MaxLength } from 'class-validator';
 import { NormalizarEspacos } from '../../../common/validators/transformacoes';
 import { AoMenosUmCampo } from '../../../common/validators/validadores';
@@ -22,5 +23,6 @@ export class EditarFilialDto {
   fusoHorario?: string;
 
   @AoMenosUmCampo()
+  @ApiHideProperty()
   readonly corpo?: never;
 }

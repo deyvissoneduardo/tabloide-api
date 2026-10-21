@@ -1,3 +1,4 @@
+import { ApiHideProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsOptional, IsString, Length, Matches, ValidateIf } from 'class-validator';
 import { NormalizarEspacos } from '../../../common/validators/transformacoes';
@@ -28,5 +29,6 @@ export class EditarIdentidadeDto {
   corSecundaria?: string | null;
 
   @AoMenosUmCampo()
+  @ApiHideProperty()
   readonly corpo?: never;
 }

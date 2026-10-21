@@ -1,23 +1,54 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { ApiDataISO } from '../../../common/swagger/data-iso.decorator';
 import type { DataISO } from '../../../common/utils/date-only';
 import type { PaginaPublica, ProdutoRow } from '../domain/montar-pagina';
 
-export interface ProdutoPublicoJson {
-  nome: string;
+export class ProdutoPublicoJson {
+  nome!: string;
   quantidade?: string;
   descricao?: string;
   observacao?: string;
-  precoPromocionalCentavos: number;
+  precoPromocionalCentavos!: number;
   precoOriginalCentavos?: number;
   fotoUrl?: string;
+  @ApiDataISO({ obrigatorio: false })
   validoAte?: DataISO;
 }
 
-export interface PaginaPublicaJson {
-  lojista: { nome: string; logoUrl: string | null; corPrimaria: string | null; corSecundaria: string | null };
-  filial: { nome: string; endereco: string };
-  panfleto: { imagemUrl: string; largura: number; altura: number; validoAte?: DataISO } | null;
-  categorias: Array<{ nome: string; produtos: ProdutoPublicoJson[] }>;
-  hoje: DataISO;
+export class LojistaPublicoJson {
+  nome!: string;
+  logoUrl!: string | null;
+  corPrimaria!: string | null;
+  corSecundaria!: string | null;
+}
+
+export class FilialPublicaJson {
+  nome!: string;
+  endereco!: string;
+}
+
+export class PanfletoPublicoJson {
+  imagemUrl!: string;
+  largura!: number;
+  altura!: number;
+  @ApiDataISO({ obrigatorio: false })
+  validoAte?: DataISO;
+}
+
+export class CategoriaPublicaJson {
+  nome!: string;
+  produtos!: ProdutoPublicoJson[];
+}
+
+export class PaginaPublicaJson {
+  lojista!: LojistaPublicoJson;
+  filial!: FilialPublicaJson;
+  // união com null: o plugin não resolve sozinho
+  @ApiProperty({ type: () => PanfletoPublicoJson, nullable: true })
+  panfleto!: PanfletoPublicoJson | null;
+  categorias!: CategoriaPublicaJson[];
+  @ApiDataISO()
+  hoje!: DataISO;
   geradoEm?: string;
 }
 
