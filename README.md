@@ -57,10 +57,13 @@ As variáveis são validadas na subida (`src/config/env.schema.ts`); a API não 
 | `CORS_ORIGENS_PAINEL` | produção | — | Origens do painel, só `https://`, sem `*` |
 | `PORT` | não | `3000` | Porta HTTP |
 | `LOG_LEVEL` | não | `info` | `fatal` … `trace` |
+| `SWAGGER_HABILITADO` | não | `false` | Expõe `/docs` (Swagger UI) e `/docs-json` (spec OpenAPI); manter `false` em produção |
 
 Os demais (limites de taxa, cache da página pública, imagens, desligamento) têm default e estão no `.env.example`. Segredos de produção ficam em `fly secrets`, nunca no repositório.
 
 ## Endpoints / API
+
+Com `SWAGGER_HABILITADO=true`, a documentação interativa fica em [`http://localhost:3000/docs`](http://localhost:3000/docs) e a spec OpenAPI 3 em `/docs-json`. Para testar rotas do painel, faça `POST /v1/auth/login` e cole o `token` em **Authorize**. As rotas `/v1/admin` ficam fora da documentação.
 
 Exemplos prontos de requisição, por fase:
 

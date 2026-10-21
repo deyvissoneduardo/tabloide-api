@@ -36,3 +36,9 @@ GET {{base}}/saude/pronto
 ### Métricas Prometheus (sem a chave → 404)
 GET {{base}}/admin/metricas
 X-Admin-Key: {{adminKey}}
+
+### Spec OpenAPI 3 (só com SWAGGER_HABILITADO=true; senão 404). Fora do prefixo /v1
+GET http://localhost:3000/docs-json
+
+### Swagger UI: abra no navegador http://localhost:3000/docs
+GET http://localhost:3000/docs
