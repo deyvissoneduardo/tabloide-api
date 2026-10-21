@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 import { MetricasService } from './common/observabilidade/metricas.service';
 import { medirDuracao } from './common/observabilidade/medir-duracao.middleware';
+import { configurarSwagger } from './common/swagger/swagger.config';
 import { AppConfig } from './config/app.config';
 import { corsPorRota } from './config/http.config';
 
@@ -23,6 +24,8 @@ export function configurarApp(app: NestExpressApplication): NestExpressApplicati
   app.useBodyParser('urlencoded', { limit: '100kb', extended: false });
   app.enableCors(corsPorRota(config.corsOrigensPainel));
   app.setGlobalPrefix('v1');
+  // depois do prefixo, para a spec sair com /v1 nos paths
+  configurarSwagger(app);
   app.enableShutdownHooks();
   return app;
 }
