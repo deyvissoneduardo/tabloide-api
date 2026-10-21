@@ -6,3 +6,5 @@ coverage/
 plans/
 .midia/
 test/carga/codigos.json
+
+.DS_Store

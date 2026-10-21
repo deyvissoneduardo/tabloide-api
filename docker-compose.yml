@@ -12,5 +12,21 @@ services:
       test: ['CMD-SHELL', 'pg_isready -U tabloide']
       interval: 5s
       retries: 10
+  # só desenvolvimento: sem login (modo desktop) e com o servidor já cadastrado; senha do banco: tabloide
+  pgadmin:
+    image: dpage/pgadmin4:9.9
+    environment:
+      PGADMIN_DEFAULT_EMAIL: dev@tabloide.app
+      PGADMIN_DEFAULT_PASSWORD: tabloide
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports: ['5050:80']
+    volumes:
+      - pgadmindata:/var/lib/pgadmin
+      - ./docker/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
 volumes:
   pgdata:
+  pgadmindata:

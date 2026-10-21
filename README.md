@@ -41,6 +41,8 @@ Confira se subiu:
 curl http://localhost:3000/v1/saude/pronto
 ```
 
+Opcional, para inspecionar o banco: `docker compose up -d pgadmin` sobe o pgAdmin em [`http://localhost:5050`](http://localhost:5050), sem login e com o servidor `tabloide (local)` já cadastrado (senha do banco: `tabloide`).
+
 ## Configuração
 
 As variáveis são validadas na subida (`src/config/env.schema.ts`); a API não sobe com valor inválido. O [`.env.example`](.env.example) traz todas, com valores de desenvolvimento.
