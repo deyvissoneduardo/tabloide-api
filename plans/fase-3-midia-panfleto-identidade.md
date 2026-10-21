@@ -80,7 +80,7 @@ Perfis em `modules/midia/domain/perfis-imagem.ts`, como constantes, sem número 
 10. **Erros novos** no catálogo: `ARMAZENAMENTO_INDISPONIVEL`; garantir o mapeamento de `IMAGEM_INVALIDA`, `IMAGEM_MUITO_GRANDE`, `PANFLETO_PERIODO_SOBREPOSTO` e `PANFLETO_ATUAL_SEM_DATA_LIMITE`; mapear `23P01` com constraint `panfletos_periodo_sem_sobreposicao` → `PANFLETO_PERIODO_SOBREPOSTO`.
 11. **Migration** `20261101000000-criar-panfletos.js` (seção 7).
 12. **Model** `Panfleto` (seção 8).
-13. **Domínio do panfleto** (`modules/panfletos/domain/conflito-periodo.ts`): função pura `encontrarConflito`. **Filtro de situação** compartilhado (`modules/vigencia/domain/filtro-situacao.ts`): `condicaoAgendado(hoje)`, `condicaoVigente(hoje)`, `condicaoVencido(hoje)` e `filtroSituacao(situacoes, hoje) → { where, paranoid }`, criado nesta fase no módulo `vigencia` porque a Fase 4 (produtos e contagens de categorias) reaproveita.
+13. **Domínio do panfleto** (`modules/panfletos/domain/conflito-periodo.ts`): função pura `encontrarConflito`. **Filtro de situação** compartilhado (`modules/vigencia/consultas/filtro-situacao.ts`): `condicaoAgendado(hoje)`, `condicaoVigente(hoje)`, `condicaoVencido(hoje)` e `filtroSituacao(situacoes, hoje) → { where, paranoid }`, criado nesta fase no módulo `vigencia` porque a Fase 4 (produtos e contagens de categorias) reaproveita.
 14. **`PanfletosService`**, **`PanfletoView`**, DTOs e **`PanfletosController`**.
 15. **`PanfletosExclusaoCascata`** (`nome = 'panfletos'`, `ordem = 30`) registrado no `ExclusaoEmCascataFilialRegistry` em `PanfletosModule.onModuleInit()`, no padrão da Fase 2 (10.2).
 16. **Identidade visual**: `IdentidadeService`, `IdentidadeView`, `EditarIdentidadeDto`, `IdentidadeController` dentro de `modules/lojistas`.
@@ -435,7 +435,7 @@ A criação grava auditoria com valor anterior nulo (D3.9, alinhada à D6 da Fas
    - Várias situações: `Op.or` das condições; se `EXCLUIDO` estiver na lista, `paranoid: false` e as outras condições ganham `deleted_at IS NULL`.
 4. `findAndCountAll` com `order: [['dataInicio','DESC'], ['id','DESC']]`, `limit`, `offset` e `attributes` explícitos.
 
-O builder de `where` fica em `modules/vigencia/domain/filtro-situacao.ts` (`filtroSituacao(situacoes, hoje)` e as condições `condicaoAgendado/condicaoVigente/condicaoVencido(hoje)`), puro e testável, e é **reaproveitado pelos produtos e categorias na Fase 4**.
+O builder de `where` fica em `modules/vigencia/consultas/filtro-situacao.ts` (`filtroSituacao(situacoes, hoje)` e as condições `condicaoAgendado/condicaoVigente/condicaoVencido(hoje)`), puro e testável, e é **reaproveitado pelos produtos e categorias na Fase 4**.
 
 #### `detalhar(tenantId, filialId, id)`
 
@@ -1519,18 +1519,54 @@ Funcionalidade: Vazamento entre tenants (RNF04)
 
 ## 16. Checklist de pronto
 
-- [ ] Variáveis de ambiente novas validadas por zod, com regra `production ⇒ supabase`.
-- [ ] Migration `criar-panfletos` aplica e reverte; `btree_gist` habilitado local e no Supabase.
-- [ ] `StoragePort` + 2 adapters + `ImageProcessor` + `MidiaService` com testes da seção 13.1–13.4 e 13.13.
-- [ ] `encontrarConflito` e `filtroSituacao` (em `vigencia/domain`) com 100% de branches.
-- [ ] `PanfletosService` com todos os cenários da 13.7; cobertura ≥ 90% (linhas e branches).
-- [ ] `PanfletoView`, DTOs, interceptor e controllers (13.8–13.12).
-- [ ] Identidade visual (13.9) e rotas `/v1/painel/lojista/identidade` e `/logo`.
-- [ ] `PanfletosExclusaoCascata` (ordem 30) registrado no `ExclusaoEmCascataFilialRegistry` e testado em integração com a exclusão de filial.
-- [ ] Auditoria na criação (D3.9) e evento `filial.conteudo-alterado` após o commit em criar/editarDatas/trocarImagem/excluir e na identidade (D3.10), com cenários de rollback sem evento.
-- [ ] `MidiaService.processar` consulta `VerificadorLimites.maxImagemBytes`.
-- [ ] Integração: EXCLUDE, CHECK, concorrência, fluxo HTTP, auditoria e vazamento entre tenants (seção 14) verdes.
-- [ ] `ARMAZENAMENTO_INDISPONIVEL` incluído no catálogo de erros da visão geral.
-- [ ] Bucket `midia` documentado (público, 5 MB, `image/webp`) para o deploy da Fase 5.
-- [ ] Arquivo `.http`/Postman com exemplos de todas as rotas da fase (incluindo multipart).
-- [ ] Nenhum `new Date()` em regra de negócio; nenhum `findByPk` em model `@TenantScoped`.
+- [x] Variáveis de ambiente novas validadas por zod, com regra `production ⇒ supabase`.
+- [x] Migration `criar-panfletos` aplica e reverte; `btree_gist` habilitado local e no Supabase.
+- [x] `StoragePort` + 2 adapters + `ImageProcessor` + `MidiaService` com testes da seção 13.1–13.4 e 13.13.
+- [x] `encontrarConflito` e `filtroSituacao` (em `vigencia/domain`) com 100% de branches.
+- [x] `PanfletosService` com todos os cenários da 13.7; cobertura ≥ 90% (linhas e branches).
+- [x] `PanfletoView`, DTOs, interceptor e controllers (13.8–13.12).
+- [x] Identidade visual (13.9) e rotas `/v1/painel/lojista/identidade` e `/logo`.
+- [x] `PanfletosExclusaoCascata` (ordem 30) registrado no `ExclusaoEmCascataFilialRegistry` e testado em integração com a exclusão de filial.
+- [x] Auditoria na criação (D3.9) e evento `filial.conteudo-alterado` após o commit em criar/editarDatas/trocarImagem/excluir e na identidade (D3.10), com cenários de rollback sem evento.
+- [x] `MidiaService.processar` consulta `VerificadorLimites.maxImagemBytes`.
+- [x] Integração: EXCLUDE, CHECK, concorrência, fluxo HTTP, auditoria e vazamento entre tenants (seção 14) verdes.
+- [x] `ARMAZENAMENTO_INDISPONIVEL` incluído no catálogo de erros da visão geral.
+- [x] Bucket `midia` documentado (público, 5 MB, `image/webp`) para o deploy da Fase 5.
+- [x] Arquivo `.http`/Postman com exemplos de todas as rotas da fase (incluindo multipart).
+- [x] Nenhum `new Date()` em regra de negócio; nenhum `findByPk` em model `@TenantScoped`.
+
+## 17. Implementação (18/10/2026)
+
+Fase concluída. São 679 testes unitários e 99 de integração passando, estes incluindo as Fases 1 e 2. A cobertura é de 98,4% de linhas e 95,3% de branches. Também testei a app real em development: upload de um JPEG 3000x4000, que saiu como WebP 1800x2400 com 27 KB, servido com `Cache-Control: public, max-age=31536000, immutable`.
+
+### Bucket do Supabase (para o deploy da Fase 5)
+
+Criar manualmente o bucket `midia` com estas opções:
+
+- público;
+- `file_size_limit` de 5 MB;
+- `allowed_mime_types` `['image/webp']`.
+
+Variáveis de produção: `STORAGE_DRIVER=supabase`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (só no servidor) e, para a migration, `DB_EXTENSIONS_SCHEMA=extensions`.
+
+### Desvios em relação a este plano
+
+| Item | Plano | Implementado | Motivo |
+| --- | --- | --- | --- |
+| `@nestjs/serve-static` | Última versão | `@5` | A 12 exige NestJS 12; o projeto está no 11 |
+| `filtroSituacao` | `vigencia/domain/filtro-situacao.ts` | `vigencia/consultas/filtro-situacao.ts` | Depende do `Op` do Sequelize; a regra de lint proíbe Sequelize em `domain/`. Referências nas Fases 4 e 5 e na visão geral corrigidas |
+| Filial no `PanfletosService` | `@InjectModel(Filial)` | `FiliaisService.obter(tenantId, id, { transaction, lock })` | Contrato único da Fase 2 para validar a filial do path |
+| "hoje" | `hojeNoFuso` + `ClockService` | `VigenciaService.hojeDaFilial(filial)` | Mesmo cálculo, contrato da Fase 2 |
+| `PanfletoView.de(p, hoje, storage)` | View recebe o storage | `panfletoView(p, hoje, urlImagem)` | A regra de lint do MVC proíbe view importar service |
+| `IdentidadeView.de(lojista, storage)` | Idem | `identidadeView(lojista, urlLogo)` | Idem |
+| Interceptor de upload | `FileInterceptor` com limites fixos | `UploadImagemInterceptor` (injetável) que envolve o `FileInterceptor` com `MAX_IMAGEM_BYTES` do env e traduz os erros do multer | O limite vem da configuração, e o arquivo ausente vira `400` com a mensagem em `detalhes.campos.imagem` |
+| `ServeStaticModule` | Condicional no `MidiaModule` | `MidiaLocalModule` com `forRootAsync`, que devolve lista vazia fora de development | O `NODE_ENV` é lido do `ConfigService` já validado |
+| `ImageProcessor.converter` | Privado | `protected` | O teste de concorrência (D3.8) simula a duração do sharp |
+| Erro interno do storage | `ErroInterno` | `Error` comum (vira `500 ERRO_INTERNO` com log no filtro) | Não existe classe `ErroInterno` no contrato de erros |
+| Mensagem de arquivo ausente | "envie a imagem do panfleto" | "Envie a imagem no campo \"imagem\"." | O mesmo interceptor atende panfleto e logo |
+| Cenário 13.12 `@SomenteLeituraPermitida` em GET | Marcar GET | Não aplicado | O `TenantStatusGuard` já libera GET para desativado; o decorator só faz sentido em POST de leitura |
+| CHECK `panfletos_datas_validas` | Não mapeado | Mapeado para `DATA_LIMITE_INVALIDA` | Mesma regra (RN42) caso o service seja contornado |
+| Timeout dos testes unitários | 5 s | 15 s (`test/helpers/jest-unit.setup.ts`) | Na primeira execução após mudanças, o ts-jest recompila em todos os workers e testes com CPU real (argon2, QR Code, sharp) passavam às vezes dos 5 s |
+| `mensagemDeErro(err)` | Inline nos services | `common/errors/mensagem-de-erro.ts` | Repetido em dois services |
+
+Contratos entregues para a Fase 4: `MidiaService.processar(tenantId, buffer, 'produto')`, `salvar(tenantId, 'produto', imagem)` e `urlPublica(caminho | null)`; `UploadImagemInterceptor`; `filtroSituacao`/`condicao*` em `vigencia/consultas`; e a factory `test/factories/panfleto.factory.ts` com o helper `test/helpers/imagens.ts`.

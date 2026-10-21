@@ -780,9 +780,9 @@ Funcionalidade: Vigência avaliada no fuso da filial (RN24, RNF06)
     E em "America/Sao_Paulo" (23:30 do dia 18) a situação é "VIGENTE"
 
   Cenário: data histórica com horário de verão usa as regras do tzdata
-    Dado o instante "2018-11-04T02:30:00Z" (quando havia horário de verão em São Paulo, UTC-2)
+    Dado o instante "2019-01-15T02:30:00Z" (horário de verão em São Paulo, UTC-2)
     Quando calculo hoje em "America/Sao_Paulo"
-    Então hoje é "2018-11-04"
+    Então hoje é "2019-01-15" (em UTC-3 seria "2019-01-14")
     # Garante que a lib usa a regra correta da época; para datas atuais, o Brasil não tem horário de verão
 
   Cenário: mesma filial, várias avaliações no mesmo request usam o mesmo "hoje"
@@ -1653,19 +1653,50 @@ Requests de exemplo, com o JWT em variável: criar filial (fuso padrão e fuso d
 
 ## 15. Checklist de pronto
 
-- [ ] Dependências e variáveis de ambiente (`PUBLIC_BASE_URL`, `FUSO_HORARIO_PADRAO`) validadas pelo zod.
-- [ ] Migrations `auditoria_alteracoes` e `filiais` sobem e descem.
-- [ ] Constraints: `filiais_codigo_publico_uk` (não parcial), formato, nome/endereço não vazios, entidade da auditoria; trigger append-only.
-- [ ] Models com `@TenantScoped()`; `Filial` com `paranoid: true`.
-- [ ] Funções puras de `vigencia/domain` com 100% de linhas e branches.
-- [ ] `VigenciaService` exportado e usado pelas próximas fases.
-- [ ] `AuditoriaService` com `registrarAlteracoes`/`registrarCriacao`/`listar` e `CAMPOS_AUDITADOS` exportado.
-- [ ] `ExclusaoEmCascataFilialRegistry` exportado e documentado para as Fases 3 e 4 (produtos 10, categorias 20, panfletos 30).
-- [ ] `VERIFICADOR_LIMITES` com `SemLimitesVerificador` registrado globalmente.
-- [ ] `ConteudoAlteradoEvento` e `EVENTO_CONTEUDO_ALTERADO` exportados de `common/eventos`; `FiliaisService` emite `filial.conteudo-alterado` só após o commit (criar, editar, excluir).
-- [ ] Rotas de filiais, QR Code e auditoria com status e erros conforme as seções 9.3 e 10.8.
-- [ ] `ParseUuidOu404Pipe` e `@IsDataISO()` disponíveis em `common/`.
-- [ ] Catálogo de erros atualizado com `DATA_INICIO_INVALIDA` em `00-visao-geral.md`.
-- [ ] Todos os cenários BDD da seção 12 implementados e passando; cobertura ≥ 90% em `services/` e `domain/`.
-- [ ] Integração (seção 13), incluindo vazamento entre tenants de filiais e auditoria, passando.
-- [ ] `fase-2.http` atualizado.
+- [x] Dependências e variáveis de ambiente (`PUBLIC_BASE_URL`, `FUSO_HORARIO_PADRAO`) validadas pelo zod.
+- [x] Migrations `auditoria_alteracoes` e `filiais` sobem e descem.
+- [x] Constraints: `filiais_codigo_publico_uk` (não parcial), formato, nome/endereço não vazios, entidade da auditoria; trigger append-only.
+- [x] Models com `@TenantScoped()`; `Filial` com `paranoid: true`.
+- [x] Funções puras de `vigencia/domain` com 100% de linhas e branches.
+- [x] `VigenciaService` exportado e usado pelas próximas fases.
+- [x] `AuditoriaService` com `registrarAlteracoes`/`registrarCriacao`/`listar` e `CAMPOS_AUDITADOS` exportado.
+- [x] `ExclusaoEmCascataFilialRegistry` exportado e documentado para as Fases 3 e 4 (produtos 10, categorias 20, panfletos 30).
+- [x] `VERIFICADOR_LIMITES` com `SemLimitesVerificador` registrado globalmente.
+- [x] `ConteudoAlteradoEvento` e `EVENTO_CONTEUDO_ALTERADO` exportados de `common/eventos`; `FiliaisService` emite `filial.conteudo-alterado` só após o commit (criar, editar, excluir).
+- [x] Rotas de filiais, QR Code e auditoria com status e erros conforme as seções 9.3 e 10.8.
+- [x] `ParseUuidOu404Pipe` e `@IsDataISO()` disponíveis em `common/`.
+- [x] Catálogo de erros atualizado com `DATA_INICIO_INVALIDA` em `00-visao-geral.md`.
+- [x] Todos os cenários BDD da seção 12 implementados e passando; cobertura ≥ 90% em `services/` e `domain/`.
+- [x] Integração (seção 13), incluindo vazamento entre tenants de filiais e auditoria, passando.
+- [x] `fase-2.http` atualizado.
+
+## 16. Implementação (18/10/2026)
+
+Fase concluída. São 492 testes unitários e 71 de integração passando; os 71 incluem os 45 da Fase 1. A cobertura é de 98,4% de linhas e 95,8% de branches, e `vigencia/domain` tem 100%.
+
+Desvios em relação a este plano, todos já refletidos no código:
+
+| Item | Plano | Implementado | Motivo |
+| --- | --- | --- | --- |
+| `AppConfig` | Pressuposto da Fase 1 | Criado nesta fase (`config/app.config.ts`, global), com `publicBaseUrl`, `fusoHorarioPadrao` e `maxImagemBytes` (10 MB fixo até a Fase 3) | Não existia na Fase 1 |
+| `FilialView.de(filial, qr)` | View recebe o `QrCodeService` | `filialView(filial, baseUrlPublica)`, com a função pura `urlPublicaDaFilial` em `filiais/domain` | A regra de lint do MVC proíbe view importar service |
+| `nanoid` | v5 (ESM) ou v3 | v3 (CommonJS) | Funciona com o Jest sem transformação extra |
+| `@NaoVazio()` | Validador próprio | `@NormalizarEspacos()` + `@Length(1, …)` | Depois de aparar os espaços, texto vazio já falha no `Length` |
+| Corpo vazio no PATCH | `@ValidateIf` de classe | `@AoMenosUmCampo()` da Fase 1, com erro em `detalhes.campos.corpo` | Reaproveita o padrão já existente |
+| `request_id` | `varchar(40)` | `varchar(64)` | O `x-request-id` recebido aceita até 64 caracteres (Fase 1) |
+| `created_at`/`updated_at` em `filiais` | Sem default | `DEFAULT now()` | Inserts por SQL (admin e testes) não precisam informar |
+| `ValidationPipe` global | No `AppModule` | `common/pipes/validation.pipe.ts` (`criarValidationPipe`) | Os testes HTTP de controller usam o mesmo pipe |
+| Barrel `vigencia/domain/index.ts` | Não previsto | Não existe; imports diretos | Arquivo sem uso derrubava a meta de 100% |
+| Cenário de horário de verão (12.3) | `2018-11-04T02:30Z` → dia 04 | `2019-01-15T02:30Z` → dia 15 (UTC-2), e `2018-11-04T02:30Z` → dia 03 | O horário de verão de 2018 começou às 00:00 locais de 04/11; o exemplo do plano ainda caía no dia 03 |
+| Teste de PNG do QR Code | Gera e decodifica 1024 px | Confere 1024 px pelo cabeçalho IHDR e decodifica uma imagem de 256 px | Decodificar 1024 px com cobertura e workers em paralelo passava às vezes do timeout de 5 s |
+
+Contratos entregues para as Fases 3 a 5 (nomes exatos do código):
+
+- `ExclusaoEmCascataFilialRegistry.registrar(handler)`, em `modules/filiais/cascata/`, com a interface `ExclusaoEmCascataFilial` (`nome`, `ordem`, `excluirPorFilial(tenantId, filialId, { transaction })`).
+- `FiliaisService.obter(tenantId, id, { transaction?, lock? })`; o `FiliaisModule` exporta `FiliaisService`, o registry, `AuditoriaModule` e `VigenciaModule`.
+- `vigencia/domain`: `calcularSituacao`, `resolverDataInicio`, `validarDatas`, `validarCriacao`, `validarEdicaoDeDatas`, `periodosSeSobrepoem`, `INFINITO` e `normalizarFuso`; `VigenciaService.hojeDaFilial(filial)`.
+- `AuditoriaService.registrarCriacao` e `registrarAlteracoes`, mais `CAMPOS_AUDITADOS` (exige a transação).
+- `VERIFICADOR_LIMITES` / `VerificadorLimites`, com `SemLimitesVerificador` global.
+- `EVENTO_CONTEUDO_ALTERADO` / `ConteudoAlteradoEvento` em `common/eventos`, emitido via `transaction.afterCommit`.
+- `@IsDataISO({ anulavel? })`, `ParseUuidOu404Pipe` e `PaginacaoQueryDto` / `Pagina<T>` em `common/`.
+- Helpers de teste: `test/helpers/transacao-fake.ts`, `test/helpers/app-de-controller.ts` e `test/factories/filial.factory.ts`.

@@ -302,7 +302,7 @@ Uma interface definida numa fase é a fonte de verdade para as seguintes: as fas
 | `VERIFICADOR_LIMITES` / `VerificadorLimites` (`verificarCriacaoFilial`, `verificarCriacaoProduto`, `maxImagemBytes`) com o no-op `SemLimitesVerificador` | `common/limites` | 2 | 2, 3, 4; implementação real (`LimitesService`) na 5 |
 | Evento `EVENTO_CONTEUDO_ALTERADO = 'filial.conteudo-alterado'`, payload `ConteudoAlteradoEvento { tenantId, filialId? }`, emitido em `afterCommit` | `common/eventos` | 2 | emitido em 2, 3, 4; consumido pelo cache na 5 |
 | `MidiaService.processar(tenantId, buffer, perfil)` / `salvar(tenantId, perfil, imagem)` / `urlPublica(caminho)`; `StoragePort` sem remoção; arquivo órfão só logado (`midia.arquivo_orfao`) | `modules/midia` | 3 | 4, 5 |
-| `filtroSituacao(situacoes, hoje)` e `condicaoAgendado/Vigente/Vencido(hoje)`; filtro `situacao` em CSV maiúsculo (`AGENDADO,VIGENTE,VENCIDO,EXCLUIDO`) | `modules/vigencia/domain/filtro-situacao.ts` | 3 | 4 |
+| `filtroSituacao(situacoes, hoje)` e `condicaoAgendado/Vigente/Vencido(hoje)`; filtro `situacao` em CSV maiúsculo (`AGENDADO,VIGENTE,VENCIDO,EXCLUIDO`) | `modules/vigencia/consultas/filtro-situacao.ts` | 3 | 4 |
 | Índices `panfletos_periodo_sem_sobreposicao` (GiST) e `produtos_filial_ativos_idx` | migrations | 3, 4 | 5 (consultas públicas) |
 
 ## Decisões técnicas tomadas nos planos

@@ -39,7 +39,7 @@ Ao fim da fase, o painel tem tudo o que a página pública (Fase 5) vai ler: pan
 | --- | --- |
 | Fase 1 | `JwtAuthGuard`, `TenantStatusGuard` (já bloqueia escrita de lojista desativado com `LOJISTA_DESATIVADO`), `@TenantId()`, hooks `@TenantScoped`, `AppError` e `AppExceptionFilter`, `ClockService`, factories base |
 | Fase 2 | `FiliaisService.obter(tenantId, filialId, { transaction?, lock? })`, que devolve a filial não excluída (com `fusoHorario`) ou lança `RECURSO_NAO_ENCONTRADO`; `VigenciaService.hojeDaFilial(filial)`; funções puras `calcularSituacao`, `validarCriacao(informadas, hoje)` (RN40, RN42, D5 → `DATA_INICIO_INVALIDA`) e `validarEdicaoDeDatas(atual, novas, hoje)` (RN26), que devolvem `ResultadoValidacao` (o service converte em `AppError`); `AuditoriaService.registrarCriacao(...)` e `registrarAlteracoes(tenantId, entidade, entidadeId, antes, depois, camposAuditados, { transaction })` com `CAMPOS_AUDITADOS.PRODUTO` e entidade `'PRODUTO'`; `ExclusaoEmCascataFilialRegistry` e interface `ExclusaoEmCascataFilial` (`nome`, `ordem`, `excluirPorFilial`); `VERIFICADOR_LIMITES` (`VerificadorLimites.verificarCriacaoProduto`); `EVENTO_CONTEUDO_ALTERADO` / `ConteudoAlteradoEvento` |
-| Fase 3 | `MidiaService.processar(tenantId, buffer, 'produto')` → `ImagemProcessada { conteudo, largura, altura, contentType, bytes }` (valida tipo real, tamanho e `maxImagemBytes`, lança `IMAGEM_INVALIDA`/`IMAGEM_MUITO_GRANDE`); `MidiaService.salvar(tenantId, 'produto', imagem)` → caminho `{tenantId}/produto/{uuidv7}.webp`; `MidiaService.urlPublica(caminho)`; estratégia de arquivo órfão (D3.4: não apaga, só loga `midia.arquivo_orfao`; o `StoragePort` não tem `remover`); tradução dos erros do multer; `filtroSituacao` e `condicaoAgendado/condicaoVigente/condicaoVencido(hoje)` em `vigencia/domain/filtro-situacao.ts` |
+| Fase 3 | `MidiaService.processar(tenantId, buffer, 'produto')` → `ImagemProcessada { conteudo, largura, altura, contentType, bytes }` (valida tipo real, tamanho e `maxImagemBytes`, lança `IMAGEM_INVALIDA`/`IMAGEM_MUITO_GRANDE`); `MidiaService.salvar(tenantId, 'produto', imagem)` → caminho `{tenantId}/produto/{uuidv7}.webp`; `MidiaService.urlPublica(caminho)`; estratégia de arquivo órfão (D3.4: não apaga, só loga `midia.arquivo_orfao`; o `StoragePort` não tem `remover`); tradução dos erros do multer; `filtroSituacao` e `condicaoAgendado/condicaoVigente/condicaoVencido(hoje)` em `vigencia/consultas/filtro-situacao.ts` |
 | Utils | `common/utils/text.ts` → `normalizarParaBusca(texto)` (minúsculas, sem acento via `NFD` e remoção de `\p{M}`, espaços colapsados). Se ainda não existir, é criada nesta fase |
 
 ## 4. Decisões desta fase
@@ -469,7 +469,7 @@ GROUP BY c.id
 ORDER BY c.nome_normalizado, c.id;
 ```
 
-`hoje = vigenciaService.hojeDaFilial(filial)`. A consulta é escrita com `Categoria.findAll({ attributes: [..., [fn('COUNT', ...), 'vigentes']], include: [{ model: Produto, attributes: [], required: false }], group, raw: true })` ou com `sequelize.query` parametrizada. Se for `query`, o `tenantId` precisa estar no SQL; o hook de tenant não cobre `query`, e um teste de integração verifica isso. As três condições dos `FILTER` são as mesmas de `calcularSituacao`, centralizadas em `vigencia/domain/filtro-situacao.ts` da Fase 3 (`condicaoVigente(hoje)`, `condicaoAgendado(hoje)`, `condicaoVencido(hoje)`) para não divergirem do domínio.
+`hoje = vigenciaService.hojeDaFilial(filial)`. A consulta é escrita com `Categoria.findAll({ attributes: [..., [fn('COUNT', ...), 'vigentes']], include: [{ model: Produto, attributes: [], required: false }], group, raw: true })` ou com `sequelize.query` parametrizada. Se for `query`, o `tenantId` precisa estar no SQL; o hook de tenant não cobre `query`, e um teste de integração verifica isso. As três condições dos `FILTER` são as mesmas de `calcularSituacao`, centralizadas em `vigencia/consultas/filtro-situacao.ts` da Fase 3 (`condicaoVigente(hoje)`, `condicaoAgendado(hoje)`, `condicaoVencido(hoje)`) para não divergirem do domínio.
 
 **`criar`**:
 
@@ -511,7 +511,7 @@ excluir(tenantId: string, filialId: string, produtoId: string): Promise<void>
 
 1. `filial = filiais.obter(tenantId, filialId)`; `hoje = hojeDaFilial(filial)`
 2. `where = { tenantId, filialId }` + `categoriaId?`
-3. Situação: `{ where: whereSituacao, paranoid } = filtroSituacao(q.situacao, hoje)` (Fase 3, `vigencia/domain/filtro-situacao.ts`), combinado com o `where` do passo 2:
+3. Situação: `{ where: whereSituacao, paranoid } = filtroSituacao(q.situacao, hoje)` (Fase 3, `vigencia/consultas/filtro-situacao.ts`), combinado com o `where` do passo 2:
    - `VIGENTE`: `dataInicio <= hoje AND (dataLimite IS NULL OR dataLimite >= hoje)`
    - `AGENDADO`: `dataInicio > hoje`
    - `VENCIDO`: `dataLimite < hoje`
@@ -1631,7 +1631,7 @@ Funcionalidade: Isolamento de categorias e produtos
 | Exclusões em lote | `destroy` em lote, sem `individualHooks`: um `UPDATE` por tabela |
 | Concorrência | Travas pontuais (`FOR SHARE`/`FOR UPDATE`) só na linha da categoria ou do produto, por tempo mínimo |
 | Contagens | Retornadas já na listagem (`podeExcluir`), evitando uma chamada extra do front antes de excluir |
-| Manutenção | Condições de situação SQL centralizadas em `vigencia/domain/filtro-situacao.ts` (Fase 3), ao lado de `calcularSituacao`; `validarPrecos` puro; services pequenos (`ProdutosService` + `ProdutoFotoService`); limite plugável por token |
+| Manutenção | Condições de situação SQL centralizadas em `vigencia/consultas/filtro-situacao.ts` (Fase 3), ao lado de `calcularSituacao`; `validarPrecos` puro; services pequenos (`ProdutosService` + `ProdutoFotoService`); limite plugável por token |
 | Meta de latência (p95, painel) | `GET /produtos` < 80 ms; `POST /produtos` sem foto < 60 ms; com foto de 3 MB < 800 ms (dominado pelo `sharp` e pelo upload) |
 
 ## 15. Checklist de pronto
