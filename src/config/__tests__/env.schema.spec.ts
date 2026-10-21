@@ -62,6 +62,7 @@ describe('Funcionalidade: Validação das variáveis de ambiente', () => {
     ['PUBLIC_BASE_URL com barra final', { PUBLIC_BASE_URL: 'https://tabloide.app/' }, 'PUBLIC_BASE_URL'],
     ['PUBLIC_BASE_URL sem http', { PUBLIC_BASE_URL: 'ftp://tabloide.app' }, 'PUBLIC_BASE_URL'],
     ['FUSO_HORARIO_PADRAO inválido', { FUSO_HORARIO_PADRAO: 'Marte/Olympus' }, 'FUSO_HORARIO_PADRAO'],
+    ['SWAGGER_HABILITADO fora de true/false', { SWAGGER_HABILITADO: 'sim' }, 'SWAGGER_HABILITADO'],
     ['FUSO_HORARIO_PADRAO não geográfico', { FUSO_HORARIO_PADRAO: 'UTC' }, 'FUSO_HORARIO_PADRAO'],
   ])('Cenário: %s', (_nome, sobrescrita, variavel) => {
     it(`Então lança erro citando ${variavel}`, () => {
@@ -103,7 +104,11 @@ describe('Funcionalidade: Validação das variáveis de ambiente', () => {
         PUBLICO_RATE_LIMIT_POR_MIN: 300,
         SHUTDOWN_DRENAGEM_MS: 5000,
         SHUTDOWN_TIMEOUT_MS: 10000,
+        SWAGGER_HABILITADO: false,
       }));
+
+    it('E SWAGGER_HABILITADO "true" vira booleano', () =>
+      expect(validarEnv({ ...minimo(), SWAGGER_HABILITADO: 'true' }).SWAGGER_HABILITADO).toBe(true));
 
     it('E CORS_ORIGENS_PAINEL vira lista sem espaços', () =>
       expect(

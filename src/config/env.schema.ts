@@ -70,6 +70,8 @@ const envBase = z.object({
   PAINEL_RATE_LIMIT_POR_MIN: z.coerce.number().int().min(1).default(600),
   SHUTDOWN_DRENAGEM_MS: z.coerce.number().int().min(0).default(5000),
   SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().min(0).default(10000),
+  /** Expõe /docs e /docs-json; desligado por padrão para não publicar a superfície da API. */
+  SWAGGER_HABILITADO: booleano,
 });
 
 export const envSchema = envBase.superRefine((env, ctx) => {

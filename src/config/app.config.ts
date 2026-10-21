@@ -75,4 +75,8 @@ export class AppConfig {
       timeoutMs: this.config.get('SHUTDOWN_TIMEOUT_MS', { infer: true }),
     };
   }
+
+  get swaggerHabilitado(): boolean {
+    return this.config.get('SWAGGER_HABILITADO', { infer: true });
+  }
 }
