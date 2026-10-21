@@ -76,6 +76,7 @@
     "pngjs": "^7.0.0",
     "prettier": "^3.9.10",
     "sequelize-cli": "^6.6.5",
+    "supabase": "^2.121.0",
     "supertest": "^7.3.1",
     "ts-jest": "^29.4.15",
     "tsconfig-paths": "^4.2.0",
