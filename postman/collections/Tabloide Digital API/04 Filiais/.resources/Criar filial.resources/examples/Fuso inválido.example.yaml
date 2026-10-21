@@ -1,0 +1,33 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/filiais"
+  method: POST
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "nome": "Centro",
+        "endereco": "Rua das Flores, 120 — Centro, Campinas/SP",
+        "fusoHorario": "America/Sao_Paulo"
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "erro": {
+          "codigo": "FUSO_HORARIO_INVALIDO",
+          "mensagem": "Fuso horário inválido.",
+          "detalhes": {
+            "campo": "fusoHorario"
+          }
+        }
+      }
+order: 2000

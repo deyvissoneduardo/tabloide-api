@@ -1,0 +1,26 @@
+$kind: http-request
+id: bb366e16-5287-58f6-8490-c6841a740eca
+description: Alterações da entidade, da mais recente para a mais antiga. Cada linha tem o campo, os valores anterior e novo (como texto) e o `requestId` da requisição que alterou.
+url: "{{baseUrl}}/painel/auditoria?entidade=PRODUTO&entidadeId={{produtoId}}&pagina=1&porPagina=50"
+method: GET
+queryParams:
+  - key: entidade
+    value: PRODUTO
+    description: "`FILIAL`, `PANFLETO` ou `PRODUTO`."
+  - key: entidadeId
+    value: "{{produtoId}}"
+    description: Id (UUID v7) da entidade.
+  - key: pagina
+    value: "1"
+    description: Página (≥ 1).
+  - key: porPagina
+    value: "50"
+    description: Itens por página (1–100).
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Histórico de um produto.resources/examples
+order: 1000

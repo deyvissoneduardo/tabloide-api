@@ -1,0 +1,20 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/filiais/:filialId/categorias/:categoriaId"
+  method: DELETE
+  pathVariables:
+    - key: filialId
+      value: "{{filialId}}"
+      description: Id (UUID v7) da filial do lojista logado.
+    - key: categoriaId
+      value: "{{categoriaTemporariaId}}"
+      description: Id (UUID v7) da categoria. O script de pré-requisição preenche com uma categoria temporária.
+response:
+  statusCode: 204
+  statusText: No Content
+  headers:
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: text
+    content: ""
+order: 1000

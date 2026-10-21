@@ -1,0 +1,72 @@
+name: 'Tabloide — dev'
+values:
+  - key: baseUrl
+    value: 'http://localhost:3000/v1'
+    enabled: true
+    type: default
+    description: 'URL base da API, já com o prefixo /v1.'
+  - key: email
+    value: 'ana@bompreco.com.br'
+    enabled: true
+    type: default
+    description: 'E-mail do lojista usado em Cadastrar e Login.'
+  - key: senha
+    value: 'senhaForte1'
+    enabled: true
+    type: secret
+    description: 'Senha do lojista (8 a 128 caracteres, com letra e número). Em prod, preencha só no valor local (Current value).'
+  - key: novaSenha
+    value: 'novaSenha123'
+    enabled: true
+    type: secret
+    description: 'Senha usada em Admin → Redefinir senha.'
+  - key: token
+    value: ''
+    enabled: true
+    type: secret
+    description: 'JWT do lojista. Preenchido automaticamente por Cadastrar e Login.'
+  - key: adminKey
+    value: ''
+    enabled: true
+    type: secret
+    description: 'Valor de ADMIN_API_KEY do servidor (header X-Admin-Key). Nunca compartilhe nem sincronize o valor de prod.'
+  - key: lojistaId
+    value: ''
+    enabled: true
+    type: default
+    description: 'Id do lojista logado. Preenchido por Cadastrar e Login.'
+  - key: filialId
+    value: ''
+    enabled: true
+    type: default
+    description: 'Id da filial em uso. Preenchido por Filiais → Criar filial.'
+  - key: codigoPublico
+    value: ''
+    enabled: true
+    type: default
+    description: 'Código de 8 caracteres da filial, usado na página pública e no QR Code. Preenchido por Criar filial.'
+  - key: panfletoId
+    value: ''
+    enabled: true
+    type: default
+    description: 'Preenchido por Panfletos → Criar panfleto.'
+  - key: categoriaId
+    value: ''
+    enabled: true
+    type: default
+    description: 'Preenchido por Categorias → Criar categoria.'
+  - key: produtoId
+    value: ''
+    enabled: true
+    type: default
+    description: 'Preenchido por Produtos → Cadastrar produto.'
+  - key: etag
+    value: ''
+    enabled: true
+    type: default
+    description: 'ETag da última leitura da página pública, usado em "Revalidar com If-None-Match".'
+  - key: arquivoImagem
+    value: 'postman/arquivos/exemplo.jpg'
+    enabled: true
+    type: default
+    description: 'Caminho (relativo à pasta api/) da imagem enviada nos uploads.'

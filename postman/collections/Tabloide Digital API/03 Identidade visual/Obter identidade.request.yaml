@@ -1,0 +1,13 @@
+$kind: http-request
+id: cf701438-266e-50e0-ab9e-31920590b590
+description: Nome fantasia, cores (`#RRGGBB` ou `null`) e URL pública do logo (ou `null`).
+url: "{{baseUrl}}/painel/lojista/identidade"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Obter identidade.resources/examples
+order: 1000

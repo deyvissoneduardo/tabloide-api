@@ -1,0 +1,23 @@
+$kind: http-request
+id: 5b641fa9-e33e-5565-bc1d-604e6acad6f8
+description: Edição parcial de `nomeFantasia` (2–120), `corPrimaria` e `corSecundaria` (`#RRGGBB`; minúsculas são convertidas; `null` remove a cor). Corpo vazio responde 400.
+url: "{{baseUrl}}/painel/lojista/identidade"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nomeFantasia": "Mercado Bom Preço",
+      "corPrimaria": "#C8102E",
+      "corSecundaria": "#ffd100"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Editar identidade.resources/examples
+order: 2000

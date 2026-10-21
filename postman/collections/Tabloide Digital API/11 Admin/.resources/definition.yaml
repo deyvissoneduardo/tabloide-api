@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  Rotas do administrador da plataforma, protegidas pelo header `X-Admin-Key` (variável secreta `adminKey`). Sem a chave, ou com a chave errada, respondem **404**.
+
+  Ativar e desativar lojistas e configurar limites são feitos direto no banco (veja `docs/operacao/runbook.md`).
+order: 11000

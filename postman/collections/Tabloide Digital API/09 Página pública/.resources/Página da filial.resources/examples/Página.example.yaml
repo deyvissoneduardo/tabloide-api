@@ -1,0 +1,79 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/publico/filiais/:codigo"
+  method: GET
+  headers:
+    - key: Accept-Encoding
+      value: gzip
+      description: A página é enviada já comprimida quando o cliente aceita gzip.
+  pathVariables:
+    - key: codigo
+      value: "{{codigoPublico}}"
+      description: Código público da filial (8 caracteres, alfabeto sem 0 1 i l o I O).
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json; charset=utf-8
+    Cache-Control: public, max-age=30, stale-while-revalidate=300
+    ETag: W/"pQ3x9vT2aB7kLm0d"
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "lojista": {
+          "nome": "Mercado Bom Preço",
+          "logoUrl": "https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/logo/0192f0e0.webp",
+          "corPrimaria": "#C8102E",
+          "corSecundaria": "#FFD100"
+        },
+        "filial": {
+          "nome": "Centro",
+          "endereco": "Rua das Flores, 120 — Centro, Campinas/SP"
+        },
+        "panfleto": {
+          "imagemUrl": "https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp",
+          "largura": 1600,
+          "altura": 2263,
+          "validoAte": "2026-10-31"
+        },
+        "categorias": [
+          {
+            "nome": "Bebidas",
+            "produtos": [
+              {
+                "nome": "Água mineral",
+                "quantidade": "1,5 L",
+                "precoPromocionalCentavos": 249
+              },
+              {
+                "nome": "Refrigerante cola",
+                "quantidade": "2 L",
+                "precoPromocionalCentavos": 799,
+                "precoOriginalCentavos": 1099,
+                "observacao": "limite 3 por cliente",
+                "fotoUrl": "https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/produto/0192f0d2.webp",
+                "validoAte": "2026-10-20"
+              }
+            ]
+          },
+          {
+            "nome": "Mercearia",
+            "produtos": [
+              {
+                "nome": "Arroz Tipo 1",
+                "quantidade": "5kg",
+                "precoPromocionalCentavos": 2199,
+                "precoOriginalCentavos": 2649,
+                "observacao": "Limite 3 por cliente",
+                "fotoUrl": "https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/produto/0192f0d1.webp",
+                "validoAte": "2026-10-25"
+              }
+            ]
+          }
+        ],
+        "hoje": "2026-10-18",
+        "geradoEm": "2026-10-18T15:04:05.123Z"
+      }
+order: 1000

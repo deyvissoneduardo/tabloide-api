@@ -1,0 +1,29 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/auth/login"
+  method: POST
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "email": "{{email}}",
+        "senha": "{{senha}}"
+      }
+response:
+  statusCode: 401
+  statusText: Unauthorized
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "erro": {
+          "codigo": "CREDENCIAIS_INVALIDAS",
+          "mensagem": "E-mail ou senha incorretos."
+        }
+      }
+order: 2000

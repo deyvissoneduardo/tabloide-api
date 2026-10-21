@@ -1,0 +1,30 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/lojista/logo"
+  method: PUT
+  body:
+    type: formdata
+    content:
+      - type: file
+        key: imagem
+        src: "{{arquivoImagem}}"
+        description: JPEG, PNG ou WebP; até MAX_IMAGEM_BYTES (10 MB) ou o limite do lojista.
+response:
+  statusCode: 413
+  statusText: Payload Too Large
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "erro": {
+          "codigo": "IMAGEM_MUITO_GRANDE",
+          "mensagem": "A imagem é maior que o tamanho permitido.",
+          "detalhes": {
+            "maxBytes": 10485760
+          }
+        }
+      }
+order: 3000

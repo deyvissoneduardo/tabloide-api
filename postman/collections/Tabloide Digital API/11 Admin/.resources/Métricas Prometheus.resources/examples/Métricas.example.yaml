@@ -1,0 +1,22 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/admin/metricas"
+  method: GET
+  headers:
+    - key: X-Admin-Key
+      value: "{{adminKey}}"
+      description: Chave de admin (ADMIN_API_KEY do servidor).
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: text/plain; version=0.0.4; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: text
+    content: |
+      # HELP publico_cache_total Leituras do cache da página pública por resultado
+      # TYPE publico_cache_total counter
+      publico_cache_total{resultado="hit"} 183
+      publico_cache_total{resultado="miss"} 17
+order: 1000

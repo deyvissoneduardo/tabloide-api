@@ -1,0 +1,20 @@
+$kind: http-request
+id: dd16485e-d483-566a-a449-2cbec630803c
+description: Inclui excluídos, para consulta.
+url: "{{baseUrl}}/painel/filiais/:filialId/produtos/:produtoId"
+method: GET
+pathVariables:
+  - key: filialId
+    value: "{{filialId}}"
+    description: Id (UUID v7) da filial do lojista logado.
+  - key: produtoId
+    value: "{{produtoId}}"
+    description: Id (UUID v7) do produto.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Obter produto.resources/examples
+order: 4000

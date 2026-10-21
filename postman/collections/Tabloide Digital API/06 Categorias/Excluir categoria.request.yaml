@@ -1,0 +1,35 @@
+$kind: http-request
+id: d8478025-fc65-5f2d-9670-60750ab6d86f
+description: |-
+  RN20: com produtos vigentes ou agendados, responde 409 `CATEGORIA_COM_PRODUTOS_ATIVOS` com as contagens. Os vencidos são excluídos logicamente junto com a categoria. Responde 204.
+
+  > Para não apagar a categoria usada pelo módulo de produtos, o script de pré-requisição cria uma **categoria temporária** e esta requisição exclui ela. Para excluir uma categoria sua, troque o valor de `:categoriaId` (por exemplo, por `{{categoriaId}}`).
+url: "{{baseUrl}}/painel/filiais/:filialId/categorias/:categoriaId"
+method: DELETE
+pathVariables:
+  - key: filialId
+    value: "{{filialId}}"
+    description: Id (UUID v7) da filial do lojista logado.
+  - key: categoriaId
+    value: "{{categoriaTemporariaId}}"
+    description: Id (UUID v7) da categoria. O script de pré-requisição preenche com uma categoria temporária.
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Cria um recurso temporário só para esta exclusão; para excluir outro, troque o path variable.
+      pm.sendRequest({
+        url: pm.environment.get('baseUrl') + '/painel/filiais/{{filialId}}/categorias'.replace('{{filialId}}', pm.environment.get('filialId')),
+        method: 'POST',
+        header: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + pm.environment.get('token') },
+        body: { mode: 'raw', raw: JSON.stringify({ nome: 'Temporária ' + Date.now() }) },
+      }, (err, res) => {
+        if (!err && res.code === 201) pm.variables.set('categoriaTemporariaId', res.json().id);
+      });
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (204)', () => pm.expect(pm.response.code).to.be.oneOf([204]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Excluir categoria.resources/examples
+order: 4000

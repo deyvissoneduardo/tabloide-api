@@ -1,0 +1,31 @@
+$kind: http-request
+id: da65ba17-cc7c-5df0-a89f-5dec18006d84
+description: "Redefine a senha (RN36): 8–128 caracteres com letra e número. Responde 204. Limite de 10 por minuto. Depois de rodar, o Login da coleção usa `senha`: atualize a variável se for continuar."
+url: "{{baseUrl}}/admin/lojistas/:id/senha"
+method: PATCH
+headers:
+  - key: X-Admin-Key
+    value: "{{adminKey}}"
+    description: Chave de admin (ADMIN_API_KEY do servidor).
+  - key: Content-Type
+    value: application/json
+pathVariables:
+  - key: id
+    value: "{{lojistaId}}"
+    description: Id (UUID v7) do lojista.
+body:
+  type: json
+  content: |-
+    {
+      "novaSenha": "{{novaSenha}}"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (204)', () => pm.expect(pm.response.code).to.be.oneOf([204]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Redefinir senha do lojista.resources/examples
+order: 1000

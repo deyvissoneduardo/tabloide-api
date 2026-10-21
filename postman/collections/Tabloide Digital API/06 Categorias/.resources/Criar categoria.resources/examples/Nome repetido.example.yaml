@@ -1,0 +1,32 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/filiais/:filialId/categorias"
+  method: POST
+  headers:
+    Content-Type: application/json
+  pathVariables:
+    - key: filialId
+      value: "{{filialId}}"
+      description: Id (UUID v7) da filial do lojista logado.
+  body:
+    type: json
+    content: |-
+      {
+        "nome": "Mercearia"
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "erro": {
+          "codigo": "CATEGORIA_JA_EXISTE",
+          "mensagem": "Já existe uma categoria com esse nome nesta filial."
+        }
+      }
+order: 2000

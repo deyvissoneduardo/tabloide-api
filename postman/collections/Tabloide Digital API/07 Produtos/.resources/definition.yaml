@@ -1,0 +1,3 @@
+$kind: collection
+description: Ofertas com preço "de/por" em centavos e vigência (RN19, RN21, RN26, RN40, RN42). Toda alteração de preço ou data é auditada (RNF07). O cadastro aceita JSON ou multipart com a foto na mesma requisição (RNF09).
+order: 7000

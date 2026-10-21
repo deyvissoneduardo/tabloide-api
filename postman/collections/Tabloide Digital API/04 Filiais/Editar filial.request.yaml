@@ -1,0 +1,27 @@
+$kind: http-request
+id: 6957e898-b537-5f84-ab9e-40c710bd4820
+description: Edição parcial de `nome`, `endereco` e `fusoHorario`. O `codigoPublico` não muda (RN39). A troca de fuso é auditada e muda o "hoje" usado na vigência dos itens.
+url: "{{baseUrl}}/painel/filiais/:id"
+method: PATCH
+headers:
+  Content-Type: application/json
+pathVariables:
+  - key: id
+    value: "{{filialId}}"
+    description: Id (UUID v7) da filial.
+body:
+  type: json
+  content: |-
+    {
+      "nome": "Centro",
+      "endereco": "Rua das Flores, 120 — Centro, Campinas/SP",
+      "fusoHorario": "America/Sao_Paulo"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Editar filial.resources/examples
+order: 4000

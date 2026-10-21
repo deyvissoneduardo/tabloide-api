@@ -1,0 +1,38 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/filiais/:id"
+  method: PATCH
+  headers:
+    Content-Type: application/json
+  pathVariables:
+    - key: id
+      value: "{{filialId}}"
+      description: Id (UUID v7) da filial.
+  body:
+    type: json
+    content: |-
+      {
+        "nome": "Centro",
+        "endereco": "Rua das Flores, 120 — Centro, Campinas/SP",
+        "fusoHorario": "America/Sao_Paulo"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "id": "0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02",
+        "nome": "Centro",
+        "endereco": "Rua das Flores, 120 — Centro, Campinas/SP",
+        "fusoHorario": "America/Sao_Paulo",
+        "codigoPublico": "k7Qm2xPa",
+        "urlPublica": "https://tabloide.app/f/k7Qm2xPa",
+        "criadaEm": "2026-10-18T13:05:00.000Z",
+        "atualizadaEm": "2026-10-18T13:05:00.000Z"
+      }
+order: 1000

@@ -1,0 +1,17 @@
+$kind: http-request
+id: b85d9afb-1a40-5967-bbdc-0cb0a4c58481
+description: Todas as categorias não excluídas da filial, em ordem alfabética, sem paginação. Cada uma traz a contagem de produtos por situação e `podeExcluir` (`vigentes + agendados = 0`).
+url: "{{baseUrl}}/painel/filiais/:filialId/categorias"
+method: GET
+pathVariables:
+  - key: filialId
+    value: "{{filialId}}"
+    description: Id (UUID v7) da filial do lojista logado.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Listar categorias.resources/examples
+order: 2000

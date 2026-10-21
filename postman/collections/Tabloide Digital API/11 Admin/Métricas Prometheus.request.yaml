@@ -1,0 +1,19 @@
+$kind: http-request
+id: c008eddd-598c-59c2-b134-c1194dfd657a
+description: "Métricas em texto Prometheus: `http_request_duration_seconds{metodo,rota,status}`, `publico_cache_total{resultado}`, `publico_cache_entradas`, `db_pool_em_uso`, `db_pool_espera` e as padrão do processo."
+url: "{{baseUrl}}/admin/metricas"
+method: GET
+headers:
+  - key: X-Admin-Key
+    value: "{{adminKey}}"
+    description: Chave de admin (ADMIN_API_KEY do servidor).
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Métricas Prometheus.resources/examples
+order: 2000

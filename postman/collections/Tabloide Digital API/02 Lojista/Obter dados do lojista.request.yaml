@@ -1,0 +1,13 @@
+$kind: http-request
+id: 140d5892-2610-544c-ae26-03f591151005
+description: Dados do lojista do token, com o `status` atual (`AGUARDANDO_ATIVACAO`, `ATIVO` ou `DESATIVADO`). Nunca expõe a senha.
+url: "{{baseUrl}}/painel/lojista"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Obter dados do lojista.resources/examples
+order: 1000

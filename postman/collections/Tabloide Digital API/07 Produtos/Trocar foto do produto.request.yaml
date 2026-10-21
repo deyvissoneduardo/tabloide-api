@@ -1,0 +1,27 @@
+$kind: http-request
+id: 3bb64491-f88f-5ae6-b279-2d681518e3a4
+description: "Troca a foto de produto vigente ou agendado. Sem arquivo: 400. A foto anterior continua no storage."
+url: "{{baseUrl}}/painel/filiais/:filialId/produtos/:produtoId/foto"
+method: PUT
+pathVariables:
+  - key: filialId
+    value: "{{filialId}}"
+    description: Id (UUID v7) da filial do lojista logado.
+  - key: produtoId
+    value: "{{produtoId}}"
+    description: Id (UUID v7) do produto.
+body:
+  type: formdata
+  content:
+    - type: file
+      key: foto
+      src: "{{arquivoImagem}}"
+      description: Obrigatório. JPEG, PNG ou WebP.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Trocar foto do produto.resources/examples
+order: 6000

@@ -1,0 +1,3 @@
+$kind: collection
+description: Categorias próprias de cada filial (RN18–RN20). O nome é único por filial, sem diferenciar acento e caixa. Na página pública só aparecem categorias com produto vigente (RN41).
+order: 6000

@@ -1,0 +1,8 @@
+$kind: collection
+description: |-
+  O que o consumidor vê ao ler o QR Code (RN23, RN27–RN32, RN35, RN41). Sem autenticação, 300 requisições por minuto por IP.
+
+  Em uma resposta: identidade do lojista, filial, panfleto vigente e produtos vigentes agrupados por categoria, em ordem alfabética. Campos opcionais vazios são omitidos. Nunca expõe ids nem dados internos.
+
+  Só funciona para lojista **ATIVO**: filial inexistente, excluída ou de lojista não ativo respondem o **mesmo** 404.
+order: 9000

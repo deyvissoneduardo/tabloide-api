@@ -1,0 +1,3 @@
+$kind: collection
+description: Dados cadastrais do lojista logado. E-mail, senha e status não são editáveis por aqui.
+order: 2000

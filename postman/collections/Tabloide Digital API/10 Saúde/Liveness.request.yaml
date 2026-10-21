@@ -1,0 +1,15 @@
+$kind: http-request
+id: de215ebf-88aa-5599-9111-f1aa2a96d5db
+description: O processo responde. Não depende do banco (usado para reiniciar o container).
+url: "{{baseUrl}}/saude/vivo"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Liveness.resources/examples
+order: 1000

@@ -1,0 +1,28 @@
+$kind: http-request
+id: b885c24b-acc2-5ae0-8f03-5806d48c09e3
+description: Renomeia (mesmas regras do cadastro). Mesmo nome é aceito sem alteração.
+url: "{{baseUrl}}/painel/filiais/:filialId/categorias/:categoriaId"
+method: PATCH
+headers:
+  Content-Type: application/json
+pathVariables:
+  - key: filialId
+    value: "{{filialId}}"
+    description: Id (UUID v7) da filial do lojista logado.
+  - key: categoriaId
+    value: "{{categoriaId}}"
+    description: Id (UUID v7) da categoria.
+body:
+  type: json
+  content: |-
+    {
+      "nome": "Mercearia e Grãos"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Renomear categoria.resources/examples
+order: 3000

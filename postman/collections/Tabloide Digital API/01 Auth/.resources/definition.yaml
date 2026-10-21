@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  Cadastro e login do lojista. Rotas públicas, com rate limit próprio.
+
+  Os dois devolvem a sessão (`lojista`, `token`, `expiraEm`); os scripts gravam `token` e `lojistaId` no ambiente.
+order: 1000

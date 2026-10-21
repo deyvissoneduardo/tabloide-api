@@ -1,0 +1,32 @@
+$kind: http-request
+id: 842a348d-9b6c-595a-93e0-8350c77691f5
+description: |-
+  Exclusão lógica (RN12, RN25) da filial e, na mesma transação, dos produtos, categorias e panfletos dela. A página pública passa a responder 404. Responde 204 sem corpo.
+
+  > Para a coleção rodar de ponta a ponta sem apagar a filial usada nos módulos seguintes, o script de pré-requisição cria uma **filial temporária** e esta requisição exclui ela. Para excluir uma filial sua, troque o valor de `:id` (por exemplo, por `{{filialId}}`).
+url: "{{baseUrl}}/painel/filiais/:id"
+method: DELETE
+pathVariables:
+  - key: id
+    value: "{{filialTemporariaId}}"
+    description: Id (UUID v7) da filial. O script de pré-requisição preenche com uma filial temporária.
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Cria um recurso temporário só para esta exclusão; para excluir outro, troque o path variable.
+      pm.sendRequest({
+        url: pm.environment.get('baseUrl') + '/painel/filiais'.replace('{{filialId}}', pm.environment.get('filialId')),
+        method: 'POST',
+        header: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + pm.environment.get('token') },
+        body: { mode: 'raw', raw: JSON.stringify({ nome: 'Filial temporária', endereco: 'Rua da exclusão, 1' }) },
+      }, (err, res) => {
+        if (!err && res.code === 201) pm.variables.set('filialTemporariaId', res.json().id);
+      });
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (204)', () => pm.expect(pm.response.code).to.be.oneOf([204]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Excluir filial.resources/examples
+order: 6000

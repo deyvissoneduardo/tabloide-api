@@ -1,0 +1,43 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/auth/cadastro"
+  method: POST
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "nomeFantasia": "Mercado Bom Preço",
+        "nomeResponsavel": "Ana Souza",
+        "email": "{{email}}",
+        "senha": "{{senha}}",
+        "whatsapp": "(11) 98765-4321",
+        "cnpj": "11.222.333/0001-81"
+      }
+response:
+  statusCode: 400
+  statusText: Bad Request
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "erro": {
+          "codigo": "VALIDACAO_INVALIDA",
+          "mensagem": "Dados inválidos.",
+          "detalhes": {
+            "campos": {
+              "senha": [
+                "A senha precisa ter de 8 a 128 caracteres, com ao menos uma letra e um número."
+              ],
+              "whatsapp": [
+                "Informe um WhatsApp válido com DDD."
+              ]
+            }
+          }
+        }
+      }
+order: 3000

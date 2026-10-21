@@ -1,0 +1,15 @@
+$kind: http-request
+id: e8c54ff9-53c2-5ae8-a40f-bd3f7ef5acf6
+description: Banco respondendo em até 1 s e o processo fora do desligamento. 503 tira a instância do load balancer.
+url: "{{baseUrl}}/saude/pronto"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Readiness.resources/examples
+order: 2000

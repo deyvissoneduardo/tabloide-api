@@ -1,0 +1,35 @@
+$kind: http-request
+id: 51f0f275-c764-534c-8297-89e376e31b16
+description: Produtos da filial em ordem alfabética, com situação e flags `editavel` e `dataInicioEditavel` para o front.
+url: "{{baseUrl}}/painel/filiais/:filialId/produtos?situacao=VIGENTE,AGENDADO&pagina=1&porPagina=50"
+method: GET
+queryParams:
+  - key: situacao
+    value: VIGENTE,AGENDADO
+    description: CSV com AGENDADO, VIGENTE, VENCIDO, EXCLUIDO. Ausente = todos os não excluídos.
+  - key: categoriaId
+    value: "{{categoriaId}}"
+    disabled: true
+    description: Filtra por categoria.
+  - key: busca
+    value: arroz
+    disabled: true
+    description: Busca no nome sem acento nem caixa ("acucar" acha "Açúcar"); até 60.
+  - key: pagina
+    value: "1"
+    description: Página (≥ 1).
+  - key: porPagina
+    value: "50"
+    description: Itens por página (1–100).
+pathVariables:
+  - key: filialId
+    value: "{{filialId}}"
+    description: Id (UUID v7) da filial do lojista logado.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Listar produtos.resources/examples
+order: 3000

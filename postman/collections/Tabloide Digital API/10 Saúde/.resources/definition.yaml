@@ -1,0 +1,3 @@
+$kind: collection
+description: Health checks para o load balancer e o monitoramento. Sem autenticação, sem rate limit e sem log de acesso.
+order: 10000

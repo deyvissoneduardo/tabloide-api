@@ -1,0 +1,91 @@
+$kind: collection
+id: b8199d83-6eee-59b3-aff6-4f0ce5ca23b7
+description: |
+  # Tabloide Digital API
+
+  API REST do **Tabloide Digital**: o lojista cadastra filiais, panfletos, categorias e produtos em oferta no **painel**, e o consumidor vê a **página pública** da filial ao ler o QR Code.
+
+  - Prefixo de todas as rotas: `/v1`.
+  - Formato: JSON (`application/json; charset=utf-8`). Uploads usam `multipart/form-data`.
+  - Stack: NestJS + Sequelize + PostgreSQL (Supabase em produção); imagens no Supabase Storage.
+
+  ## Como usar esta coleção
+
+  1. Escolha o ambiente **Tabloide — dev** (API local em `http://localhost:3000/v1`) ou **Tabloide — prod**.
+  2. Rode **Auth → Cadastrar lojista** (ou **Login**). O script da requisição grava `token` e `lojistaId` no ambiente; as demais rotas do painel usam o `token` automaticamente (auth Bearer herdada da coleção).
+  3. Rode **Filiais → Criar filial**: grava `filialId` e `codigoPublico`. Os módulos de panfletos, categorias e produtos usam esses ids, e cada "criar" grava o id do recurso criado (`panfletoId`, `categoriaId`, `produtoId`).
+  4. A **página pública** só aparece para lojista **ATIVO**. Um lojista recém-cadastrado fica `AGUARDANDO_ATIVACAO` até o administrador ativá-lo no banco (veja `docs/operacao/runbook.md`).
+  5. As rotas de **Admin** usam o header `X-Admin-Key` com a variável secreta `adminKey`; sem ela respondem 404.
+
+  Uploads: as requisições multipart apontam para `postman/arquivos/exemplo.jpg`. No app do Postman, defina a pasta do repositório `api/` como *working directory* (Settings → General) ou escolha outro arquivo no campo.
+
+  ## Autenticação
+
+  | Rotas | Como |
+  | --- | --- |
+  | `/v1/painel/*` | `Authorization: Bearer <token>` (JWT HS256, validade `JWT_EXPIRES_IN`, padrão 8 h). O tenant vem **sempre** do token, nunca do corpo |
+  | `/v1/auth/*`, `/v1/publico/*`, `/v1/saude/*` | Sem autenticação |
+  | `/v1/admin/*` | Header `X-Admin-Key` (segredo do servidor). Chave ausente ou errada responde **404**, para não revelar a rota |
+
+  Lojista **DESATIVADO** pode ler o painel, mas toda escrita responde `403 LOJISTA_DESATIVADO`.
+
+  ## Contrato de erros
+
+  Todo erro tem o mesmo formato e o header `x-request-id` (use-o ao reportar problemas):
+
+  ```json
+  { "erro": { "codigo": "VALIDACAO_INVALIDA", "mensagem": "Dados inválidos.", "detalhes": { "campos": { "nome": ["..."] } } } }
+  ```
+
+  | Código | HTTP | Quando | Como tratar |
+  | --- | --- | --- | --- |
+  | `VALIDACAO_INVALIDA` | 400 | Corpo, query ou campo desconhecido inválido (`detalhes.campos` lista as mensagens por campo) | Corrigir a entrada conforme `detalhes.campos`; não repetir igual |
+  | `NAO_AUTENTICADO` | 401 | Token ausente, inválido ou expirado | Fazer login de novo e repetir com o novo token |
+  | `CREDENCIAIS_INVALIDAS` | 401 | E-mail ou senha incorretos no login | Pedir e-mail e senha de novo; não repetir em loop (rate limit) |
+  | `LOJISTA_DESATIVADO` | 403 | Escrita por lojista desativado | Não recuperável pelo cliente: só leitura até o administrador reativar |
+  | `RECURSO_NAO_ENCONTRADO` | 404 | Não existe, foi excluído, pertence a outro lojista ou o id não é UUID v7 | Conferir o id e a filial do path; não repetir |
+  | `EMAIL_JA_CADASTRADO` | 409 | Cadastro com e-mail já usado | Usar outro e-mail ou fazer login |
+  | `PANFLETO_PERIODO_SOBREPOSTO` | 409 | Período de panfleto sobrepõe outro da filial (`detalhes.conflitoCom`) | Ajustar as datas para não cruzar `detalhes.conflitoCom` |
+  | `PANFLETO_ATUAL_SEM_DATA_LIMITE` | 409 | Agendar panfleto enquanto o atual não tem data limite | Definir `dataLimite` no panfleto atual e repetir |
+  | `CATEGORIA_COM_PRODUTOS_ATIVOS` | 409 | Excluir categoria com produtos vigentes ou agendados (`detalhes.vigentes/agendados`) | Excluir ou mover os produtos ativos e repetir |
+  | `CATEGORIA_JA_EXISTE` | 409 | Nome de categoria repetido na filial (sem diferenciar acento e caixa) | Escolher outro nome ou usar a categoria existente |
+  | `ITEM_NAO_EDITAVEL` | 409 | Alterar item vencido ou excluído | Não recuperável: cadastrar um novo item |
+  | `DATA_INICIO_IMUTAVEL` | 409 | Mudar a data de início de item já vigente | Não enviar `dataInicio` (ou reenviar o valor atual) |
+  | `LIMITE_DO_PLANO_ATINGIDO` | 409 | Limite de filiais ou produtos do lojista (`detalhes.recurso/limite`) | Excluir itens antigos ou pedir aumento do limite ao administrador |
+  | `PRECO_ORIGINAL_INVALIDO` | 422 | Preço original menor ou igual ao promocional | Enviar original maior que o promocional, ou `null` |
+  | `DATA_LIMITE_INVALIDA` | 422 | Data limite antes do início ou de hoje | Enviar limite ≥ início e ≥ hoje no fuso da filial |
+  | `DATA_INICIO_INVALIDA` | 422 | Data de início no passado | Enviar início ≥ hoje, ou omitir para começar hoje |
+  | `FUSO_HORARIO_INVALIDO` | 422 | Fuso IANA inválido | Enviar um fuso IANA válido (ex.: `America/Sao_Paulo`) |
+  | `IMAGEM_INVALIDA` | 422 | Arquivo não é JPEG, PNG ou WebP válido | Enviar JPEG, PNG ou WebP válido |
+  | `IMAGEM_MUITO_GRANDE` | 413 | Imagem acima do limite (`detalhes.maxBytes`) | Reduzir a imagem abaixo de `detalhes.maxBytes` |
+  | `CORPO_MUITO_GRANDE` | 413 | JSON acima de 100 KB | Reduzir o corpo abaixo de 100 KB |
+  | `MUITAS_TENTATIVAS` | 429 | Rate limit (header `Retry-After`) | Esperar o `Retry-After` (segundos) e repetir |
+  | `ERRO_INTERNO` | 500 | Erro inesperado (sem detalhes; procure pelo `x-request-id` nos logs) | Repetir uma vez com espera; persistindo, reportar com o `x-request-id` |
+  | `ARMAZENAMENTO_INDISPONIVEL` | 503 | Storage de imagens fora do ar | Temporário: repetir com espera exponencial |
+
+  ## Rate limits
+
+  | Rota | Limite |
+  | --- | --- |
+  | `POST /auth/login` | 5 tentativas a cada 15 min por IP + e-mail |
+  | `POST /auth/cadastro` | 10 por hora por IP |
+  | `/admin/lojistas/*` | 10 por minuto por IP |
+  | `/publico/*` | 300 por minuto por IP |
+  | `/painel/*` | 600 por minuto por sessão (token) |
+
+  ## Convenções
+
+  - **Ids**: UUID v7. Id malformado responde 404, igual a inexistente.
+  - **Datas**: `AAAA-MM-DD`, sem hora. "Hoje" é calculado no **fuso da filial** (`fusoHorario`, padrão `America/Sao_Paulo`). O início vale a partir de 00:00 e a data limite até 23:59:59 locais.
+  - **Situação** de panfletos e produtos: `AGENDADO` (início no futuro), `VIGENTE`, `VENCIDO` (limite no passado), `EXCLUIDO`. Só vigentes e agendados são editáveis.
+  - **Preços** em centavos inteiros (`2199` = R$ 21,99), até `99999999`.
+  - **Paginação**: `pagina` (≥ 1, padrão 1) e `porPagina` (1–100, padrão 50). Resposta `{ itens, total, pagina, porPagina }`.
+  - **Exclusão** é sempre lógica: o item sai das listas, mas continua consultável pelo id.
+  - **PATCH** é parcial: campo ausente não muda; `null` limpa os campos opcionais que aceitam.
+  - Toda alteração de preço, data, fuso ou imagem fica na **auditoria**.
+auth:
+  - id: 7c8a6822-e9e0-4597-8332-0ac8f196f6af
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{token}}"

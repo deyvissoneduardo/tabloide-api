@@ -1,0 +1,27 @@
+$kind: http-request
+id: 7253aa3e-1844-5358-a49f-3096c68c3c93
+description: QR Code apontando para a URL pública da filial (`PUBLIC_BASE_URL/f/<codigo>`). Responde a imagem (`image/svg+xml` ou `image/png`) com ETag e cache longo.
+url: "{{baseUrl}}/painel/filiais/:id/qrcode?formato=svg&download=0"
+method: GET
+queryParams:
+  - key: formato
+    value: svg
+    description: "`svg` (padrão) ou `png`."
+  - key: tamanho
+    value: "512"
+    disabled: true
+    description: Lado em pixels (128–2048); só vale para PNG.
+  - key: download
+    value: "0"
+    description: "`1` envia `Content-Disposition: attachment` com o nome qrcode-<codigo>.<formato>."
+pathVariables:
+  - key: id
+    value: "{{filialId}}"
+    description: Id (UUID v7) da filial.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+order: 5000

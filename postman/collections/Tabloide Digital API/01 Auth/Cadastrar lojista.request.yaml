@@ -1,0 +1,45 @@
+$kind: http-request
+id: 59cccfbf-5def-5977-81f2-f70e3543d31b
+description: |-
+  Cria a conta do lojista (RN01, RN02) e já devolve a sessão. A conta nasce `AGUARDANDO_ATIVACAO`: o painel funciona, mas a página pública só aparece depois que o administrador ativa o lojista.
+
+  | Campo | Regra |
+  | --- | --- |
+  | `nomeFantasia` | obrigatório, 2–120 caracteres (espaços aparados) |
+  | `nomeResponsavel` | obrigatório, 2–120 caracteres |
+  | `email` | obrigatório, e-mail válido, até 254; único na plataforma (sem diferenciar maiúsculas) |
+  | `senha` | 8–128 caracteres com ao menos uma letra e um número |
+  | `whatsapp` | celular ou fixo brasileiro com DDD; aceita máscara e sai em E.164 (`+5511987654321`) |
+  | `cnpj` | opcional; aceita máscara; dígitos verificadores conferidos |
+
+  Campos desconhecidos são recusados (400). Rate limit: 10 cadastros por hora por IP.
+url: "{{baseUrl}}/auth/cadastro"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nomeFantasia": "Mercado Bom Preço",
+      "nomeResponsavel": "Ana Souza",
+      "email": "{{email}}",
+      "senha": "{{senha}}",
+      "whatsapp": "(11) 98765-4321",
+      "cnpj": "11.222.333/0001-81"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (201)', () => pm.expect(pm.response.code).to.be.oneOf([201]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+      if (pm.response.code < 300) {
+        const corpo = pm.response.json();
+        pm.environment.set('token', corpo.token);
+        pm.environment.set('lojistaId', corpo.lojista.id);
+      }
+    language: text/javascript
+examples: ./.resources/Cadastrar lojista.resources/examples
+order: 1000

@@ -1,0 +1,32 @@
+$kind: http-request
+id: 3b26d690-b51a-5ed4-b7e6-347cea43ffb5
+description: |-
+  Autentica o lojista (RN05) e devolve um JWT válido por `JWT_EXPIRES_IN` (padrão 8 h). Não há refresh: ao expirar, faça login de novo.
+
+  Rate limit: 5 tentativas a cada 15 min por IP + e-mail; depois, 429 com `Retry-After`. E-mail inexistente e senha errada respondem igual (401 `CREDENCIAIS_INVALIDAS`).
+url: "{{baseUrl}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{email}}",
+      "senha": "{{senha}}"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+      if (pm.response.code < 300) {
+        const corpo = pm.response.json();
+        pm.environment.set('token', corpo.token);
+        pm.environment.set('lojistaId', corpo.lojista.id);
+      }
+    language: text/javascript
+examples: ./.resources/Login.resources/examples
+order: 2000

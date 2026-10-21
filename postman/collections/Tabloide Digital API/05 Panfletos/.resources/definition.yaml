@@ -1,0 +1,3 @@
+$kind: collection
+description: Panfleto = uma imagem com período de vigência (RN13–RN17). Por filial há no máximo um panfleto vigente e nenhum período pode se sobrepor; para agendar o próximo, o atual precisa ter data limite.
+order: 5000

@@ -1,0 +1,20 @@
+$kind: http-request
+id: 23347e52-db14-5c87-a6f4-3de5b3ba11cc
+description: Filiais não excluídas do lojista, paginadas.
+url: "{{baseUrl}}/painel/filiais?pagina=1&porPagina=50"
+method: GET
+queryParams:
+  - key: pagina
+    value: "1"
+    description: Página (≥ 1).
+  - key: porPagina
+    value: "50"
+    description: Itens por página (1–100).
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Listar filiais.resources/examples
+order: 2000

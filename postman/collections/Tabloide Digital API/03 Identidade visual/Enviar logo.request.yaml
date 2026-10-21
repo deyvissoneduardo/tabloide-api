@@ -1,0 +1,20 @@
+$kind: http-request
+id: 58082a4f-85e8-5819-883d-86be97adbb6e
+description: Envia ou troca o logo (`multipart/form-data`, arquivo no campo `imagem`). A imagem é validada pelo conteúdo real, reduzida a 512 px e gravada em WebP; a transparência é mantida. O logo anterior continua no storage.
+url: "{{baseUrl}}/painel/lojista/logo"
+method: PUT
+body:
+  type: formdata
+  content:
+    - type: file
+      key: imagem
+      src: "{{arquivoImagem}}"
+      description: JPEG, PNG ou WebP; até MAX_IMAGEM_BYTES (10 MB) ou o limite do lojista.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Enviar logo.resources/examples
+order: 3000

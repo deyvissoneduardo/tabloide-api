@@ -1,0 +1,22 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/publico/filiais/:codigo"
+  method: GET
+  headers:
+    - key: If-None-Match
+      value: "{{etag}}"
+      description: ETag recebido na leitura anterior (gravado pela requisição "Página da filial").
+  pathVariables:
+    - key: codigo
+      value: "{{codigoPublico}}"
+      description: Código público da filial.
+response:
+  statusCode: 304
+  statusText: Not Modified
+  headers:
+    ETag: W/"pQ3x9vT2aB7kLm0d"
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: text
+    content: ""
+order: 1000

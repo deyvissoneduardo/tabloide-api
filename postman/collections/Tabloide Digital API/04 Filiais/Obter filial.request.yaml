@@ -1,0 +1,17 @@
+$kind: http-request
+id: 7b86d303-7e09-5bf7-91e9-68c607d19e6b
+description: "Filial do lojista logado. Filial de outro lojista, excluída ou id inválido: 404."
+url: "{{baseUrl}}/painel/filiais/:id"
+method: GET
+pathVariables:
+  - key: id
+    value: "{{filialId}}"
+    description: Id (UUID v7) da filial.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Obter filial.resources/examples
+order: 3000

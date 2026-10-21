@@ -1,0 +1,31 @@
+$kind: http-request
+id: 4dc04b5c-ae9d-595e-9011-aa5cbe1ac310
+description: |-
+  Responde 200 com:
+
+  - `Cache-Control: public, max-age=30, stale-while-revalidate=300`
+  - `ETag` fraco (não muda se os dados não mudarem)
+  - `hoje` no fuso da filial; `validoAte` em panfleto e produtos só quando há data limite; `precoOriginalCentavos` só quando há "de/por".
+
+  Mudanças no painel aparecem na hora (o cache do servidor é invalidado). Desativar o lojista no banco leva até 60 s para tirar a página do ar.
+url: "{{baseUrl}}/publico/filiais/:codigo"
+method: GET
+headers:
+  - key: Accept-Encoding
+    value: gzip
+    description: A página é enviada já comprimida quando o cliente aceita gzip.
+pathVariables:
+  - key: codigo
+    value: "{{codigoPublico}}"
+    description: Código público da filial (8 caracteres, alfabeto sem 0 1 i l o I O).
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+      if (pm.response.code === 200) pm.environment.set('etag', pm.response.headers.get('ETag'));
+    language: text/javascript
+examples: ./.resources/Página da filial.resources/examples
+order: 1000

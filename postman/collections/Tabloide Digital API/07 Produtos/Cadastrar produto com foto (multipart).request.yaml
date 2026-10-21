@@ -1,0 +1,52 @@
+$kind: http-request
+id: d1497c27-d628-5bbc-9546-9d6f9f9b0577
+description: Mesmos campos do cadastro em JSON, como campos de formulário, mais a foto opcional no campo `foto`. Campo vazio vale como não enviado.
+url: "{{baseUrl}}/painel/filiais/:filialId/produtos"
+method: POST
+pathVariables:
+  - key: filialId
+    value: "{{filialId}}"
+    description: Id (UUID v7) da filial do lojista logado.
+body:
+  type: formdata
+  content:
+    - type: text
+      key: nome
+      value: Refrigerante cola
+      description: Obrigatório.
+    - type: text
+      key: categoriaId
+      value: "{{categoriaId}}"
+      description: Obrigatório.
+    - type: text
+      key: quantidade
+      value: 2 L
+      description: Opcional.
+    - type: text
+      key: precoPromocionalCentavos
+      value: "799"
+      description: Obrigatório; inteiro em centavos (texto no multipart).
+    - type: text
+      key: precoOriginalCentavos
+      value: "1099"
+      description: Opcional.
+    - type: text
+      key: observacao
+      value: Limite 3 por cliente
+      description: Opcional.
+    - type: text
+      key: dataLimite
+      value: 2026-12-31
+      description: Opcional.
+    - type: file
+      key: foto
+      src: "{{arquivoImagem}}"
+      description: Opcional. JPEG, PNG ou WebP; reduzida a 800 px, WebP.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (201)', () => pm.expect(pm.response.code).to.be.oneOf([201]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Cadastrar produto com foto (multipart).resources/examples
+order: 2000

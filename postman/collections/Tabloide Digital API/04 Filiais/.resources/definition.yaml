@@ -1,0 +1,3 @@
+$kind: collection
+description: Cada filial é uma vitrine independente, com página pública própria (`codigoPublico`) e fuso horário próprio (RN09–RN12, RN38, RN39). Excluir a filial exclui logicamente panfletos, categorias e produtos dela.
+order: 4000

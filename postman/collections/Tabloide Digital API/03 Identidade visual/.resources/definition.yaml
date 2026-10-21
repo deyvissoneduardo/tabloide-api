@@ -1,0 +1,3 @@
+$kind: collection
+description: Nome, cores e logo exibidos na página pública de **todas** as filiais do lojista (RN06, RN28). Toda alteração invalida o cache das páginas públicas na hora.
+order: 3000

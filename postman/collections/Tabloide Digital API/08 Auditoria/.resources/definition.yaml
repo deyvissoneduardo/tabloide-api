@@ -1,0 +1,3 @@
+$kind: collection
+description: Histórico de alterações de preço, datas, fuso e imagens (RNF07), por entidade. Inclui o registro da criação (valor anterior nulo).
+order: 8000

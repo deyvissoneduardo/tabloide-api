@@ -1,0 +1,38 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/filiais/:filialId/categorias"
+  method: POST
+  headers:
+    Content-Type: application/json
+  pathVariables:
+    - key: filialId
+      value: "{{filialId}}"
+      description: Id (UUID v7) da filial do lojista logado.
+  body:
+    type: json
+    content: |-
+      {
+        "nome": "Mercearia"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "id": "0192f0c1-9f51-7e43-8a6d-4f5a6b7c8d04",
+        "nome": "Mercearia",
+        "produtos": {
+          "vigentes": 0,
+          "agendados": 0,
+          "vencidos": 0
+        },
+        "podeExcluir": true,
+        "criadoEm": "2026-10-18T13:02:11.000Z",
+        "atualizadoEm": "2026-10-18T13:02:11.000Z"
+      }
+order: 1000

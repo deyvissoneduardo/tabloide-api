@@ -1,0 +1,33 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/auth/cadastro"
+  method: POST
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "nomeFantasia": "Mercado Bom Preço",
+        "nomeResponsavel": "Ana Souza",
+        "email": "{{email}}",
+        "senha": "{{senha}}",
+        "whatsapp": "(11) 98765-4321",
+        "cnpj": "11.222.333/0001-81"
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "erro": {
+          "codigo": "EMAIL_JA_CADASTRADO",
+          "mensagem": "Este e-mail já está cadastrado."
+        }
+      }
+order: 2000

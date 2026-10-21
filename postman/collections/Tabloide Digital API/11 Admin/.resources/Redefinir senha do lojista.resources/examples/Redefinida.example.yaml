@@ -1,0 +1,29 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/admin/lojistas/:id/senha"
+  method: PATCH
+  headers:
+    - key: X-Admin-Key
+      value: "{{adminKey}}"
+      description: Chave de admin (ADMIN_API_KEY do servidor).
+    - key: Content-Type
+      value: application/json
+  pathVariables:
+    - key: id
+      value: "{{lojistaId}}"
+      description: Id (UUID v7) do lojista.
+  body:
+    type: json
+    content: |-
+      {
+        "novaSenha": "{{novaSenha}}"
+      }
+response:
+  statusCode: 204
+  statusText: No Content
+  headers:
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: text
+    content: ""
+order: 1000

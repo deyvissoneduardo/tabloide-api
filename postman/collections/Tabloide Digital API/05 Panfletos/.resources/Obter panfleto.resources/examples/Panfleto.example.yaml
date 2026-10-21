@@ -1,0 +1,34 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/filiais/:filialId/panfletos/:id"
+  method: GET
+  pathVariables:
+    - key: filialId
+      value: "{{filialId}}"
+      description: Id (UUID v7) da filial do lojista logado.
+    - key: id
+      value: "{{panfletoId}}"
+      description: Id (UUID v7) do panfleto.
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "id": "0192f0c0-8e40-7d32-9f5c-3e4f5a6b7c03",
+        "filialId": "0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02",
+        "urlImagem": "https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp",
+        "largura": 1600,
+        "altura": 2263,
+        "dataInicio": "2026-10-18",
+        "dataLimite": "2026-10-31",
+        "situacao": "VIGENTE",
+        "editavel": true,
+        "criadoEm": "2026-10-18T13:10:00.000Z",
+        "excluidoEm": null
+      }
+order: 1000

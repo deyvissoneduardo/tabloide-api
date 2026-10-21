@@ -1,0 +1,42 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/filiais/:filialId/produtos"
+  method: POST
+  headers:
+    Content-Type: application/json
+  pathVariables:
+    - key: filialId
+      value: "{{filialId}}"
+      description: Id (UUID v7) da filial do lojista logado.
+  body:
+    type: json
+    content: |-
+      {
+        "nome": "Arroz Tipo 1",
+        "categoriaId": "{{categoriaId}}",
+        "quantidade": "5kg",
+        "precoPromocionalCentavos": 2199,
+        "precoOriginalCentavos": 2649,
+        "observacao": "Limite 3 por cliente",
+        "dataLimite": "2026-12-31"
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "erro": {
+          "codigo": "LIMITE_DO_PLANO_ATINGIDO",
+          "mensagem": "O limite do seu plano foi atingido.",
+          "detalhes": {
+            "recurso": "PRODUTOS_POR_FILIAL",
+            "limite": 500
+          }
+        }
+      }
+order: 3000

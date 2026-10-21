@@ -1,0 +1,41 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/filiais/:filialId/categorias/:categoriaId"
+  method: PATCH
+  headers:
+    Content-Type: application/json
+  pathVariables:
+    - key: filialId
+      value: "{{filialId}}"
+      description: Id (UUID v7) da filial do lojista logado.
+    - key: categoriaId
+      value: "{{categoriaId}}"
+      description: Id (UUID v7) da categoria.
+  body:
+    type: json
+    content: |-
+      {
+        "nome": "Mercearia e Grãos"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "id": "0192f0c1-9f51-7e43-8a6d-4f5a6b7c8d04",
+        "nome": "Mercearia e Grãos",
+        "produtos": {
+          "vigentes": 12,
+          "agendados": 3,
+          "vencidos": 7
+        },
+        "podeExcluir": false,
+        "criadoEm": "2026-10-18T13:02:11.000Z",
+        "atualizadoEm": "2026-10-18T13:02:11.000Z"
+      }
+order: 1000

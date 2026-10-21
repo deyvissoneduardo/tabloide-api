@@ -1,0 +1,27 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/lojista/logo"
+  method: PUT
+  body:
+    type: formdata
+    content:
+      - type: file
+        key: imagem
+        src: "{{arquivoImagem}}"
+        description: JPEG, PNG ou WebP; até MAX_IMAGEM_BYTES (10 MB) ou o limite do lojista.
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "nomeFantasia": "Mercado Bom Preço",
+        "corPrimaria": "#C8102E",
+        "corSecundaria": "#FFD100",
+        "urlLogo": "https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/logo/0192f0e0.webp"
+      }
+order: 1000

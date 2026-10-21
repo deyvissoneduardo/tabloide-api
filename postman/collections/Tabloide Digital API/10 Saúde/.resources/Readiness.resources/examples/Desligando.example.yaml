@@ -1,0 +1,22 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/saude/pronto"
+  method: GET
+response:
+  statusCode: 503
+  statusText: Service Unavailable
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "status": "erro",
+        "info": {
+          "desligamento": {
+            "status": "em andamento"
+          }
+        }
+      }
+order: 3000

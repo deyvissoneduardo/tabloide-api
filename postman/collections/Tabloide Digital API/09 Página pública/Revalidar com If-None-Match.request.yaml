@@ -1,0 +1,23 @@
+$kind: http-request
+id: e048b945-7faa-51a3-9a2b-2304604e55b3
+description: Com o ETag atual, responde **304** sem corpo; se a página mudou, 200 com ETag novo. Aceita lista separada por vírgula e `*`.
+url: "{{baseUrl}}/publico/filiais/:codigo"
+method: GET
+headers:
+  - key: If-None-Match
+    value: "{{etag}}"
+    description: ETag recebido na leitura anterior (gravado pela requisição "Página da filial").
+pathVariables:
+  - key: codigo
+    value: "{{codigoPublico}}"
+    description: Código público da filial.
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (304, 200)', () => pm.expect(pm.response.code).to.be.oneOf([304, 200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Revalidar com If-None-Match.resources/examples
+order: 2000

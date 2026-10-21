@@ -1,0 +1,27 @@
+$kind: http-request
+id: 6f78e115-874b-5b18-b0a4-cc76714d0a80
+description: |-
+  Edição parcial. Campos aceitos: `nomeFantasia`, `nomeResponsavel`, `whatsapp`, `cnpj` (`null` remove o CNPJ). Corpo vazio responde 400 ("Informe ao menos um campo."). `email`, `senha`, `status` e campos desconhecidos são recusados.
+
+  Lojista desativado recebe 403.
+url: "{{baseUrl}}/painel/lojista"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nomeFantasia": "Mercado Bom Preço Centro",
+      "nomeResponsavel": "Ana Souza",
+      "whatsapp": "(11) 98765-4321",
+      "cnpj": null
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Editar dados do lojista.resources/examples
+order: 2000

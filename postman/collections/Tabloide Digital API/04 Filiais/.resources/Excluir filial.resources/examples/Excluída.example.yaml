@@ -1,0 +1,17 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/filiais/:id"
+  method: DELETE
+  pathVariables:
+    - key: id
+      value: "{{filialTemporariaId}}"
+      description: Id (UUID v7) da filial. O script de pré-requisição preenche com uma filial temporária.
+response:
+  statusCode: 204
+  statusText: No Content
+  headers:
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: text
+    content: ""
+order: 1000

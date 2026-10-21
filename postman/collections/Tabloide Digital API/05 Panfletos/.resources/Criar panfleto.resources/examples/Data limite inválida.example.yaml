@@ -1,0 +1,43 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/filiais/:filialId/panfletos"
+  method: POST
+  pathVariables:
+    - key: filialId
+      value: "{{filialId}}"
+      description: Id (UUID v7) da filial do lojista logado.
+  body:
+    type: formdata
+    content:
+      - type: file
+        key: imagem
+        src: "{{arquivoImagem}}"
+        description: Obrigatório. JPEG, PNG ou WebP.
+      - type: text
+        key: dataInicio
+        value: ""
+        description: Opcional, AAAA-MM-DD; não pode ser no passado. Vazio = hoje (RN40).
+        disabled: true
+      - type: text
+        key: dataLimite
+        value: 2026-12-31
+        description: Opcional, AAAA-MM-DD; ≥ início e ≥ hoje (RN42). Vazio = sem limite.
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "erro": {
+          "codigo": "DATA_LIMITE_INVALIDA",
+          "mensagem": "A data limite não pode ser anterior à data de início nem a hoje.",
+          "detalhes": {
+            "campo": "dataLimite"
+          }
+        }
+      }
+order: 4000

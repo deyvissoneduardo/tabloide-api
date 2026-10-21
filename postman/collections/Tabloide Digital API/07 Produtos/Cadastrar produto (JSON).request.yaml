@@ -1,0 +1,50 @@
+$kind: http-request
+id: 27553228-6afa-5601-bb70-eaa1e6454a60
+description: |-
+  Cadastro sem foto.
+
+  | Campo | Obrigatório | Regra |
+  | --- | --- | --- |
+  | `nome` | sim | 1–120 |
+  | `categoriaId` | sim | categoria não excluída **da mesma filial** (senão 404) |
+  | `precoPromocionalCentavos` | sim | inteiro 1–99999999 |
+  | `precoOriginalCentavos` | não | inteiro; maior que o promocional (senão 422 `PRECO_ORIGINAL_INVALIDO`) |
+  | `quantidade` | não | até 40 (ex.: `5kg`, `1,5 L`) |
+  | `descricao` | não | até 500 |
+  | `observacao` | não | até 200 |
+  | `dataInicio` | não | AAAA-MM-DD, não no passado; ausente = hoje |
+  | `dataLimite` | não | AAAA-MM-DD, ≥ início e ≥ hoje |
+
+  Pode responder 409 `LIMITE_DO_PLANO_ATINGIDO` (limite de produtos por filial; vencidos não excluídos contam).
+url: "{{baseUrl}}/painel/filiais/:filialId/produtos"
+method: POST
+headers:
+  Content-Type: application/json
+pathVariables:
+  - key: filialId
+    value: "{{filialId}}"
+    description: Id (UUID v7) da filial do lojista logado.
+body:
+  type: json
+  content: |-
+    {
+      "nome": "Arroz Tipo 1",
+      "categoriaId": "{{categoriaId}}",
+      "quantidade": "5kg",
+      "precoPromocionalCentavos": 2199,
+      "precoOriginalCentavos": 2649,
+      "observacao": "Limite 3 por cliente",
+      "dataLimite": "2026-12-31"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (201)', () => pm.expect(pm.response.code).to.be.oneOf([201]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+      if (pm.response.code < 300) {
+        const corpo = pm.response.json();
+        pm.environment.set('produtoId', corpo.id);
+      }
+    language: text/javascript
+examples: ./.resources/Cadastrar produto (JSON).resources/examples
+order: 1000

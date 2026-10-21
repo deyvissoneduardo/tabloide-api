@@ -1,0 +1,27 @@
+$kind: http-request
+id: 666ee1e8-44a5-5a17-8857-19cc50cf4d85
+description: Troca a imagem de um panfleto vigente ou agendado. A troca é auditada e a imagem anterior continua no storage.
+url: "{{baseUrl}}/painel/filiais/:filialId/panfletos/:id/imagem"
+method: PUT
+pathVariables:
+  - key: filialId
+    value: "{{filialId}}"
+    description: Id (UUID v7) da filial do lojista logado.
+  - key: id
+    value: "{{panfletoId}}"
+    description: Id (UUID v7) do panfleto.
+body:
+  type: formdata
+  content:
+    - type: file
+      key: imagem
+      src: "{{arquivoImagem}}"
+      description: Obrigatório. JPEG, PNG ou WebP.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Trocar imagem do panfleto.resources/examples
+order: 5000

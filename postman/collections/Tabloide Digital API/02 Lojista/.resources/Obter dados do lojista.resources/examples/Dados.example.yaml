@@ -1,0 +1,24 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/lojista"
+  method: GET
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "id": "0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01",
+        "nomeFantasia": "Mercado Bom Preço",
+        "nomeResponsavel": "Ana Souza",
+        "email": "ana@bompreco.com.br",
+        "whatsapp": "+5511987654321",
+        "cnpj": "11222333000181",
+        "status": "ATIVO",
+        "criadoEm": "2026-10-18T13:00:00.000Z"
+      }
+order: 1000

@@ -1,0 +1,27 @@
+$kind: http-request
+id: a230a3bb-690f-505c-af27-f78752bed09f
+description: Panfletos da filial, do mais recente para o mais antigo (data de início), com a situação calculada no fuso da filial.
+url: "{{baseUrl}}/painel/filiais/:filialId/panfletos?situacao=VIGENTE,AGENDADO&pagina=1&porPagina=50"
+method: GET
+queryParams:
+  - key: situacao
+    value: VIGENTE,AGENDADO
+    description: CSV com AGENDADO, VIGENTE, VENCIDO, EXCLUIDO. Ausente = todos os não excluídos.
+  - key: pagina
+    value: "1"
+    description: Página (≥ 1).
+  - key: porPagina
+    value: "50"
+    description: Itens por página (1–100).
+pathVariables:
+  - key: filialId
+    value: "{{filialId}}"
+    description: Id (UUID v7) da filial do lojista logado.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Listar panfletos.resources/examples
+order: 2000

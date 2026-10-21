@@ -1,0 +1,36 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/filiais/:filialId/produtos/:produtoId"
+  method: PATCH
+  headers:
+    Content-Type: application/json
+  pathVariables:
+    - key: filialId
+      value: "{{filialId}}"
+      description: Id (UUID v7) da filial do lojista logado.
+    - key: produtoId
+      value: "{{produtoId}}"
+      description: Id (UUID v7) do produto.
+  body:
+    type: json
+    content: |-
+      {
+        "precoPromocionalCentavos": 1999,
+        "observacao": null
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "erro": {
+          "codigo": "ITEM_NAO_EDITAVEL",
+          "mensagem": "Produtos vencidos ou excluídos não podem ser editados. Cadastre um novo produto."
+        }
+      }
+order: 2000

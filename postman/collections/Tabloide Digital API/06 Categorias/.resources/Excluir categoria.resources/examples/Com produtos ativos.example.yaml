@@ -1,0 +1,31 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/filiais/:filialId/categorias/:categoriaId"
+  method: DELETE
+  pathVariables:
+    - key: filialId
+      value: "{{filialId}}"
+      description: Id (UUID v7) da filial do lojista logado.
+    - key: categoriaId
+      value: "{{categoriaTemporariaId}}"
+      description: Id (UUID v7) da categoria. O script de pré-requisição preenche com uma categoria temporária.
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "erro": {
+          "codigo": "CATEGORIA_COM_PRODUTOS_ATIVOS",
+          "mensagem": "Exclua os produtos vigentes e agendados antes de excluir a categoria.",
+          "detalhes": {
+            "vigentes": 2,
+            "agendados": 1
+          }
+        }
+      }
+order: 2000
