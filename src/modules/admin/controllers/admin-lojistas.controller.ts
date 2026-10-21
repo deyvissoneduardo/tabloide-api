@@ -1,4 +1,5 @@
 import { Body, Controller, HttpCode, HttpStatus, Param, Patch, UseGuards } from '@nestjs/common';
+import { ApiExcludeController } from '@nestjs/swagger';
 import { Public } from '../../../common/decorators/public.decorator';
 import { AdminKeyGuard } from '../../../common/guards/admin-key.guard';
 import { ParseUuidOu404Pipe } from '../../../common/pipes/parse-uuid-ou-404.pipe';
@@ -6,6 +7,8 @@ import { LimitarRequisicoes } from '../../../common/throttle/limites-de-requisic
 import { LojistasService } from '../../lojistas/services/lojistas.service';
 import { RedefinirSenhaDto } from '../dtos/redefinir-senha.dto';
 
+// fora da spec: sem a chave a rota responde 404, como se não existisse
+@ApiExcludeController()
 @Public()
 @UseGuards(AdminKeyGuard)
 @LimitarRequisicoes('admin')

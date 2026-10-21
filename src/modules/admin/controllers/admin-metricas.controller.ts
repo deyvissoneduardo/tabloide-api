@@ -1,4 +1,5 @@
 import { Controller, Get, Header, UseGuards } from '@nestjs/common';
+import { ApiExcludeController } from '@nestjs/swagger';
 import { Sequelize } from 'sequelize-typescript';
 import { Public } from '../../../common/decorators/public.decorator';
 import { AdminKeyGuard } from '../../../common/guards/admin-key.guard';
@@ -10,6 +11,7 @@ interface PoolSequelize {
 }
 
 /** Texto Prometheus atrás da chave de admin; sem a chave, o mesmo 404 das rotas admin. */
+@ApiExcludeController()
 @Public()
 @UseGuards(AdminKeyGuard)
 @Controller('admin/metricas')
