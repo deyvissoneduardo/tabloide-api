@@ -1,4 +1,5 @@
 import type { SequelizeModuleOptions } from '@nestjs/sequelize';
+import pg from 'pg';
 import type { Env } from '../config/env.schema';
 
 export function opcoesSequelize(
@@ -7,6 +8,8 @@ export function opcoesSequelize(
 ): SequelizeModuleOptions {
   return {
     dialect: 'postgres',
+    // import explícito: o require dinâmico do sequelize deixa o pg fora do bundle da Vercel
+    dialectModule: pg,
     uri: env.DATABASE_URL,
     logging: env.NODE_ENV === 'development' && log ? log : false,
     pool: { max: env.DB_POOL_MAX, min: 0, idle: 10_000, acquire: 30_000 },
