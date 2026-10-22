@@ -20,4 +20,8 @@ async function bootstrap(): Promise<void> {
   }
 }
 
-void bootstrap();
+// com bufferLogs, uma falha antes do listen sumiria sem log (ex.: banco recusando a conexão)
+bootstrap().catch((erro: unknown) => {
+  console.error('Falha ao iniciar a API:', erro);
+  process.exit(1);
+});
