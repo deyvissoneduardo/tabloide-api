@@ -2,5 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nestjs",
   "buildCommand": "bash scripts/vercel-build.sh",
-  "regions": ["gru1"]
+  "regions": ["gru1"],
+  "functions": {
+    "src/main.ts": {
+      "includeFiles": "node_modules/swagger-ui-dist/**"
+    }
+  }
 }
