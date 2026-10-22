@@ -6,7 +6,7 @@ Procedimentos do administrador em produção. Referência técnica: `plans/fase-
 
 | Peça | Onde | Observação |
 | --- | --- | --- |
-| API | Fly.io, região `gru`, 2 máquinas `shared-cpu-1x` 512 MB (`fly.toml`) | Deploy rolling, readiness em `/v1/saude/pronto` |
+| API | Vercel Functions (Fluid compute), região `gru1`, projeto `tabloide-api` (`vercel.json`) | Escala sob demanda; rate limit e caches em memória valem por instância (ADR 0013) |
 | Banco | Supabase, região `sa-east-1` | API no transaction pooler (6543); migrations e `pg_dump` na porta 5432 |
 | Mídia | Supabase Storage, bucket `midia` | Leitura pública, escrita só com a `service_role` (servidor) |
 | Backup próprio | Bucket S3-compatível fora do Supabase (ex.: Cloudflare R2) | Ver [backup.md](backup.md) |
@@ -52,21 +52,22 @@ ON CONFLICT (lojista_id) DO UPDATE
 
 ## Deploy e rollback
 
-O deploy é automático depois do CI verde na branch principal (`.github/workflows/api-deploy.yml`):
+Push na branch principal gera deploy de produção na Vercel; outras branches geram preview. O build roda `scripts/vercel-build.sh`:
 
-1. Build e push da imagem com a tag do SHA.
-2. `npm run db:migrate` com `DATABASE_URL_MIGRATIONS` (porta 5432).
-3. Deploy rolling.
-4. Smoke test: `/v1/saude/pronto` e a página pública da filial de teste (`vars.CODIGO_FILIAL_TESTE`).
-5. Se o smoke falhar, volta para a imagem anterior.
+1. `npm run typecheck` e `npm test` (unitários). Falhou, não publica. Lint e `test:int` (Docker) ficam locais.
+2. Só em produção: `npm run db:migrate` com `DATABASE_URL_MIGRATIONS` (porta 5432). Preview não migra, porque usa o mesmo banco.
+3. `npm run build`; a Vercel troca o tráfego para o novo deploy quando ele fica pronto.
+
+Deploy manual: `vercel deploy --prod`. Não há smoke test automático: conferir `/v1/saude/pronto` depois do deploy.
 
 **Migrations não são revertidas automaticamente.** Por isso toda migration precisa ser compatível com a versão anterior do código: expandir → migrar dados → contrair, em deploys separados.
 
 Rollback manual:
 
 ```bash
-fly releases --image          # localizar a imagem anterior
-fly deploy --image registry.fly.io/tabloide-api:<sha-anterior> --strategy rolling
+vercel rollback               # volta para o deploy de produção anterior
+vercel ls                     # localizar um deploy específico
+vercel rollback <url-do-deploy>
 ```
 
 ## Monitoramento
@@ -87,9 +88,11 @@ fly deploy --image registry.fly.io/tabloide-api:<sha-anterior> --strategy rollin
 
 ## Variáveis de ambiente de produção
 
-Validadas pelo `zod` na subida (`src/config/env.schema.ts`). Obrigatórias além das das fases anteriores: `TRUST_PROXY`, `CORS_ORIGENS_PAINEL` (só `https://`, sem `*`), `DATABASE_URL` (pooler 6543), `DATABASE_URL_MIGRATIONS` (5432, só no CI), `DB_SSL=true`, `STORAGE_DRIVER=supabase`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
+Validadas pelo `zod` na subida (`src/config/env.schema.ts`). Obrigatórias além das das fases anteriores: `TRUST_PROXY`, `CORS_ORIGENS_PAINEL` (só `https://`, sem `*`), `DATABASE_URL` (pooler 6543), `DATABASE_URL_MIGRATIONS` (5432, só no build), `DB_SSL=true`, `STORAGE_DRIVER=supabase`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
 
-`JWT_SECRET` e `ADMIN_API_KEY` com pelo menos 32 bytes aleatórios, diferentes dos de dev, guardados só em `fly secrets` e nos secrets do GitHub.
+`JWT_SECRET` e `ADMIN_API_KEY` com pelo menos 32 bytes aleatórios, diferentes dos de dev, guardados só nas variáveis *sensitive* da Vercel (`vercel env`).
+
+Na Vercel o corpo da requisição tem limite de 4,5 MB: `MAX_IMAGEM_BYTES=4194304` em produção.
 
 ## Checklist de go-live
 
@@ -101,7 +104,7 @@ Validadas pelo `zod` na subida (`src/config/env.schema.ts`). Obrigatórias além
 - [ ] Bucket `midia` público para leitura, sem escrita para `anon`/`authenticated`, limite de tamanho e MIME `image/webp`.
 
 **API**
-- [ ] 2 máquinas em `gru`, readiness no health check e deploy rolling.
+- [ ] Projeto Vercel em `gru1`, Node 22 e `/v1/saude/pronto` respondendo depois do deploy.
 - [ ] Variáveis de produção definidas; `CORS_ORIGENS_PAINEL` só com HTTPS.
 - [ ] `JWT_SECRET` e `ADMIN_API_KEY` novos e só nos secrets.
 - [ ] TLS válido no domínio da API; HSTS ativo.

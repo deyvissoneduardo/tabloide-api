@@ -9,3 +9,5 @@ test/carga/codigos.json
 
 .DS_Store
 supabase/.temp/
+.vercel
+.env*

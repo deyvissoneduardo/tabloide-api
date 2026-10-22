@@ -18,7 +18,7 @@ Os dados de um lojista nunca ficam visíveis para outro: toda consulta a tabela 
 - **NestJS 11 + TypeScript** (Node 22), organizado por módulo em `src/modules/` (controller → service → model, com `domain/` puro para as regras de negócio).
 - **Postgres 16** com Sequelize 6; migrations em SQL em `src/database/migrations/`.
 - **Mídia**: imagens processadas com `sharp` e gravadas em disco local (dev) ou no Supabase Storage (produção).
-- **Produção**: Fly.io (região `gru`) + Supabase (banco e storage). Detalhes em [docs/operacao/runbook.md](docs/operacao/runbook.md).
+- **Produção**: Vercel (região `gru1`) + Supabase (banco e storage). Detalhes em [docs/operacao/runbook.md](docs/operacao/runbook.md).
 
 ## Pré-requisitos
 
@@ -61,7 +61,7 @@ As variáveis são validadas na subida (`src/config/env.schema.ts`); a API não 
 | `LOG_LEVEL` | não | `info` | `fatal` … `trace` |
 | `SWAGGER_HABILITADO` | não | `false` | Expõe `/docs` (Swagger UI) e `/docs-json` (spec OpenAPI); manter `false` em produção |
 
-Os demais (limites de taxa, cache da página pública, imagens, desligamento) têm default e estão no `.env.example`. Segredos de produção ficam em `fly secrets`, nunca no repositório.
+Os demais (limites de taxa, cache da página pública, imagens, desligamento) têm default e estão no `.env.example`. Segredos de produção ficam nas variáveis da Vercel (`vercel env`), nunca no repositório.
 
 ## Endpoints / API
 
@@ -91,7 +91,7 @@ O teste de carga da página pública (k6) está descrito em [docs/operacao/carga
 3. Use commits no padrão Conventional Commits em pt-BR, ex.: `feat(produtos): adiciona busca por nome`.
 4. Rota nova ganha exemplo no `http/fase-N.http` correspondente.
 
-Depois do CI verde na branch principal, o deploy no Fly.io é automático (ver [runbook](docs/operacao/runbook.md)).
+Push na branch principal gera o deploy de produção na Vercel, com typecheck e testes unitários no build (ver [runbook](docs/operacao/runbook.md)).
 
 ## Operação
 

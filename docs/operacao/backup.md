@@ -8,7 +8,7 @@
 | 2. Própria | `pg_dump -Fc --no-owner`, criptografado com `age` | diário, 03:00 BRT | **30 dias** (regra de ciclo de vida no bucket) | Bucket S3-compatível fora do Supabase |
 | 2b. Mídia | `rclone sync` do bucket `midia`, com versões em `midia-versoes/<data>` | diário | 30 dias de versões | Mesmo bucket da camada 2 |
 
-A camada 2 roda em `.github/workflows/api-backup.yml` e usa a porta 5432 (`DATABASE_URL_MIGRATIONS`), porque o `pg_dump` não funciona no transaction pooler.
+**Desativada:** o workflow `api-backup.yml` foi removido junto com o GitHub Actions; até haver substituto só vale o backup nativo do Supabase. Quando ativa, a camada 2 usa a porta 5432 (`DATABASE_URL_MIGRATIONS`), porque o `pg_dump` não funciona no transaction pooler.
 
 Secrets do workflow: `DATABASE_URL_MIGRATIONS`, `BACKUP_AGE_PUBLIC_KEY`, `BACKUP_S3_ENDPOINT`, `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY`, `SUPABASE_S3_ENDPOINT`, `SUPABASE_S3_ACCESS_KEY_ID`, `SUPABASE_S3_SECRET_ACCESS_KEY`. A falha do workflow gera o e-mail padrão do GitHub para o administrador.
 

@@ -7,7 +7,7 @@ API do Tabloide Digital: lojistas (tenants) cadastram filiais, panfletos, catego
 - NestJS 11 + TypeScript 5.9 estrito (CommonJS), Node 22 (`.nvmrc`), npm (`package-lock.json`).
 - Postgres 16 + Sequelize 6 / `sequelize-typescript`; migrations JS via `sequelize-cli`.
 - DTOs: `class-validator`/`class-transformer`. Env: `zod` em `src/config/env.schema.ts`.
-- Testes: Jest 29 + ts-jest, supertest, Testcontainers (Postgres). Deploy: Fly.io.
+- Testes: Jest 29 + ts-jest, supertest, Testcontainers (Postgres). Deploy: Vercel (`vercel.json`, build em `scripts/vercel-build.sh`).
 - NÃO usar: TypeORM/Prisma/Mongoose, zod em DTO, class-validator em env, `process.env` fora de `src/config` (use `AppConfig`).
 
 ## Como rodar
@@ -49,10 +49,10 @@ API do Tabloide Digital: lojistas (tenants) cadastram filiais, panfletos, catego
 - Recurso com tenant ganha cenários de vazamento via `descreverVazamentoEntreTenants` (`test/helpers/vazamento.ts`).
 
 ## Safe-Change Rules
-- Toda migration reverte (CI roda up → undo:all → up) e é compatível com o código anterior (expandir → migrar → contrair): o rollback de deploy não reverte migrations.
+- Toda migration reverte (rode localmente up → undo:all → up; não há mais CI) e é compatível com o código anterior (expandir → migrar → contrair): o rollback de deploy não reverte migrations.
 - Exclusão é lógica (`paranoid`). NÃO apague registros nem sobrescreva arquivos de mídia.
 - NÃO logue segredos/PII (`authorization`, `x-admin-key`, senha, chave do Supabase); `.env` nunca é versionado.
-- Mudança em auth, guards globais, `tenant-scope.hooks.ts`, CI ou `fly.toml` → confirme antes.
+- Mudança em auth, guards globais, `tenant-scope.hooks.ts`, build da Vercel ou `vercel.json` → confirme antes.
 
 <!-- Itere este arquivo: erro que estava neste contrato → fortaleça a regra existente;
      erro que NÃO estava → adicione uma regra nova. -->
