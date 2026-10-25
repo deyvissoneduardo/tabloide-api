@@ -18,7 +18,7 @@ scripts:
         url: pm.environment.get('baseUrl') + '/painel/filiais'.replace('{{filialId}}', pm.environment.get('filialId')),
         method: 'POST',
         header: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + pm.environment.get('token') },
-        body: { mode: 'raw', raw: JSON.stringify({ nome: 'Filial temporária', endereco: 'Rua da exclusão, 1' }) },
+        body: { mode: 'raw', raw: JSON.stringify({ nome: 'Filial temporária', endereco: { cep: '13010-111', logradouro: 'Rua da exclusão', numero: '1', bairro: 'Centro', cidade: 'Campinas', uf: 'SP' } }) },
       }, (err, res) => {
         if (!err && res.code === 201) pm.variables.set('filialTemporariaId', res.json().id);
       });

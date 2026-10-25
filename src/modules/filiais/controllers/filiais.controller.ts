@@ -70,7 +70,10 @@ export class FiliaisController {
     @TenantId() tenantId: string,
     @Param('id', ParseUuidOu404Pipe) id: string,
   ): Promise<FilialView> {
-    return filialView(await this.filiais.obter(tenantId, id), this.config.publicBaseUrl);
+    return filialView(
+      await this.filiais.obter(tenantId, id, { comEndereco: true }),
+      this.config.publicBaseUrl,
+    );
   }
 
   @Post()

@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import { v7 as uuidv7 } from 'uuid';
+import { umEndereco, umEnderecoDto } from '../../../../test/factories/endereco-filial.factory';
 import { criarAppDeController } from '../../../../test/helpers/app-de-controller';
 import { naoEncontrado } from '../../../common/errors/errors';
 import { AppConfig } from '../../../config/app.config';
@@ -12,7 +13,14 @@ const filial = {
   id: ID,
   tenantId: 'T1',
   nome: 'Centro',
-  endereco: 'Rua A',
+  // como vem do model: tenantId e timestamps não podem sair na view
+  endereco: {
+    ...umEndereco(),
+    filialId: ID,
+    tenantId: 'T1',
+    createdAt: new Date('2026-10-18T15:00:00Z'),
+    updatedAt: new Date('2026-10-18T15:00:00Z'),
+  },
   fusoHorario: 'America/Sao_Paulo',
   codigoPublico: 'k7Qm2xPa',
   createdAt: new Date('2026-10-18T15:00:00Z'),
@@ -61,14 +69,17 @@ describe('Funcionalidade: Rotas de filiais', () => {
     it('Então o service recebe os dados normalizados e a view não expõe tenantId', async () => {
       const resposta = await http()
         .post('/v1/painel/filiais')
-        .send({ nome: '  Centro  ', endereco: 'Rua A' });
+        .send({ nome: '  Centro  ', endereco: umEnderecoDto({ logradouro: '  Rua  das Flores ' }) });
       expect(resposta.status).toBe(201);
-      expect(filiais.criar).toHaveBeenCalledWith('T1', { nome: 'Centro', endereco: 'Rua A' });
+      expect(filiais.criar).toHaveBeenCalledWith('T1', {
+        nome: 'Centro',
+        endereco: umEnderecoDto({ cep: '01310100' }),
+      });
       expect(resposta.headers.location).toBe(`/v1/painel/filiais/${ID}`);
       expect(resposta.body).toEqual({
         id: ID,
         nome: 'Centro',
-        endereco: 'Rua A',
+        endereco: umEndereco(),
         fusoHorario: 'America/Sao_Paulo',
         codigoPublico: 'k7Qm2xPa',
         urlPublica: 'https://tabloide.app/f/k7Qm2xPa',
@@ -80,19 +91,58 @@ describe('Funcionalidade: Rotas de filiais', () => {
 
   describe('Cenário: POST sem nome', () => {
     it('Então 400 com detalhe em nome', async () => {
-      const resposta = await http().post('/v1/painel/filiais').send({ endereco: 'Rua A' });
+      const resposta = await http().post('/v1/painel/filiais').send({ endereco: umEnderecoDto() });
       await esperaValidacao(resposta);
       expect(resposta.body.erro.detalhes.campos.nome).toBeDefined();
     });
   });
 
+  describe('Cenário: POST com complemento e CEP sem hífen', () => {
+    it('Então o service recebe o complemento e o CEP como veio', async () => {
+      await http()
+        .post('/v1/painel/filiais')
+        .send({ nome: 'C', endereco: umEnderecoDto({ cep: '01310100', complemento: ' Loja  2 ' }) })
+        .expect(201);
+      expect(filiais.criar).toHaveBeenCalledWith('T1', {
+        nome: 'C',
+        endereco: umEnderecoDto({ cep: '01310100', complemento: 'Loja 2' }),
+      });
+    });
+  });
+
   describe.each([
-    ['nome só de espaços', { nome: '   ', endereco: 'Rua A' }],
-    ['nome com 121 caracteres', { nome: 'x'.repeat(121), endereco: 'Rua A' }],
-    ['endereço com 301 caracteres', { nome: 'C', endereco: 'x'.repeat(301) }],
-    ['codigoPublico no corpo', { nome: 'C', endereco: 'R', codigoPublico: 'AAAAAAAA' }],
-    ['tenantId no corpo', { nome: 'C', endereco: 'R', tenantId: 'T2' }],
-    ['fuso com mais de 64 caracteres', { nome: 'C', endereco: 'R', fusoHorario: 'x'.repeat(65) }],
+    ['cep com letras', { cep: '0131A-100' }, 'endereco.cep'],
+    ['cep com 7 dígitos', { cep: '0131010' }, 'endereco.cep'],
+    ['cep ausente', { cep: undefined }, 'endereco.cep'],
+    ['logradouro com 201 caracteres', { logradouro: 'x'.repeat(201) }, 'endereco.logradouro'],
+    ['número só de espaços', { numero: '   ' }, 'endereco.numero'],
+    ['número com 21 caracteres', { numero: '1'.repeat(21) }, 'endereco.numero'],
+    ['complemento com 101 caracteres', { complemento: 'x'.repeat(101) }, 'endereco.complemento'],
+    ['bairro ausente', { bairro: undefined }, 'endereco.bairro'],
+    ['cidade com 101 caracteres', { cidade: 'x'.repeat(101) }, 'endereco.cidade'],
+    ['uf com 3 caracteres', { uf: 'SPX' }, 'endereco.uf'],
+    ['campo desconhecido no endereço', { pais: 'BR' }, 'endereco.pais'],
+  ])('Cenário: POST com %s', (_nome, endereco, campo) => {
+    it(`Então 400 com detalhe em ${campo} e o service não é chamado`, async () => {
+      const resposta = await http()
+        .post('/v1/painel/filiais')
+        .send({ nome: 'C', endereco: umEnderecoDto(endereco) });
+      await esperaValidacao(resposta);
+      expect(resposta.body.erro.detalhes.campos[campo]).toBeDefined();
+      expect(filiais.criar).not.toHaveBeenCalled();
+    });
+  });
+
+  describe.each([
+    ['nome só de espaços', { nome: '   ', endereco: umEnderecoDto() }],
+    ['nome com 121 caracteres', { nome: 'x'.repeat(121), endereco: umEnderecoDto() }],
+    ['endereço ausente', { nome: 'C' }],
+    ['endereço como texto', { nome: 'C', endereco: 'Rua A, 100' }],
+    ['endereço null', { nome: 'C', endereco: null }],
+    ['codigoPublico no corpo', { nome: 'C', endereco: umEnderecoDto(), codigoPublico: 'AAAAAAAA' }],
+    ['tenantId no corpo', { nome: 'C', endereco: umEnderecoDto(), tenantId: 'T2' }],
+    ['tenantId no endereço', { nome: 'C', endereco: umEnderecoDto({ tenantId: 'T2' }) }],
+    ['fuso com mais de 64 caracteres', { nome: 'C', endereco: umEnderecoDto(), fusoHorario: 'x'.repeat(65) }],
   ])('Cenário: POST com %s', (_nome, corpo) => {
     it('Então 400 e o service não é chamado', async () => {
       await esperaValidacao(await http().post('/v1/painel/filiais').send(corpo));
@@ -114,6 +164,29 @@ describe('Funcionalidade: Rotas de filiais', () => {
         await http().patch(`/v1/painel/filiais/${ID}`).send({ codigoPublico: 'AAAAAAAA' }),
       );
       expect(filiais.editar).not.toHaveBeenCalled();
+    });
+  });
+
+  describe.each([
+    ['endereço null', { endereco: null }],
+    ['endereço parcial', { endereco: { numero: '12' } }],
+    ['endereço como texto', { endereco: 'Rua B' }],
+  ])('Cenário: PATCH com %s', (_nome, corpo) => {
+    it('Então 400 e o service não é chamado', async () => {
+      await esperaValidacao(await http().patch(`/v1/painel/filiais/${ID}`).send(corpo));
+      expect(filiais.editar).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Cenário: PATCH com endereço completo', () => {
+    it('Então o service recebe o endereço normalizado', async () => {
+      await http()
+        .patch(`/v1/painel/filiais/${ID}`)
+        .send({ endereco: umEnderecoDto({ numero: '200' }) })
+        .expect(200);
+      expect(filiais.editar).toHaveBeenCalledWith('T1', ID, {
+        endereco: umEnderecoDto({ cep: '01310100', numero: '200' }),
+      });
     });
   });
 
@@ -141,8 +214,15 @@ describe('Funcionalidade: Rotas de filiais', () => {
     it('Então devolve a view', async () => {
       const resposta = await http().get(`/v1/painel/filiais/${ID}`);
       expect(resposta.status).toBe(200);
-      expect(filiais.obter).toHaveBeenCalledWith('T1', ID);
+      expect(filiais.obter).toHaveBeenCalledWith('T1', ID, { comEndereco: true });
       expect(resposta.body.urlPublica).toBe('https://tabloide.app/f/k7Qm2xPa');
+      expect(resposta.body.endereco).toEqual(umEndereco());
+    });
+
+    it('E filial sem endereço estruturado devolve endereco null', async () => {
+      filiais.obter.mockResolvedValue({ ...filial, endereco: null });
+      const resposta = await http().get(`/v1/painel/filiais/${ID}`).expect(200);
+      expect(resposta.body.endereco).toBeNull();
     });
   });
 

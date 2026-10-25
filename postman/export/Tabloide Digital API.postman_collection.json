@@ -1089,10 +1089,10 @@
                 "filiais"
               ]
             },
-            "description": "Cria a filial e gera o `codigoPublico` (8 caracteres sem ambíguos) usado na URL pública e no QR Code.\n\n| Campo | Regra |\n| --- | --- |\n| `nome` | obrigatório, até 120 |\n| `endereco` | obrigatório, até 300 |\n| `fusoHorario` | opcional, fuso IANA (ex.: `America/Manaus`); padrão `FUSO_HORARIO_PADRAO` |\n\nResponde 201 com `Location`. Pode responder 409 `LIMITE_DO_PLANO_ATINGIDO` se o lojista tiver limite de filiais.",
+            "description": "Cria a filial e gera o `codigoPublico` (8 caracteres sem ambíguos) usado na URL pública e no QR Code.\n\n| Campo | Regra |\n| --- | --- |\n| `nome` | obrigatório, até 120 |\n| `endereco` | obrigatório, objeto completo (abaixo) |\n| `endereco.cep` | obrigatório, `00000-000` ou `00000000`; volta só com os 8 dígitos |\n| `endereco.logradouro` | obrigatório, até 200 |\n| `endereco.numero` | obrigatório, até 20 |\n| `endereco.complemento` | opcional, até 100; ausente volta `null` |\n| `endereco.bairro` | obrigatório, até 100 |\n| `endereco.cidade` | obrigatório, até 100 |\n| `endereco.uf` | obrigatório, 2 caracteres (a sigla é validada no front) |\n| `fusoHorario` | opcional, fuso IANA (ex.: `America/Manaus`); padrão `FUSO_HORARIO_PADRAO` |\n\nResponde 201 com `Location`. Pode responder 409 `LIMITE_DO_PLANO_ATINGIDO` se o lojista tiver limite de filiais.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nome\": \"Centro\",\n  \"endereco\": \"Rua das Flores, 120 — Centro, Campinas/SP\",\n  \"fusoHorario\": \"America/Sao_Paulo\"\n}",
+              "raw": "{\n  \"nome\": \"Centro\",\n  \"endereco\": {\n    \"cep\": \"13010-111\",\n    \"logradouro\": \"Rua das Flores\",\n    \"numero\": \"120\",\n    \"complemento\": \"Loja 2\",\n    \"bairro\": \"Centro\",\n    \"cidade\": \"Campinas\",\n    \"uf\": \"SP\"\n  },\n  \"fusoHorario\": \"America/Sao_Paulo\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1121,10 +1121,10 @@
                     "filiais"
                   ]
                 },
-                "description": "Cria a filial e gera o `codigoPublico` (8 caracteres sem ambíguos) usado na URL pública e no QR Code.\n\n| Campo | Regra |\n| --- | --- |\n| `nome` | obrigatório, até 120 |\n| `endereco` | obrigatório, até 300 |\n| `fusoHorario` | opcional, fuso IANA (ex.: `America/Manaus`); padrão `FUSO_HORARIO_PADRAO` |\n\nResponde 201 com `Location`. Pode responder 409 `LIMITE_DO_PLANO_ATINGIDO` se o lojista tiver limite de filiais.",
+                "description": "Cria a filial e gera o `codigoPublico` (8 caracteres sem ambíguos) usado na URL pública e no QR Code.\n\n| Campo | Regra |\n| --- | --- |\n| `nome` | obrigatório, até 120 |\n| `endereco` | obrigatório, objeto completo (abaixo) |\n| `endereco.cep` | obrigatório, `00000-000` ou `00000000`; volta só com os 8 dígitos |\n| `endereco.logradouro` | obrigatório, até 200 |\n| `endereco.numero` | obrigatório, até 20 |\n| `endereco.complemento` | opcional, até 100; ausente volta `null` |\n| `endereco.bairro` | obrigatório, até 100 |\n| `endereco.cidade` | obrigatório, até 100 |\n| `endereco.uf` | obrigatório, 2 caracteres (a sigla é validada no front) |\n| `fusoHorario` | opcional, fuso IANA (ex.: `America/Manaus`); padrão `FUSO_HORARIO_PADRAO` |\n\nResponde 201 com `Location`. Pode responder 409 `LIMITE_DO_PLANO_ATINGIDO` se o lojista tiver limite de filiais.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"nome\": \"Centro\",\n  \"endereco\": \"Rua das Flores, 120 — Centro, Campinas/SP\",\n  \"fusoHorario\": \"America/Sao_Paulo\"\n}",
+                  "raw": "{\n  \"nome\": \"Centro\",\n  \"endereco\": {\n    \"cep\": \"13010-111\",\n    \"logradouro\": \"Rua das Flores\",\n    \"numero\": \"120\",\n    \"complemento\": \"Loja 2\",\n    \"bairro\": \"Centro\",\n    \"cidade\": \"Campinas\",\n    \"uf\": \"SP\"\n  },\n  \"fusoHorario\": \"America/Sao_Paulo\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1148,7 +1148,7 @@
                   "value": "0192f0f0-1111-7000-8000-00000000abcd"
                 }
               ],
-              "body": "{\n  \"id\": \"0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02\",\n  \"nome\": \"Centro\",\n  \"endereco\": \"Rua das Flores, 120 — Centro, Campinas/SP\",\n  \"fusoHorario\": \"America/Sao_Paulo\",\n  \"codigoPublico\": \"k7Qm2xPa\",\n  \"urlPublica\": \"https://tabloide.app/f/k7Qm2xPa\",\n  \"criadaEm\": \"2026-10-18T13:05:00.000Z\",\n  \"atualizadaEm\": \"2026-10-18T13:05:00.000Z\"\n}",
+              "body": "{\n  \"id\": \"0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02\",\n  \"nome\": \"Centro\",\n  \"endereco\": {\n    \"cep\": \"13010111\",\n    \"logradouro\": \"Rua das Flores\",\n    \"numero\": \"120\",\n    \"complemento\": \"Loja 2\",\n    \"bairro\": \"Centro\",\n    \"cidade\": \"Campinas\",\n    \"uf\": \"SP\"\n  },\n  \"fusoHorario\": \"America/Sao_Paulo\",\n  \"codigoPublico\": \"k7Qm2xPa\",\n  \"urlPublica\": \"https://tabloide.app/f/k7Qm2xPa\",\n  \"criadaEm\": \"2026-10-18T13:05:00.000Z\",\n  \"atualizadaEm\": \"2026-10-18T13:05:00.000Z\"\n}",
               "_postman_previewlanguage": "json"
             },
             {
@@ -1171,10 +1171,10 @@
                     "filiais"
                   ]
                 },
-                "description": "Cria a filial e gera o `codigoPublico` (8 caracteres sem ambíguos) usado na URL pública e no QR Code.\n\n| Campo | Regra |\n| --- | --- |\n| `nome` | obrigatório, até 120 |\n| `endereco` | obrigatório, até 300 |\n| `fusoHorario` | opcional, fuso IANA (ex.: `America/Manaus`); padrão `FUSO_HORARIO_PADRAO` |\n\nResponde 201 com `Location`. Pode responder 409 `LIMITE_DO_PLANO_ATINGIDO` se o lojista tiver limite de filiais.",
+                "description": "Cria a filial e gera o `codigoPublico` (8 caracteres sem ambíguos) usado na URL pública e no QR Code.\n\n| Campo | Regra |\n| --- | --- |\n| `nome` | obrigatório, até 120 |\n| `endereco` | obrigatório, objeto completo (abaixo) |\n| `endereco.cep` | obrigatório, `00000-000` ou `00000000`; volta só com os 8 dígitos |\n| `endereco.logradouro` | obrigatório, até 200 |\n| `endereco.numero` | obrigatório, até 20 |\n| `endereco.complemento` | opcional, até 100; ausente volta `null` |\n| `endereco.bairro` | obrigatório, até 100 |\n| `endereco.cidade` | obrigatório, até 100 |\n| `endereco.uf` | obrigatório, 2 caracteres (a sigla é validada no front) |\n| `fusoHorario` | opcional, fuso IANA (ex.: `America/Manaus`); padrão `FUSO_HORARIO_PADRAO` |\n\nResponde 201 com `Location`. Pode responder 409 `LIMITE_DO_PLANO_ATINGIDO` se o lojista tiver limite de filiais.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"nome\": \"Centro\",\n  \"endereco\": \"Rua das Flores, 120 — Centro, Campinas/SP\",\n  \"fusoHorario\": \"America/Sao_Paulo\"\n}",
+                  "raw": "{\n  \"nome\": \"Centro\",\n  \"endereco\": {\n    \"cep\": \"13010-111\",\n    \"logradouro\": \"Rua das Flores\",\n    \"numero\": \"120\",\n    \"complemento\": \"Loja 2\",\n    \"bairro\": \"Centro\",\n    \"cidade\": \"Campinas\",\n    \"uf\": \"SP\"\n  },\n  \"fusoHorario\": \"America/Sao_Paulo\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1217,10 +1217,10 @@
                     "filiais"
                   ]
                 },
-                "description": "Cria a filial e gera o `codigoPublico` (8 caracteres sem ambíguos) usado na URL pública e no QR Code.\n\n| Campo | Regra |\n| --- | --- |\n| `nome` | obrigatório, até 120 |\n| `endereco` | obrigatório, até 300 |\n| `fusoHorario` | opcional, fuso IANA (ex.: `America/Manaus`); padrão `FUSO_HORARIO_PADRAO` |\n\nResponde 201 com `Location`. Pode responder 409 `LIMITE_DO_PLANO_ATINGIDO` se o lojista tiver limite de filiais.",
+                "description": "Cria a filial e gera o `codigoPublico` (8 caracteres sem ambíguos) usado na URL pública e no QR Code.\n\n| Campo | Regra |\n| --- | --- |\n| `nome` | obrigatório, até 120 |\n| `endereco` | obrigatório, objeto completo (abaixo) |\n| `endereco.cep` | obrigatório, `00000-000` ou `00000000`; volta só com os 8 dígitos |\n| `endereco.logradouro` | obrigatório, até 200 |\n| `endereco.numero` | obrigatório, até 20 |\n| `endereco.complemento` | opcional, até 100; ausente volta `null` |\n| `endereco.bairro` | obrigatório, até 100 |\n| `endereco.cidade` | obrigatório, até 100 |\n| `endereco.uf` | obrigatório, 2 caracteres (a sigla é validada no front) |\n| `fusoHorario` | opcional, fuso IANA (ex.: `America/Manaus`); padrão `FUSO_HORARIO_PADRAO` |\n\nResponde 201 com `Location`. Pode responder 409 `LIMITE_DO_PLANO_ATINGIDO` se o lojista tiver limite de filiais.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"nome\": \"Centro\",\n  \"endereco\": \"Rua das Flores, 120 — Centro, Campinas/SP\",\n  \"fusoHorario\": \"America/Sao_Paulo\"\n}",
+                  "raw": "{\n  \"nome\": \"Centro\",\n  \"endereco\": {\n    \"cep\": \"13010-111\",\n    \"logradouro\": \"Rua das Flores\",\n    \"numero\": \"120\",\n    \"complemento\": \"Loja 2\",\n    \"bairro\": \"Centro\",\n    \"cidade\": \"Campinas\",\n    \"uf\": \"SP\"\n  },\n  \"fusoHorario\": \"America/Sao_Paulo\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1334,7 +1334,7 @@
                   "value": "0192f0f0-1111-7000-8000-00000000abcd"
                 }
               ],
-              "body": "{\n  \"itens\": [\n    {\n      \"id\": \"0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02\",\n      \"nome\": \"Centro\",\n      \"endereco\": \"Rua das Flores, 120 — Centro, Campinas/SP\",\n      \"fusoHorario\": \"America/Sao_Paulo\",\n      \"codigoPublico\": \"k7Qm2xPa\",\n      \"urlPublica\": \"https://tabloide.app/f/k7Qm2xPa\",\n      \"criadaEm\": \"2026-10-18T13:05:00.000Z\",\n      \"atualizadaEm\": \"2026-10-18T13:05:00.000Z\"\n    }\n  ],\n  \"total\": 1,\n  \"pagina\": 1,\n  \"porPagina\": 50\n}",
+              "body": "{\n  \"itens\": [\n    {\n      \"id\": \"0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02\",\n      \"nome\": \"Centro\",\n      \"endereco\": {\n        \"cep\": \"13010111\",\n        \"logradouro\": \"Rua das Flores\",\n        \"numero\": \"120\",\n        \"complemento\": \"Loja 2\",\n        \"bairro\": \"Centro\",\n        \"cidade\": \"Campinas\",\n        \"uf\": \"SP\"\n      },\n      \"fusoHorario\": \"America/Sao_Paulo\",\n      \"codigoPublico\": \"k7Qm2xPa\",\n      \"urlPublica\": \"https://tabloide.app/f/k7Qm2xPa\",\n      \"criadaEm\": \"2026-10-18T13:05:00.000Z\",\n      \"atualizadaEm\": \"2026-10-18T13:05:00.000Z\"\n    }\n  ],\n  \"total\": 1,\n  \"pagina\": 1,\n  \"porPagina\": 50\n}",
               "_postman_previewlanguage": "json"
             }
           ],
@@ -1415,7 +1415,7 @@
                   "value": "0192f0f0-1111-7000-8000-00000000abcd"
                 }
               ],
-              "body": "{\n  \"id\": \"0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02\",\n  \"nome\": \"Centro\",\n  \"endereco\": \"Rua das Flores, 120 — Centro, Campinas/SP\",\n  \"fusoHorario\": \"America/Sao_Paulo\",\n  \"codigoPublico\": \"k7Qm2xPa\",\n  \"urlPublica\": \"https://tabloide.app/f/k7Qm2xPa\",\n  \"criadaEm\": \"2026-10-18T13:05:00.000Z\",\n  \"atualizadaEm\": \"2026-10-18T13:05:00.000Z\"\n}",
+              "body": "{\n  \"id\": \"0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02\",\n  \"nome\": \"Centro\",\n  \"endereco\": {\n    \"cep\": \"13010111\",\n    \"logradouro\": \"Rua das Flores\",\n    \"numero\": \"120\",\n    \"complemento\": \"Loja 2\",\n    \"bairro\": \"Centro\",\n    \"cidade\": \"Campinas\",\n    \"uf\": \"SP\"\n  },\n  \"fusoHorario\": \"America/Sao_Paulo\",\n  \"codigoPublico\": \"k7Qm2xPa\",\n  \"urlPublica\": \"https://tabloide.app/f/k7Qm2xPa\",\n  \"criadaEm\": \"2026-10-18T13:05:00.000Z\",\n  \"atualizadaEm\": \"2026-10-18T13:05:00.000Z\"\n}",
               "_postman_previewlanguage": "json"
             },
             {
@@ -1501,10 +1501,10 @@
                 }
               ]
             },
-            "description": "Edição parcial de `nome`, `endereco` e `fusoHorario`. O `codigoPublico` não muda (RN39). A troca de fuso é auditada e muda o \"hoje\" usado na vigência dos itens.",
+            "description": "Edição parcial de `nome`, `endereco` e `fusoHorario`. O `endereco`, quando enviado, vem completo (mesmas regras do cadastro) e substitui o atual; `null` ou parcial dá 400. O `codigoPublico` não muda (RN39). A troca de fuso é auditada e muda o \"hoje\" usado na vigência dos itens.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nome\": \"Centro\",\n  \"endereco\": \"Rua das Flores, 120 — Centro, Campinas/SP\",\n  \"fusoHorario\": \"America/Sao_Paulo\"\n}",
+              "raw": "{\n  \"nome\": \"Centro\",\n  \"endereco\": {\n    \"cep\": \"13010-111\",\n    \"logradouro\": \"Rua das Flores\",\n    \"numero\": \"120\",\n    \"complemento\": \"Loja 2\",\n    \"bairro\": \"Centro\",\n    \"cidade\": \"Campinas\",\n    \"uf\": \"SP\"\n  },\n  \"fusoHorario\": \"America/Sao_Paulo\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1541,10 +1541,10 @@
                     }
                   ]
                 },
-                "description": "Edição parcial de `nome`, `endereco` e `fusoHorario`. O `codigoPublico` não muda (RN39). A troca de fuso é auditada e muda o \"hoje\" usado na vigência dos itens.",
+                "description": "Edição parcial de `nome`, `endereco` e `fusoHorario`. O `endereco`, quando enviado, vem completo (mesmas regras do cadastro) e substitui o atual; `null` ou parcial dá 400. O `codigoPublico` não muda (RN39). A troca de fuso é auditada e muda o \"hoje\" usado na vigência dos itens.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"nome\": \"Centro\",\n  \"endereco\": \"Rua das Flores, 120 — Centro, Campinas/SP\",\n  \"fusoHorario\": \"America/Sao_Paulo\"\n}",
+                  "raw": "{\n  \"nome\": \"Centro\",\n  \"endereco\": {\n    \"cep\": \"13010-111\",\n    \"logradouro\": \"Rua das Flores\",\n    \"numero\": \"120\",\n    \"complemento\": \"Loja 2\",\n    \"bairro\": \"Centro\",\n    \"cidade\": \"Campinas\",\n    \"uf\": \"SP\"\n  },\n  \"fusoHorario\": \"America/Sao_Paulo\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1564,7 +1564,7 @@
                   "value": "0192f0f0-1111-7000-8000-00000000abcd"
                 }
               ],
-              "body": "{\n  \"id\": \"0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02\",\n  \"nome\": \"Centro\",\n  \"endereco\": \"Rua das Flores, 120 — Centro, Campinas/SP\",\n  \"fusoHorario\": \"America/Sao_Paulo\",\n  \"codigoPublico\": \"k7Qm2xPa\",\n  \"urlPublica\": \"https://tabloide.app/f/k7Qm2xPa\",\n  \"criadaEm\": \"2026-10-18T13:05:00.000Z\",\n  \"atualizadaEm\": \"2026-10-18T13:05:00.000Z\"\n}",
+              "body": "{\n  \"id\": \"0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02\",\n  \"nome\": \"Centro\",\n  \"endereco\": {\n    \"cep\": \"13010111\",\n    \"logradouro\": \"Rua das Flores\",\n    \"numero\": \"120\",\n    \"complemento\": \"Loja 2\",\n    \"bairro\": \"Centro\",\n    \"cidade\": \"Campinas\",\n    \"uf\": \"SP\"\n  },\n  \"fusoHorario\": \"America/Sao_Paulo\",\n  \"codigoPublico\": \"k7Qm2xPa\",\n  \"urlPublica\": \"https://tabloide.app/f/k7Qm2xPa\",\n  \"criadaEm\": \"2026-10-18T13:05:00.000Z\",\n  \"atualizadaEm\": \"2026-10-18T13:05:00.000Z\"\n}",
               "_postman_previewlanguage": "json"
             }
           ],
@@ -1754,7 +1754,7 @@
                   "  url: pm.environment.get('baseUrl') + '/painel/filiais'.replace('{{filialId}}', pm.environment.get('filialId')),",
                   "  method: 'POST',",
                   "  header: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + pm.environment.get('token') },",
-                  "  body: { mode: 'raw', raw: JSON.stringify({ nome: 'Filial temporária', endereco: 'Rua da exclusão, 1' }) },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ nome: 'Filial temporária', endereco: { cep: '13010-111', logradouro: 'Rua da exclusão', numero: '1', bairro: 'Centro', cidade: 'Campinas', uf: 'SP' } }) },",
                   "}, (err, res) => {",
                   "  if (!err && res.code === 201) pm.variables.set('filialTemporariaId', res.json().id);",
                   "});"
@@ -4807,7 +4807,7 @@
                   "value": "0192f0f0-1111-7000-8000-00000000abcd"
                 }
               ],
-              "body": "{\n  \"lojista\": {\n    \"nome\": \"Mercado Bom Preço\",\n    \"logoUrl\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/logo/0192f0e0.webp\",\n    \"corPrimaria\": \"#C8102E\",\n    \"corSecundaria\": \"#FFD100\"\n  },\n  \"filial\": {\n    \"nome\": \"Centro\",\n    \"endereco\": \"Rua das Flores, 120 — Centro, Campinas/SP\"\n  },\n  \"panfleto\": {\n    \"imagemUrl\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp\",\n    \"largura\": 1600,\n    \"altura\": 2263,\n    \"validoAte\": \"2026-10-31\"\n  },\n  \"categorias\": [\n    {\n      \"nome\": \"Bebidas\",\n      \"produtos\": [\n        {\n          \"nome\": \"Água mineral\",\n          \"quantidade\": \"1,5 L\",\n          \"precoPromocionalCentavos\": 249\n        },\n        {\n          \"nome\": \"Refrigerante cola\",\n          \"quantidade\": \"2 L\",\n          \"precoPromocionalCentavos\": 799,\n          \"precoOriginalCentavos\": 1099,\n          \"observacao\": \"limite 3 por cliente\",\n          \"fotoUrl\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/produto/0192f0d2.webp\",\n          \"validoAte\": \"2026-10-20\"\n        }\n      ]\n    },\n    {\n      \"nome\": \"Mercearia\",\n      \"produtos\": [\n        {\n          \"nome\": \"Arroz Tipo 1\",\n          \"quantidade\": \"5kg\",\n          \"precoPromocionalCentavos\": 2199,\n          \"precoOriginalCentavos\": 2649,\n          \"observacao\": \"Limite 3 por cliente\",\n          \"fotoUrl\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/produto/0192f0d1.webp\",\n          \"validoAte\": \"2026-10-25\"\n        }\n      ]\n    }\n  ],\n  \"hoje\": \"2026-10-18\",\n  \"geradoEm\": \"2026-10-18T15:04:05.123Z\"\n}",
+              "body": "{\n  \"lojista\": {\n    \"nome\": \"Mercado Bom Preço\",\n    \"logoUrl\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/logo/0192f0e0.webp\",\n    \"corPrimaria\": \"#C8102E\",\n    \"corSecundaria\": \"#FFD100\"\n  },\n  \"filial\": {\n    \"nome\": \"Centro\",\n    \"endereco\": {\n      \"cep\": \"13010111\",\n      \"logradouro\": \"Rua das Flores\",\n      \"numero\": \"120\",\n      \"complemento\": \"Loja 2\",\n      \"bairro\": \"Centro\",\n      \"cidade\": \"Campinas\",\n      \"uf\": \"SP\"\n    }\n  },\n  \"panfleto\": {\n    \"imagemUrl\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp\",\n    \"largura\": 1600,\n    \"altura\": 2263,\n    \"validoAte\": \"2026-10-31\"\n  },\n  \"categorias\": [\n    {\n      \"nome\": \"Bebidas\",\n      \"produtos\": [\n        {\n          \"nome\": \"Água mineral\",\n          \"quantidade\": \"1,5 L\",\n          \"precoPromocionalCentavos\": 249\n        },\n        {\n          \"nome\": \"Refrigerante cola\",\n          \"quantidade\": \"2 L\",\n          \"precoPromocionalCentavos\": 799,\n          \"precoOriginalCentavos\": 1099,\n          \"observacao\": \"limite 3 por cliente\",\n          \"fotoUrl\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/produto/0192f0d2.webp\",\n          \"validoAte\": \"2026-10-20\"\n        }\n      ]\n    },\n    {\n      \"nome\": \"Mercearia\",\n      \"produtos\": [\n        {\n          \"nome\": \"Arroz Tipo 1\",\n          \"quantidade\": \"5kg\",\n          \"precoPromocionalCentavos\": 2199,\n          \"precoOriginalCentavos\": 2649,\n          \"observacao\": \"Limite 3 por cliente\",\n          \"fotoUrl\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/produto/0192f0d1.webp\",\n          \"validoAte\": \"2026-10-25\"\n        }\n      ]\n    }\n  ],\n  \"hoje\": \"2026-10-18\",\n  \"geradoEm\": \"2026-10-18T15:04:05.123Z\"\n}",
               "_postman_previewlanguage": "json"
             },
             {

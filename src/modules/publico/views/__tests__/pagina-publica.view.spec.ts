@@ -1,3 +1,4 @@
+import { umEndereco } from '../../../../../test/factories/endereco-filial.factory';
 import type { DataISO } from '../../../../common/utils/date-only';
 import { StatusLojista } from '../../../lojistas/models/status-lojista';
 import type { PaginaPublica, PanfletoRow, ProdutoRow } from '../../domain/montar-pagina';
@@ -28,7 +29,7 @@ const umaPagina = (
       id: '0192f0b4-0000-7000-8000-000000000001',
       tenantId: '0192f0a1-0000-7000-8000-000000000001',
       nome: 'Centro',
-      endereco: 'Rua das Flores, 120',
+      endereco: umEndereco(),
       fusoHorario: 'America/Sao_Paulo',
       lojista: {
         nomeFantasia: 'Mercado Bom Preço',
@@ -116,9 +117,25 @@ describe('Funcionalidade: View pública com campos mínimos (RN28, RN31, RN32, R
           corPrimaria: '#C8102E',
           corSecundaria: '#FFD100',
         },
-        filial: { nome: 'Centro', endereco: 'Rua das Flores, 120' },
+        filial: { nome: 'Centro', endereco: umEndereco() },
         hoje: '2026-10-18',
       }));
+  });
+
+  describe('Cenário: filial sem endereço estruturado', () => {
+    it('Então endereco é null', () => {
+      const pagina = umaPagina();
+      pagina.filial.endereco = null;
+      expect(paginaPublicaView(pagina, url, HOJE).filial).toEqual({ nome: 'Centro', endereco: null });
+    });
+  });
+
+  describe('Cenário: endereço não expõe tenantId nem timestamps do model', () => {
+    it('Então só os campos do endereço saem', () => {
+      const pagina = umaPagina();
+      pagina.filial.endereco = { ...umEndereco(), tenantId: 't1', createdAt: new Date() } as never;
+      expect(paginaPublicaView(pagina, url, HOJE).filial.endereco).toEqual(umEndereco());
+    });
   });
 
   describe('Cenário: lojista sem logo nem cores', () => {

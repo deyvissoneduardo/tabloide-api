@@ -6,7 +6,14 @@ description: |-
   | Campo | Regra |
   | --- | --- |
   | `nome` | obrigatório, até 120 |
-  | `endereco` | obrigatório, até 300 |
+  | `endereco` | obrigatório, objeto completo (abaixo) |
+  | `endereco.cep` | obrigatório, `00000-000` ou `00000000`; volta só com os 8 dígitos |
+  | `endereco.logradouro` | obrigatório, até 200 |
+  | `endereco.numero` | obrigatório, até 20 |
+  | `endereco.complemento` | opcional, até 100; ausente volta `null` |
+  | `endereco.bairro` | obrigatório, até 100 |
+  | `endereco.cidade` | obrigatório, até 100 |
+  | `endereco.uf` | obrigatório, 2 caracteres (a sigla é validada no front) |
   | `fusoHorario` | opcional, fuso IANA (ex.: `America/Manaus`); padrão `FUSO_HORARIO_PADRAO` |
 
   Responde 201 com `Location`. Pode responder 409 `LIMITE_DO_PLANO_ATINGIDO` se o lojista tiver limite de filiais.
@@ -19,7 +26,15 @@ body:
   content: |-
     {
       "nome": "Centro",
-      "endereco": "Rua das Flores, 120 — Centro, Campinas/SP",
+      "endereco": {
+        "cep": "13010-111",
+        "logradouro": "Rua das Flores",
+        "numero": "120",
+        "complemento": "Loja 2",
+        "bairro": "Centro",
+        "cidade": "Campinas",
+        "uf": "SP"
+      },
       "fusoHorario": "America/Sao_Paulo"
     }
 scripts:

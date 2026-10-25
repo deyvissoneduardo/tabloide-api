@@ -1,7 +1,17 @@
 import { ApiHideProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsObject,
+  IsOptional,
+  IsString,
+  Length,
+  MaxLength,
+  ValidateIf,
+  ValidateNested,
+} from 'class-validator';
 import { NormalizarEspacos } from '../../../common/validators/transformacoes';
 import { AoMenosUmCampo } from '../../../common/validators/validadores';
+import { EnderecoFilialDto } from './endereco-filial.dto';
 
 /** codigoPublico não é editável (RN39): campo desconhecido é recusado pelo forbidNonWhitelisted. */
 export class EditarFilialDto {
@@ -11,11 +21,12 @@ export class EditarFilialDto {
   @Length(1, 120, { message: 'nome não pode ficar vazio e deve ter até 120 caracteres' })
   nome?: string;
 
-  @NormalizarEspacos()
-  @IsOptional()
-  @IsString({ message: 'endereço deve ter até 300 caracteres' })
-  @Length(1, 300, { message: 'endereço não pode ficar vazio e deve ter até 300 caracteres' })
-  endereco?: string;
+  /** Vem inteiro e substitui o endereço atual; null é recusado (não há como remover o endereço). */
+  @ValidateIf((o: EditarFilialDto) => o.endereco !== undefined)
+  @IsObject({ message: 'endereço deve ser um objeto' })
+  @ValidateNested()
+  @Type(() => EnderecoFilialDto)
+  endereco?: EnderecoFilialDto;
 
   @IsOptional()
   @IsString({ message: 'fusoHorario deve ser texto' })

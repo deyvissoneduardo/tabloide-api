@@ -2,6 +2,7 @@ import { Sequelize } from 'sequelize-typescript';
 import { DesligamentoService } from '../../../src/common/observabilidade/desligamento.service';
 import { StatusLojista } from '../../../src/modules/lojistas/models/status-lojista';
 import { criarCategoria } from '../../factories/categoria.factory';
+import { umEnderecoDto } from '../../factories/endereco-filial.factory';
 import { criarFilial, type FilialCriada } from '../../factories/filial.factory';
 import { umLojista, type LojistaCriado } from '../../factories/lojista.factory';
 import { inserirProduto } from '../../factories/produto.factory';
@@ -60,7 +61,7 @@ describe('Funcionalidade: API pronta para produção', () => {
         .post('/v1/painel/filiais')
         .set('Authorization', `Bearer ${lojista.token}`)
         .set('Content-Type', 'application/json')
-        .send(JSON.stringify({ nome: 'x'.repeat(200 * 1024), endereco: 'Rua' }));
+        .send(JSON.stringify({ nome: 'x'.repeat(200 * 1024), endereco: umEnderecoDto() }));
       expect(r.status).toBe(413);
     });
 

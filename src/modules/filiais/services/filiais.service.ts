@@ -16,25 +16,38 @@ import { AppConfig } from '../../../config/app.config';
 import { AuditoriaService, CAMPOS_AUDITADOS } from '../../auditoria/services/auditoria.service';
 import { normalizarFuso } from '../../vigencia/domain/fuso';
 import { ExclusaoEmCascataFilialRegistry } from '../cascata/exclusao-em-cascata-filial.registry';
+import { CAMPOS_ENDERECO, type EnderecoFilial } from '../domain/endereco';
 import { CriarFilialDto } from '../dtos/criar-filial.dto';
 import { EditarFilialDto } from '../dtos/editar-filial.dto';
+import type { EnderecoFilialDto } from '../dtos/endereco-filial.dto';
+import { FilialEndereco } from '../models/filial-endereco.model';
 import { Filial } from '../models/filial.model';
 import { GERADOR_CODIGO_PUBLICO, type GeradorCodigoPublico } from './gerador-codigo-publico';
 
 export const MAX_TENTATIVAS_CODIGO = 5;
 const CONSTRAINT_CODIGO_PUBLICO = 'filiais_codigo_publico_uk';
 
-const ATRIBUTOS_LISTAGEM = [
-  'id',
-  'nome',
-  'endereco',
-  'fusoHorario',
-  'codigoPublico',
-  'createdAt',
-  'updatedAt',
-];
+const ATRIBUTOS_LISTAGEM = ['id', 'nome', 'fusoHorario', 'codigoPublico', 'createdAt', 'updatedAt'];
 
-const CAMPOS_EDITAVEIS = ['nome', 'endereco', 'fusoHorario'] as const;
+const CAMPOS_EDITAVEIS = ['nome', 'fusoHorario'] as const;
+
+/** LEFT JOIN: filial anterior ao endereço estruturado vem com endereco null. */
+const incluirEndereco = (tenantId: string) => ({
+  model: FilialEndereco,
+  attributes: [...CAMPOS_ENDERECO],
+  where: { tenantId },
+  required: false,
+});
+
+const dadosDoEndereco = (dto: EnderecoFilialDto): EnderecoFilial => ({
+  cep: dto.cep,
+  logradouro: dto.logradouro,
+  numero: dto.numero,
+  complemento: dto.complemento ?? null,
+  bairro: dto.bairro,
+  cidade: dto.cidade,
+  uf: dto.uf,
+});
 
 function ehColisaoDeCodigo(err: unknown): boolean {
   if (!(err instanceof UniqueConstraintError)) return false;
@@ -52,6 +65,8 @@ function fusoOuErro(fuso: string): string {
 export interface OpcoesObterFilial {
   transaction?: Transaction;
   lock?: Transaction['LOCK'][keyof Transaction['LOCK']];
+  /** Só para a resposta da própria filial; as outras fases só validam o dono. */
+  comEndereco?: boolean;
 }
 
 @Injectable()
@@ -60,6 +75,7 @@ export class FiliaisService {
 
   constructor(
     @InjectModel(Filial) private readonly filialModel: typeof Filial,
+    @InjectModel(FilialEndereco) private readonly enderecoModel: typeof FilialEndereco,
     private readonly sequelize: Sequelize,
     @Inject(GERADOR_CODIGO_PUBLICO) private readonly gerador: GeradorCodigoPublico,
     private readonly cascata: ExclusaoEmCascataFilialRegistry,
@@ -76,6 +92,7 @@ export class FiliaisService {
     const { rows, count } = await this.filialModel.findAndCountAll({
       where: { tenantId },
       attributes: ATRIBUTOS_LISTAGEM,
+      include: [incluirEndereco(tenantId)],
       order: [
         [literal('nome COLLATE "pt-BR-x-icu"'), 'ASC'],
         ['id', 'ASC'],
@@ -90,6 +107,7 @@ export class FiliaisService {
   async obter(tenantId: string, id: string, opts: OpcoesObterFilial = {}): Promise<Filial> {
     const filial = await this.filialModel.findOne({
       where: { id, tenantId },
+      include: opts.comEndereco ? [incluirEndereco(tenantId)] : undefined,
       transaction: opts.transaction,
       lock: opts.lock,
     });
@@ -103,8 +121,12 @@ export class FiliaisService {
     return this.sequelize.transaction(async (transaction) => {
       await this.limites.verificarCriacaoFilial(tenantId, { transaction });
       const filial = await this.criarComCodigoUnico(
-        { id: uuidv7(), tenantId, nome: dto.nome, endereco: dto.endereco, fusoHorario },
+        { id: uuidv7(), tenantId, nome: dto.nome, fusoHorario },
         transaction,
+      );
+      filial.endereco = await this.enderecoModel.create(
+        { filialId: filial.id, tenantId, ...dadosDoEndereco(dto.endereco) },
+        { transaction },
       );
       await this.auditoria.registrarCriacao(
         tenantId,
@@ -131,6 +153,7 @@ export class FiliaisService {
       const antes = { fusoHorario: filial.fusoHorario };
       filial.set(novos);
       await filial.save({ transaction });
+      filial.endereco = await this.salvarEndereco(tenantId, id, dto.endereco, transaction);
 
       if (novos.fusoHorario !== undefined) {
         await this.auditoria.registrarAlteracoes(
@@ -160,6 +183,22 @@ export class FiliaisService {
       await filial.destroy({ transaction });
       this.emitirAposCommit(transaction, { tenantId, filialId: id });
     });
+  }
+
+  /** O lock da filial (em editar) serializa a troca do endereço. */
+  private async salvarEndereco(
+    tenantId: string,
+    filialId: string,
+    dto: EnderecoFilialDto | undefined,
+    transaction: Transaction,
+  ): Promise<FilialEndereco | null> {
+    const atual = await this.enderecoModel.findOne({ where: { filialId, tenantId }, transaction });
+    if (!dto) return atual;
+    if (!atual) {
+      return this.enderecoModel.create({ filialId, tenantId, ...dadosDoEndereco(dto) }, { transaction });
+    }
+    atual.set(dadosDoEndereco(dto));
+    return atual.save({ transaction });
   }
 
   private async criarComCodigoUnico(

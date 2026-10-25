@@ -19,7 +19,10 @@ POST {{base}}/painel/filiais
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{ "nome": "Centro", "endereco": "Rua A, 100" }
+{
+  "nome": "Centro",
+  "endereco": { "cep": "01310-100", "logradouro": "Rua A", "numero": "100", "bairro": "Centro", "cidade": "São Paulo", "uf": "SP" }
+}
 
 @filialId = {{filial.response.body.id}}
 

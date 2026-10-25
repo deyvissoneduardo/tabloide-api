@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { ApiDataISO } from '../../../common/swagger/data-iso.decorator';
 import type { DataISO } from '../../../common/utils/date-only';
+import { EnderecoFilialView, enderecoView } from '../../filiais/views/filial.view';
 import type { PaginaPublica, ProdutoRow } from '../domain/montar-pagina';
 
 export class ProdutoPublicoJson {
@@ -24,7 +25,9 @@ export class LojistaPublicoJson {
 
 export class FilialPublicaJson {
   nome!: string;
-  endereco!: string;
+  /** null em filial anterior ao endereço estruturado. */
+  @ApiProperty({ type: () => EnderecoFilialView, nullable: true })
+  endereco!: EnderecoFilialView | null;
 }
 
 export class PanfletoPublicoJson {
@@ -84,7 +87,7 @@ export function paginaPublicaView(pagina: PaginaPublica, url: UrlPublica, hoje: 
       corPrimaria: filial.lojista.corPrimaria,
       corSecundaria: filial.lojista.corSecundaria,
     },
-    filial: { nome: filial.nome, endereco: filial.endereco },
+    filial: { nome: filial.nome, endereco: enderecoView(filial.endereco) },
     panfleto: panfleto && {
       imagemUrl: url(panfleto.imagemPath),
       largura: panfleto.imagemLargura,

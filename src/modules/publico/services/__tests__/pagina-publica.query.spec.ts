@@ -5,6 +5,7 @@ import { Categoria } from '../../../categorias/models/categoria.model';
 import type { Panfleto } from '../../../panfletos/models/panfleto.model';
 import type { Produto } from '../../../produtos/models/produto.model';
 import { PaginaPublicaQuery } from '../pagina-publica.query';
+import { umEndereco } from '../../../../../test/factories/endereco-filial.factory';
 
 const HOJE = '2026-10-18' as DataISO;
 
@@ -27,8 +28,8 @@ describe('Funcionalidade: Consultas da página pública', () => {
           id: 'f1',
           tenantId: 't1',
           nome: 'Centro',
-          endereco: 'Rua A',
           fusoHorario: 'America/Sao_Paulo',
+          ...umEndereco(),
           nomeFantasia: 'M',
           logoPath: null,
           corPrimaria: '#C8102E',
@@ -40,7 +41,7 @@ describe('Funcionalidade: Consultas da página pública', () => {
         id: 'f1',
         tenantId: 't1',
         nome: 'Centro',
-        endereco: 'Rua A',
+        endereco: umEndereco(),
         fusoHorario: 'America/Sao_Paulo',
         lojista: {
           nomeFantasia: 'M',
@@ -52,7 +53,18 @@ describe('Funcionalidade: Consultas da página pública', () => {
       });
       const [sql, opcoes] = sequelize.query.mock.calls[0]!;
       expect(sql).toContain('f.deleted_at IS NULL');
+      expect(sql).toContain(
+        'LEFT JOIN filial_enderecos e ON e.filial_id = f.id AND e.tenant_id = f.tenant_id',
+      );
       expect(opcoes.replacements).toEqual({ codigo: 'k7Qm2xPa' });
+    });
+
+    it('E filial sem endereço (colunas do LEFT JOIN nulas) vem com endereco null', async () => {
+      const semEndereco = Object.fromEntries(Object.keys(umEndereco()).map((k) => [k, null]));
+      sequelize.query.mockResolvedValue([
+        { id: 'f1', tenantId: 't1', nome: 'Centro', fusoHorario: 'America/Sao_Paulo', ...semEndereco },
+      ]);
+      expect(await consultas.buscarFilialPorCodigo('k7Qm2xPa')).toMatchObject({ endereco: null });
     });
 
     it('E código sem filial devolve null', async () => {
