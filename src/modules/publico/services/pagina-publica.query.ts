@@ -4,6 +4,7 @@ import { literal, Op, QueryTypes } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
 import type { DataISO } from '../../../common/utils/date-only';
 import { Categoria } from '../../categorias/models/categoria.model';
+import type { EnderecoFilial } from '../../filiais/domain/endereco';
 import type { StatusLojista } from '../../lojistas/models/status-lojista';
 import { Panfleto } from '../../panfletos/models/panfleto.model';
 import { Produto } from '../../produtos/models/produto.model';
@@ -15,20 +16,24 @@ import type { FilialPublicaRow, PanfletoRow, ProdutoRow } from '../domain/montar
  * mesmo e a regra (RN35) ser testável em unidade.
  */
 const SQL_FILIAL_POR_CODIGO = `
-  SELECT f.id, f.tenant_id AS "tenantId", f.nome, f.endereco, f.fuso_horario AS "fusoHorario",
+  SELECT f.id, f.tenant_id AS "tenantId", f.nome, f.fuso_horario AS "fusoHorario",
+         e.cep, e.logradouro, e.numero, e.complemento, e.bairro, e.cidade, e.uf,
          l.nome_fantasia AS "nomeFantasia", l.logo_path AS "logoPath",
          l.cor_primaria AS "corPrimaria", l.cor_secundaria AS "corSecundaria", a.status
   FROM filiais f
   JOIN lojistas l          ON l.id = f.tenant_id
   JOIN lojista_ativacoes a ON a.lojista_id = l.id
+  LEFT JOIN filial_enderecos e ON e.filial_id = f.id AND e.tenant_id = f.tenant_id
   WHERE f.codigo_publico = :codigo AND f.deleted_at IS NULL
   LIMIT 1`;
 
-interface LinhaFilial {
+/** Colunas do endereço vêm todas null quando a filial não tem endereço (LEFT JOIN). */
+type ColunasEndereco = { [K in keyof EnderecoFilial]: EnderecoFilial[K] | null };
+
+interface LinhaFilial extends ColunasEndereco {
   id: string;
   tenantId: string;
   nome: string;
-  endereco: string;
   fusoHorario: string;
   nomeFantasia: string;
   logoPath: string | null;
@@ -52,8 +57,12 @@ export class PaginaPublicaQuery {
       type: QueryTypes.SELECT,
     });
     if (!linha) return null;
-    const { nomeFantasia, logoPath, corPrimaria, corSecundaria, status, ...filial } = linha;
-    return { ...filial, lojista: { nomeFantasia, logoPath, corPrimaria, corSecundaria, status } };
+    const { nomeFantasia, logoPath, corPrimaria, corSecundaria, status, ...resto } = linha;
+    const { cep, logradouro, numero, complemento, bairro, cidade, uf, ...filial } = resto;
+    // as colunas são NOT NULL: só vêm null juntas, quando a filial não tem endereço
+    const endereco =
+      cep === null ? null : ({ cep, logradouro, numero, complemento, bairro, cidade, uf } as EnderecoFilial);
+    return { ...filial, endereco, lojista: { nomeFantasia, logoPath, corPrimaria, corSecundaria, status } };
   }
 
   /**

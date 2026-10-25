@@ -30,7 +30,15 @@ response:
         },
         "filial": {
           "nome": "Centro",
-          "endereco": "Rua das Flores, 120 — Centro, Campinas/SP"
+          "endereco": {
+            "cep": "13010111",
+            "logradouro": "Rua das Flores",
+            "numero": "120",
+            "complemento": "Loja 2",
+            "bairro": "Centro",
+            "cidade": "Campinas",
+            "uf": "SP"
+          }
         },
         "panfleto": {
           "imagemUrl": "https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp",

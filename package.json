@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Tabloide Digital API",
   "scripts": {
-    "start:dev": "nest start --watch",
+    "start:dev": "node scripts/start-dev.js",
     "build": "nest build",
     "start:prod": "node dist/main.js",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",

@@ -1,12 +1,12 @@
 import type { CreationOptional } from 'sequelize';
-import { Column, DataType, Model, PrimaryKey, Table } from 'sequelize-typescript';
+import { Column, DataType, HasOne, Model, PrimaryKey, Table } from 'sequelize-typescript';
 import { TenantScoped } from '../../../database/tenant-scoped.decorator';
+import { FilialEndereco } from './filial-endereco.model';
 
 export interface AtributosFilial {
   id: string;
   tenantId: string;
   nome: string;
-  endereco: string;
   fusoHorario: string;
   codigoPublico: string;
   createdAt: Date;
@@ -30,9 +30,6 @@ export class Filial extends Model<AtributosFilial, AtributosCriacaoFilial> {
   @Column(DataType.STRING(120))
   declare nome: string;
 
-  @Column(DataType.STRING(300))
-  declare endereco: string;
-
   @Column(DataType.STRING(64))
   declare fusoHorario: string;
 
@@ -42,4 +39,8 @@ export class Filial extends Model<AtributosFilial, AtributosCriacaoFilial> {
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
   declare deletedAt: CreationOptional<Date | null>;
+
+  /** Ausente em filiais anteriores ao endereço estruturado. */
+  @HasOne(() => FilialEndereco)
+  declare endereco?: FilialEndereco | null;
 }

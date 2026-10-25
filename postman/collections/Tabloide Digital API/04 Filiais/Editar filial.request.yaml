@@ -1,6 +1,6 @@
 $kind: http-request
 id: 6957e898-b537-5f84-ab9e-40c710bd4820
-description: Edição parcial de `nome`, `endereco` e `fusoHorario`. O `codigoPublico` não muda (RN39). A troca de fuso é auditada e muda o "hoje" usado na vigência dos itens.
+description: Edição parcial de `nome`, `endereco` e `fusoHorario`. O `endereco`, quando enviado, vem completo (mesmas regras do cadastro) e substitui o atual; `null` ou parcial dá 400. O `codigoPublico` não muda (RN39). A troca de fuso é auditada e muda o "hoje" usado na vigência dos itens.
 url: "{{baseUrl}}/painel/filiais/:id"
 method: PATCH
 headers:
@@ -14,7 +14,15 @@ body:
   content: |-
     {
       "nome": "Centro",
-      "endereco": "Rua das Flores, 120 — Centro, Campinas/SP",
+      "endereco": {
+        "cep": "13010-111",
+        "logradouro": "Rua das Flores",
+        "numero": "120",
+        "complemento": "Loja 2",
+        "bairro": "Centro",
+        "cidade": "Campinas",
+        "uf": "SP"
+      },
       "fusoHorario": "America/Sao_Paulo"
     }
 scripts:
