@@ -2,6 +2,7 @@ import { v7 as uuidv7 } from 'uuid';
 import { StatusLojista } from '../../../src/modules/lojistas/models/status-lojista';
 import { PaginaPublicaCache } from '../../../src/modules/publico/services/pagina-publica.cache';
 import { criarCategoria, type CategoriaCriada } from '../../factories/categoria.factory';
+import { umEndereco } from '../../factories/endereco-filial.factory';
 import { criarFilial, type FilialCriada } from '../../factories/filial.factory';
 import { definirStatus, umLojista, type LojistaCriado } from '../../factories/lojista.factory';
 import { criarProduto, inserirProduto } from '../../factories/produto.factory';
@@ -53,7 +54,7 @@ describe('Funcionalidade: Página pública ponta a ponta', () => {
     relogio.agora = AGORA_FIXO;
     cache().limpar();
     lojista = await umLojista().comStatus(StatusLojista.ATIVO).criar(app, banco.sequelize);
-    filial = await criarFilial(app, lojista.token, { nome: 'Centro', endereco: 'Rua das Flores, 120' });
+    filial = await criarFilial(app, lojista.token, { nome: 'Centro' });
     categoria = await criarCategoria(app, lojista.token, filial.id, 'Mercearia');
   });
   afterEach(() => limparBanco(banco));
@@ -78,7 +79,7 @@ describe('Funcionalidade: Página pública ponta a ponta', () => {
       expect(r.headers['content-type']).toBe('application/json; charset=utf-8');
       expect(r.body).toMatchObject({
         lojista: { nome: 'Mercado Bom Preço', logoUrl: null, corPrimaria: null, corSecundaria: null },
-        filial: { nome: 'Centro', endereco: 'Rua das Flores, 120' },
+        filial: { nome: 'Centro', endereco: umEndereco() },
         panfleto: null,
         categorias: [
           {
@@ -318,8 +319,8 @@ describe('Funcionalidade: Página pública ponta a ponta', () => {
       }
       // volume de produção para a tabela de filiais: com poucas linhas o seq scan é o certo
       await sql(
-        `INSERT INTO filiais (id, tenant_id, nome, endereco, codigo_publico)
-         SELECT gen_random_uuid(), :t, 'Filial ' || g, 'Rua ' || g, translate(lpad(g::text, 8, 'x'), '01', 'ab')
+        `INSERT INTO filiais (id, tenant_id, nome, codigo_publico)
+         SELECT gen_random_uuid(), :t, 'Filial ' || g, translate(lpad(g::text, 8, 'x'), '01', 'ab')
          FROM generate_series(1, 3000) g`,
         { t: lojista.id },
       );

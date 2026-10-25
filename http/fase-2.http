@@ -18,7 +18,18 @@ POST {{base}}/painel/filiais
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{ "nome": "Centro", "endereco": "Rua A, 100 — Centro" }
+{
+  "nome": "Centro",
+  "endereco": {
+    "cep": "01310-100",
+    "logradouro": "Rua A",
+    "numero": "100",
+    "complemento": "Loja 2",
+    "bairro": "Centro",
+    "cidade": "São Paulo",
+    "uf": "SP"
+  }
+}
 
 @filialId = {{filial.response.body.id}}
 
@@ -27,7 +38,18 @@ POST {{base}}/painel/filiais
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{ "nome": "Manaus", "endereco": "Av. Eduardo Ribeiro, 500", "fusoHorario": "america/manaus" }
+{
+  "nome": "Manaus",
+  "endereco": {
+    "cep": "69010-001",
+    "logradouro": "Av. Eduardo Ribeiro",
+    "numero": "500",
+    "bairro": "Centro",
+    "cidade": "Manaus",
+    "uf": "AM"
+  },
+  "fusoHorario": "america/manaus"
+}
 
 ### Listar (ordem alfabética pt-BR, paginada)
 GET {{base}}/painel/filiais?pagina=1&porPagina=50
@@ -50,6 +72,31 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "fusoHorario": "America/Belem" }
+
+### Trocar o endereço (vem completo e substitui o atual; complemento ausente vira null)
+PATCH {{base}}/painel/filiais/{{filialId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "endereco": {
+    "cep": "01310100",
+    "logradouro": "Av. Paulista",
+    "numero": "1000",
+    "bairro": "Bela Vista",
+    "cidade": "São Paulo",
+    "uf": "SP"
+  }
+}
+
+### Erro: CEP fora do formato → 400 VALIDACAO_INVALIDA (detalhes.campos["endereco.cep"])
+PATCH {{base}}/painel/filiais/{{filialId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "endereco": { "cep": "1234", "logradouro": "Av. Paulista", "numero": "1000", "bairro": "Bela Vista", "cidade": "São Paulo", "uf": "SP" }
+}
 
 ### QR Code em SVG
 GET {{base}}/painel/filiais/{{filialId}}/qrcode
@@ -74,7 +121,11 @@ POST {{base}}/painel/filiais
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{ "nome": "X", "endereco": "Y", "fusoHorario": "Marte/Olympus" }
+{
+  "nome": "X",
+  "endereco": { "cep": "01310100", "logradouro": "Y", "numero": "1", "bairro": "B", "cidade": "C", "uf": "SP" },
+  "fusoHorario": "Marte/Olympus"
+}
 
 ### Erro: código público é imutável → 400 VALIDACAO_INVALIDA
 PATCH {{base}}/painel/filiais/{{filialId}}

@@ -1,5 +1,6 @@
 import { StatusLojista } from '../../src/modules/lojistas/models/status-lojista';
 import { criarCategoria } from '../factories/categoria.factory';
+import { umEnderecoDto } from '../factories/endereco-filial.factory';
 import { criarFilial } from '../factories/filial.factory';
 import { umLojista, type LojistaCriado } from '../factories/lojista.factory';
 import { enviarPanfleto } from '../factories/panfleto.factory';
@@ -46,7 +47,7 @@ describe('Funcionalidade: Limites por lojista ponta a ponta (RNF12)', () => {
       await limitar({ maxFiliais: 1 });
       const respostas = await Promise.all(
         ['A', 'B'].map((nome) =>
-          app.http().post('/v1/painel/filiais').set(auth()).send({ nome, endereco: 'Rua A, 100' }),
+          app.http().post('/v1/painel/filiais').set(auth()).send({ nome, endereco: umEnderecoDto() }),
         ),
       );
       expect(respostas.map((r) => r.status).sort()).toEqual([201, 409]);

@@ -1,3 +1,4 @@
+import { umEndereco } from '../../../../../test/factories/endereco-filial.factory';
 import { montarPagina, type FilialPublicaRow, type ProdutoRow } from '../montar-pagina';
 import { StatusLojista } from '../../../lojistas/models/status-lojista';
 
@@ -5,7 +6,7 @@ const FILIAL: FilialPublicaRow = {
   id: 'f1',
   tenantId: 't1',
   nome: 'Centro',
-  endereco: 'Rua A',
+  endereco: umEndereco(),
   fusoHorario: 'America/Sao_Paulo',
   lojista: {
     nomeFantasia: 'M',

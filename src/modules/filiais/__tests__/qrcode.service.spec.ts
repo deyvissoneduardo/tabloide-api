@@ -33,7 +33,7 @@ describe('Funcionalidade: QR Code da filial (RN11, RN39)', () => {
       expect(contentType).toBe('image/png');
       expect(png.subarray(0, 4)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47]));
       expect(png.readUInt32BE(16)).toBe(1024);
-    });
+    }, 30_000); // PNG de 1024 px é CPU puro (~4 s isolado); com a suíte em paralelo passa dos 15 s globais.
 
     it('E decodifica para a URL pública', async () => {
       const { conteudo } = await servico().gerar('k7Qm2xPa', 'png', 256);

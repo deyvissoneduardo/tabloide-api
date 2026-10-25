@@ -1,5 +1,6 @@
 import type { DataISO } from '../../../common/utils/date-only';
 import { compararTextoPtBr } from '../../../common/utils/text';
+import type { EnderecoFilial } from '../../filiais/domain/endereco';
 import type { StatusLojista } from '../../lojistas/models/status-lojista';
 
 /** Consulta 1: filial pelo código, com identidade e status do lojista. */
@@ -7,7 +8,7 @@ export interface FilialPublicaRow {
   id: string;
   tenantId: string;
   nome: string;
-  endereco: string;
+  endereco: EnderecoFilial | null;
   fusoHorario: string;
   lojista: {
     nomeFantasia: string;

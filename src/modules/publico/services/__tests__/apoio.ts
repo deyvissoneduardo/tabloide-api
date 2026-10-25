@@ -1,3 +1,4 @@
+import { umEndereco } from '../../../../../test/factories/endereco-filial.factory';
 import { MetricasService } from '../../../../common/observabilidade/metricas.service';
 import type { DataISO } from '../../../../common/utils/date-only';
 import type { AppConfig } from '../../../../config/app.config';
@@ -19,7 +20,7 @@ export function umaFilialPublica() {
     id: 'f1',
     tenantId: 't1',
     nome: 'Centro',
-    endereco: 'Rua das Flores, 120',
+    endereco: umEndereco(),
     fusoHorario: 'America/Sao_Paulo',
     lojista: {
       nomeFantasia: 'Mercado Bom Preço',

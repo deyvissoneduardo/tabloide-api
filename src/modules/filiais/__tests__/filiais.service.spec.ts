@@ -12,11 +12,31 @@ import { AppConfig } from '../../../config/app.config';
 import { AuditoriaService, CAMPOS_AUDITADOS } from '../../auditoria/services/auditoria.service';
 import type { ExclusaoEmCascataFilial } from '../cascata/exclusao-em-cascata-filial';
 import { ExclusaoEmCascataFilialRegistry } from '../cascata/exclusao-em-cascata-filial.registry';
+import type { EnderecoFilialDto } from '../dtos/endereco-filial.dto';
+import { FilialEndereco } from '../models/filial-endereco.model';
 import { Filial } from '../models/filial.model';
 import { FiliaisService, MAX_TENTATIVAS_CODIGO } from '../services/filiais.service';
 import { GERADOR_CODIGO_PUBLICO } from '../services/gerador-codigo-publico';
 
 const EVENTO = 'filial.conteudo-alterado';
+
+const ENDERECO: EnderecoFilialDto = {
+  cep: '01310100',
+  logradouro: 'Rua das Flores',
+  numero: '120',
+  bairro: 'Centro',
+  cidade: 'São Paulo',
+  uf: 'SP',
+};
+const ENDERECO_GRAVADO = { ...ENDERECO, complemento: null };
+
+/** Instância falsa de FilialEndereco com set/save observáveis. */
+function umEnderecoModel(dados: object = {}) {
+  const endereco: Record<string, unknown> = { filialId: 'F1', tenantId: 'T1', ...ENDERECO_GRAVADO, ...dados };
+  endereco.set = jest.fn((valores: object) => Object.assign(endereco, valores));
+  endereco.save = jest.fn(async () => endereco);
+  return endereco as unknown as FilialEndereco & { set: jest.Mock; save: jest.Mock };
+}
 
 const erroUnico = (constraint: string) =>
   new UniqueConstraintError({ parent: Object.assign(new Error('dup'), { constraint }) as never });
@@ -27,7 +47,6 @@ function umaFilial(dados: Partial<Filial> = {}) {
     id: 'F1',
     tenantId: 'T1',
     nome: 'Centro',
-    endereco: 'Rua A',
     fusoHorario: 'America/Sao_Paulo',
     codigoPublico: 'k7Qm2xPa',
     ...dados,
@@ -44,6 +63,7 @@ describe('Funcionalidade: Gestão de filiais', () => {
   let sequelize: ReturnType<typeof sequelizeFake>;
   let registry: ExclusaoEmCascataFilialRegistry;
   const filialModel = { create: jest.fn(), findOne: jest.fn(), findAndCountAll: jest.fn() };
+  const enderecoModel = { create: jest.fn(), findOne: jest.fn() };
   const gerador = { gerar: jest.fn() };
   const auditoria = { registrarCriacao: jest.fn(), registrarAlteracoes: jest.fn() };
   const eventos = { emit: jest.fn() };
@@ -56,10 +76,13 @@ describe('Funcionalidade: Gestão de filiais', () => {
     registry = new ExclusaoEmCascataFilialRegistry();
     gerador.gerar.mockReturnValue('k7Qm2xPa');
     filialModel.create.mockImplementation(async (v) => ({ ...v }));
+    enderecoModel.create.mockImplementation(async (v) => ({ ...v }));
+    enderecoModel.findOne.mockResolvedValue(null);
     const modulo = await Test.createTestingModule({
       providers: [
         FiliaisService,
         { provide: getModelToken(Filial), useValue: filialModel },
+        { provide: getModelToken(FilialEndereco), useValue: enderecoModel },
         { provide: Sequelize, useValue: sequelize },
         { provide: GERADOR_CODIGO_PUBLICO, useValue: gerador },
         { provide: ExclusaoEmCascataFilialRegistry, useValue: registry },
@@ -76,7 +99,7 @@ describe('Funcionalidade: Gestão de filiais', () => {
     describe('Cenário: cria filial com fuso padrão (RN38)', () => {
       let filial: Filial;
       beforeEach(async () => {
-        filial = await service.criar('T1', { nome: 'Centro', endereco: 'Rua A, 100' });
+        filial = await service.criar('T1', { nome: 'Centro', endereco: ENDERECO });
       });
 
       it('Então create recebe tenant, dados, fuso padrão e código, com a transação', () => {
@@ -84,11 +107,30 @@ describe('Funcionalidade: Gestão de filiais', () => {
         expect(dados).toMatchObject({
           tenantId: 'T1',
           nome: 'Centro',
-          endereco: 'Rua A, 100',
           fusoHorario: 'America/Sao_Paulo',
           codigoPublico: 'k7Qm2xPa',
         });
+        expect(dados).not.toHaveProperty('endereco');
         expect(opcoes).toEqual({ transaction: t });
+      });
+
+      it('E o endereço é criado na mesma transação, ligado à filial e ao tenant, com complemento null', () => {
+        expect(enderecoModel.create).toHaveBeenCalledWith(
+          { filialId: filial.id, tenantId: 'T1', ...ENDERECO_GRAVADO },
+          { transaction: t },
+        );
+        expect(enderecoModel.create.mock.invocationCallOrder[0]).toBeGreaterThan(
+          filialModel.create.mock.invocationCallOrder[0]!,
+        );
+        expect(filial.endereco).toEqual({ filialId: filial.id, tenantId: 'T1', ...ENDERECO_GRAVADO });
+      });
+
+      it('E o complemento informado é gravado', async () => {
+        await service.criar('T1', { nome: 'C', endereco: { ...ENDERECO, complemento: 'Loja 2' } });
+        expect(enderecoModel.create).toHaveBeenLastCalledWith(
+          expect.objectContaining({ complemento: 'Loja 2' }),
+          { transaction: t },
+        );
       });
 
       it('E o id é UUID v7', () => expect(ehUuid(filial.id) && versaoUuid(filial.id)).toBe(7));
@@ -109,7 +151,11 @@ describe('Funcionalidade: Gestão de filiais', () => {
 
     describe('Cenário: normaliza o fuso informado', () => {
       it('Então "america/manaus" vira "America/Manaus"', async () => {
-        const filial = await service.criar('T1', { nome: 'C', endereco: 'R', fusoHorario: 'america/manaus' });
+        const filial = await service.criar('T1', {
+          nome: 'C',
+          endereco: ENDERECO,
+          fusoHorario: 'america/manaus',
+        });
         expect(filial.fusoHorario).toBe('America/Manaus');
       });
     });
@@ -117,7 +163,7 @@ describe('Funcionalidade: Gestão de filiais', () => {
     describe('Cenário: fuso inválido', () => {
       it('Então FUSO_HORARIO_INVALIDO com o campo, sem transação nem create', async () => {
         await expect(
-          service.criar('T1', { nome: 'C', endereco: 'R', fusoHorario: 'Marte/Olympus' }),
+          service.criar('T1', { nome: 'C', endereco: ENDERECO, fusoHorario: 'Marte/Olympus' }),
         ).rejects.toMatchObject({
           codigo: CodigoErro.FUSO_HORARIO_INVALIDO,
           detalhes: { campo: 'fusoHorario' },
@@ -129,7 +175,7 @@ describe('Funcionalidade: Gestão de filiais', () => {
 
     describe('Cenário: verifica limites antes de criar (gancho RNF12)', () => {
       it('Então verificarCriacaoFilial roda na transação, antes de create', async () => {
-        await service.criar('T1', { nome: 'C', endereco: 'R' });
+        await service.criar('T1', { nome: 'C', endereco: ENDERECO });
         expect(limites.verificarCriacaoFilial).toHaveBeenCalledWith('T1', { transaction: t });
         expect(limites.verificarCriacaoFilial.mock.invocationCallOrder[0]).toBeLessThan(
           filialModel.create.mock.invocationCallOrder[0]!,
@@ -140,10 +186,11 @@ describe('Funcionalidade: Gestão de filiais', () => {
     describe('Cenário: limite atingido', () => {
       it('Então LIMITE_DO_PLANO_ATINGIDO, sem create nem evento', async () => {
         limites.verificarCriacaoFilial.mockRejectedValue(new AppError(CodigoErro.LIMITE_DO_PLANO_ATINGIDO));
-        await expect(service.criar('T1', { nome: 'C', endereco: 'R' })).rejects.toMatchObject({
+        await expect(service.criar('T1', { nome: 'C', endereco: ENDERECO })).rejects.toMatchObject({
           codigo: CodigoErro.LIMITE_DO_PLANO_ATINGIDO,
         });
         expect(filialModel.create).not.toHaveBeenCalled();
+        expect(enderecoModel.create).not.toHaveBeenCalled();
         expect(eventos.emit).not.toHaveBeenCalled();
       });
     });
@@ -152,7 +199,7 @@ describe('Funcionalidade: Gestão de filiais', () => {
       it('Então create é chamado 2 vezes e a filial fica com o segundo código, em savepoint', async () => {
         gerador.gerar.mockReturnValueOnce('AAAAAAAA').mockReturnValueOnce('BBBBBBBB');
         filialModel.create.mockRejectedValueOnce(erroUnico('filiais_codigo_publico_uk'));
-        const filial = await service.criar('T1', { nome: 'C', endereco: 'R' });
+        const filial = await service.criar('T1', { nome: 'C', endereco: ENDERECO });
         expect(filialModel.create).toHaveBeenCalledTimes(2);
         expect(filial.codigoPublico).toBe('BBBBBBBB');
         expect(sequelize.transaction).toHaveBeenCalledWith({ transaction: t }, expect.any(Function));
@@ -163,7 +210,7 @@ describe('Funcionalidade: Gestão de filiais', () => {
     describe('Cenário: colisões esgotam as tentativas', () => {
       it(`Então create é chamado ${MAX_TENTATIVAS_CODIGO} vezes, erro interno e nenhum evento`, async () => {
         filialModel.create.mockRejectedValue(erroUnico('filiais_codigo_publico_uk'));
-        await expect(service.criar('T1', { nome: 'C', endereco: 'R' })).rejects.toThrow(
+        await expect(service.criar('T1', { nome: 'C', endereco: ENDERECO })).rejects.toThrow(
           'falha ao gerar código público único',
         );
         expect(filialModel.create).toHaveBeenCalledTimes(MAX_TENTATIVAS_CODIGO);
@@ -175,7 +222,7 @@ describe('Funcionalidade: Gestão de filiais', () => {
       it('Então o erro é relançado após 1 create', async () => {
         const erro = erroUnico('outra_uk');
         filialModel.create.mockRejectedValue(erro);
-        await expect(service.criar('T1', { nome: 'C', endereco: 'R' })).rejects.toBe(erro);
+        await expect(service.criar('T1', { nome: 'C', endereco: ENDERECO })).rejects.toBe(erro);
         expect(filialModel.create).toHaveBeenCalledTimes(1);
       });
     });
@@ -183,7 +230,7 @@ describe('Funcionalidade: Gestão de filiais', () => {
     describe('Cenário: erro que não é de unicidade não é retentado', () => {
       it('Então é relançado', async () => {
         filialModel.create.mockRejectedValue(new Error('conexão caiu'));
-        await expect(service.criar('T1', { nome: 'C', endereco: 'R' })).rejects.toThrow('conexão caiu');
+        await expect(service.criar('T1', { nome: 'C', endereco: ENDERECO })).rejects.toThrow('conexão caiu');
         expect(filialModel.create).toHaveBeenCalledTimes(1);
       });
     });
@@ -198,7 +245,9 @@ describe('Funcionalidade: Gestão de filiais', () => {
             return r;
           },
         );
-        await expect(service.criar('T1', { nome: 'C', endereco: 'R' })).rejects.toThrow('falha no commit');
+        await expect(service.criar('T1', { nome: 'C', endereco: ENDERECO })).rejects.toThrow(
+          'falha no commit',
+        );
         expect(t.afterCommit).toHaveBeenCalled();
         expect(eventos.emit).not.toHaveBeenCalled();
       });
@@ -215,6 +264,14 @@ describe('Funcionalidade: Gestão de filiais', () => {
         });
         const [opcoes] = filialModel.findAndCountAll.mock.calls[0]!;
         expect(opcoes).toMatchObject({ where: { tenantId: 'T1' }, limit: 10, offset: 10 });
+        expect(opcoes.include).toEqual([
+          {
+            model: FilialEndereco,
+            attributes: ['cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf'],
+            where: { tenantId: 'T1' },
+            required: false,
+          },
+        ]);
         expect(opcoes.order[0][0].val).toBe('nome COLLATE "pt-BR-x-icu"');
         expect(opcoes.order[1]).toEqual(['id', 'ASC']);
         expect(opcoes.attributes).not.toContain('tenantId');
@@ -232,6 +289,18 @@ describe('Funcionalidade: Gestão de filiais', () => {
           transaction: undefined,
           lock: undefined,
         });
+      });
+
+      it('E com comEndereco inclui o endereço do mesmo tenant (LEFT JOIN)', async () => {
+        filialModel.findOne.mockResolvedValue(umaFilial());
+        await service.obter('T1', 'F1', { comEndereco: true });
+        expect(filialModel.findOne).toHaveBeenCalledWith(
+          expect.objectContaining({
+            include: [
+              expect.objectContaining({ model: FilialEndereco, where: { tenantId: 'T1' }, required: false }),
+            ],
+          }),
+        );
       });
 
       it('E repassa transação e lock quando informados', async () => {
@@ -255,17 +324,62 @@ describe('Funcionalidade: Gestão de filiais', () => {
 
   describe('Funcionalidade: editar', () => {
     describe('Cenário: edita nome e endereço sem auditoria', () => {
-      it('Então salva com lock de UPDATE, não audita e emite após o commit', async () => {
+      it('Então salva com lock de UPDATE, substitui o endereço, não audita e emite após o commit', async () => {
         const filial = umaFilial();
+        const endereco = umEnderecoModel({ complemento: 'Loja 2' });
         filialModel.findOne.mockResolvedValue(filial);
-        await service.editar('T1', 'F1', { nome: 'Centro Novo', endereco: 'Rua B' });
+        enderecoModel.findOne.mockResolvedValue(endereco);
+        const novo = { ...ENDERECO, logradouro: 'Rua B' };
+
+        const editada = await service.editar('T1', 'F1', { nome: 'Centro Novo', endereco: novo });
+
         expect(filialModel.findOne).toHaveBeenCalledWith(
           expect.objectContaining({ lock: 'UPDATE', transaction: t }),
         );
-        expect(filial.set).toHaveBeenCalledWith({ nome: 'Centro Novo', endereco: 'Rua B' });
+        expect(filial.set).toHaveBeenCalledWith({ nome: 'Centro Novo' });
         expect(filial.save).toHaveBeenCalledWith({ transaction: t });
+        expect(enderecoModel.findOne).toHaveBeenCalledWith({
+          where: { filialId: 'F1', tenantId: 'T1' },
+          transaction: t,
+        });
+        // substituição completa: complemento ausente vira null
+        expect(endereco.set).toHaveBeenCalledWith({ ...novo, complemento: null });
+        expect(endereco.save).toHaveBeenCalledWith({ transaction: t });
+        expect(enderecoModel.create).not.toHaveBeenCalled();
+        expect(editada.endereco).toBe(endereco);
         expect(auditoria.registrarAlteracoes).not.toHaveBeenCalled();
         expect(eventos.emit).toHaveBeenCalledWith(EVENTO, { tenantId: 'T1', filialId: 'F1' });
+      });
+    });
+
+    describe('Cenário: informa endereço em filial que ainda não tem', () => {
+      it('Então cria o endereço ligado à filial e ao tenant', async () => {
+        filialModel.findOne.mockResolvedValue(umaFilial());
+        const editada = await service.editar('T1', 'F1', { endereco: ENDERECO });
+        expect(enderecoModel.create).toHaveBeenCalledWith(
+          { filialId: 'F1', tenantId: 'T1', ...ENDERECO_GRAVADO },
+          { transaction: t },
+        );
+        expect(editada.endereco).toEqual({ filialId: 'F1', tenantId: 'T1', ...ENDERECO_GRAVADO });
+      });
+    });
+
+    describe('Cenário: edita sem endereço', () => {
+      it('Então o endereço atual não é alterado e volta na resposta', async () => {
+        const endereco = umEnderecoModel();
+        filialModel.findOne.mockResolvedValue(umaFilial());
+        enderecoModel.findOne.mockResolvedValue(endereco);
+        const editada = await service.editar('T1', 'F1', { nome: 'X' });
+        expect(endereco.set).not.toHaveBeenCalled();
+        expect(endereco.save).not.toHaveBeenCalled();
+        expect(enderecoModel.create).not.toHaveBeenCalled();
+        expect(editada.endereco).toBe(endereco);
+      });
+
+      it('E filial sem endereço continua com endereco null', async () => {
+        filialModel.findOne.mockResolvedValue(umaFilial());
+        const editada = await service.editar('T1', 'F1', { nome: 'X' });
+        expect(editada.endereco).toBeNull();
       });
     });
 

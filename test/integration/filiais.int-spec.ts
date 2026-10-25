@@ -3,12 +3,15 @@ import jsQR from 'jsqr';
 import { PNG } from 'pngjs';
 import type { Transaction } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
+import { v7 as uuidv7 } from 'uuid';
 import { TenantScopeViolationError } from '../../src/database/tenant-scope.hooks';
 import type { ExclusaoEmCascataFilial } from '../../src/modules/filiais/cascata/exclusao-em-cascata-filial';
 import { ExclusaoEmCascataFilialRegistry } from '../../src/modules/filiais/cascata/exclusao-em-cascata-filial.registry';
 import { FiliaisModule } from '../../src/modules/filiais/filiais.module';
+import { FilialEndereco } from '../../src/modules/filiais/models/filial-endereco.model';
 import { Filial } from '../../src/modules/filiais/models/filial.model';
 import { StatusLojista } from '../../src/modules/lojistas/models/status-lojista';
+import { umEndereco, umEnderecoDto } from '../factories/endereco-filial.factory';
 import { criarFilial } from '../factories/filial.factory';
 import { definirStatus, umLojista, type LojistaCriado } from '../factories/lojista.factory';
 import { criarApp, PUBLIC_BASE_URL, type AppDeTeste } from '../helpers/app-de-teste';
@@ -91,9 +94,10 @@ describe('Funcionalidade: Filiais no banco real', () => {
 
   const inserirFilialSql = (campos: Record<string, unknown>) =>
     sql(
-      `INSERT INTO filiais (id, tenant_id, nome, endereco, codigo_publico, deleted_at)
-       VALUES (gen_random_uuid(), :tenantId, :nome, 'Rua', :codigo, :deletedAt)`,
-      { tenantId: lojista.id, nome: 'Loja', codigo: 'k7Qm2xPa', deletedAt: null, ...campos },
+      `INSERT INTO filiais (id, tenant_id, nome, codigo_publico, deleted_at)
+       VALUES (:id, :tenantId, :nome, :codigo, :deletedAt)`,
+      // v7: o ParseUuidOu404Pipe das rotas recusa outras versões
+      { id: uuidv7(), tenantId: lojista.id, nome: 'Loja', codigo: 'k7Qm2xPa', deletedAt: null, ...campos },
     );
 
   describe('Cenário: código público único entre filiais excluídas (D1)', () => {
@@ -117,6 +121,38 @@ describe('Funcionalidade: Filiais no banco real', () => {
       expect(inserirFilialSql({ nome: '   ' })).rejects.toMatchObject({
         parent: { constraint: 'filiais_nome_nao_vazio_ck' },
       }));
+  });
+
+  describe.each([
+    ['cep com hífen', { cep: '01310-10' }, 'filial_enderecos_cep_formato_ck'],
+    ['cep com letras', { cep: '0131010A' }, 'filial_enderecos_cep_formato_ck'],
+    ['logradouro só de espaços', { logradouro: '   ' }, 'filial_enderecos_campos_nao_vazios_ck'],
+    ['número vazio', { numero: '' }, 'filial_enderecos_campos_nao_vazios_ck'],
+    ['bairro só de espaços', { bairro: ' ' }, 'filial_enderecos_campos_nao_vazios_ck'],
+    ['cidade vazia', { cidade: '' }, 'filial_enderecos_campos_nao_vazios_ck'],
+    ['uf só de espaços', { uf: '  ' }, 'filial_enderecos_campos_nao_vazios_ck'],
+  ])('Cenário: endereço com %s no banco', (_nome, campos, constraint) => {
+    it(`Então ${constraint} recusa`, async () => {
+      const filial = await criarFilial(app, lojista.token);
+      await expect(
+        sql(
+          `INSERT INTO filial_enderecos (filial_id, tenant_id, cep, logradouro, numero, bairro, cidade, uf)
+           VALUES (:filialId, :tenantId, :cep, :logradouro, :numero, :bairro, :cidade, :uf)`,
+          { tenantId: lojista.id, ...umEndereco(), filialId: filial.id, ...campos },
+        ),
+      ).rejects.toMatchObject({ parent: { constraint } });
+    });
+  });
+
+  describe('Cenário: endereço de filial inexistente no banco', () => {
+    it('Então a FK recusa', () =>
+      expect(
+        sql(
+          `INSERT INTO filial_enderecos (filial_id, tenant_id, cep, logradouro, numero, bairro, cidade, uf)
+           VALUES (gen_random_uuid(), :tenantId, :cep, :logradouro, :numero, :bairro, :cidade, :uf)`,
+          { tenantId: lojista.id, ...umEndereco() },
+        ),
+      ).rejects.toMatchObject({ parent: { code: '23503' } }));
   });
 
   describe('Cenário: fuso padrão no banco', () => {
@@ -150,11 +186,14 @@ describe('Funcionalidade: Filiais no banco real', () => {
       expect(filial).toMatchObject({
         fusoHorario: 'America/Belem',
         urlPublica: `${PUBLIC_BASE_URL}/f/${filial.codigoPublico}`,
+        endereco: umEndereco(),
       });
 
       const lista = await app.http().get('/v1/painel/filiais').set(auth()).expect(200);
       expect(lista.body).toMatchObject({ total: 1, pagina: 1, porPagina: 50 });
-      await app.http().get(`/v1/painel/filiais/${filial.id}`).set(auth()).expect(200);
+      expect(lista.body.itens[0].endereco).toEqual(umEndereco());
+      const detalhe = await app.http().get(`/v1/painel/filiais/${filial.id}`).set(auth()).expect(200);
+      expect(detalhe.body.endereco).toEqual(umEndereco());
       const editada = await app
         .http()
         .patch(`/v1/painel/filiais/${filial.id}`)
@@ -162,6 +201,7 @@ describe('Funcionalidade: Filiais no banco real', () => {
         .send({ fusoHorario: 'America/Manaus' })
         .expect(200);
       expect(editada.body.fusoHorario).toBe('America/Manaus');
+      expect(editada.body.endereco).toEqual(umEndereco());
       await app.http().delete(`/v1/painel/filiais/${filial.id}`).set(auth()).expect(204);
       await app.http().get(`/v1/painel/filiais/${filial.id}`).set(auth()).expect(404);
 
@@ -189,7 +229,7 @@ describe('Funcionalidade: Filiais no banco real', () => {
         .http()
         .post('/v1/painel/filiais')
         .set(auth())
-        .send({ nome: 'C', endereco: 'R', fusoHorario: 'Marte/Olympus' });
+        .send({ nome: 'C', endereco: umEnderecoDto(), fusoHorario: 'Marte/Olympus' });
       expect(resposta.status).toBe(422);
       expect(resposta.body.erro).toMatchObject({
         codigo: 'FUSO_HORARIO_INVALIDO',
@@ -241,7 +281,8 @@ describe('Funcionalidade: Filiais no banco real', () => {
       await definirStatus(banco.sequelize, lojista.id, StatusLojista.DESATIVADO);
 
       for (const req of [
-        () => app.http().post('/v1/painel/filiais').set(auth()).send({ nome: 'X', endereco: 'Y' }),
+        () =>
+          app.http().post('/v1/painel/filiais').set(auth()).send({ nome: 'X', endereco: umEnderecoDto() }),
         () => app.http().patch(`/v1/painel/filiais/${filial.id}`).set(auth()).send({ nome: 'X' }),
         () => app.http().delete(`/v1/painel/filiais/${filial.id}`).set(auth()),
       ]) {
@@ -291,10 +332,75 @@ describe('Funcionalidade: Filiais no banco real', () => {
   });
 
   describe('Cenário: trava de tenant no ORM', () => {
-    it('Então Filial.findAll() sem tenantId lança TenantScopeViolationError', async () => {
-      await expect(app.app.get(Sequelize).model(Filial).findAll()).rejects.toBeInstanceOf(
-        TenantScopeViolationError,
+    it.each([Filial.name, FilialEndereco.name])(
+      'Então %s.findAll() sem tenantId lança TenantScopeViolationError',
+      async (modelo) => {
+        await expect(app.app.get(Sequelize).model(modelo).findAll()).rejects.toBeInstanceOf(
+          TenantScopeViolationError,
+        );
+      },
+    );
+  });
+
+  describe('Cenário: PATCH substitui o endereço inteiro', () => {
+    it('Então o banco fica só com o endereço novo, CEP em dígitos e complemento limpo', async () => {
+      const filial = await criarFilial(app, lojista.token, {
+        endereco: umEnderecoDto({ complemento: 'Loja 2' }),
+      });
+      expect(filial.endereco).toEqual(umEndereco({ complemento: 'Loja 2' }));
+
+      const novo = umEnderecoDto({ cep: '20040-020', logradouro: 'Av. Rio Branco', numero: '1', uf: 'RJ' });
+      const resposta = await app
+        .http()
+        .patch(`/v1/painel/filiais/${filial.id}`)
+        .set(auth())
+        .send({ endereco: novo })
+        .expect(200);
+      const esperado = umEndereco({ cep: '20040020', logradouro: 'Av. Rio Branco', numero: '1', uf: 'RJ' });
+      expect(resposta.body.endereco).toEqual(esperado);
+
+      const [linhas] = await sql(
+        `SELECT cep, logradouro, numero, complemento, bairro, cidade, uf, tenant_id
+         FROM filial_enderecos WHERE filial_id = :id`,
+        { id: filial.id },
       );
+      expect(linhas).toEqual([{ ...esperado, tenant_id: lojista.id }]);
+    });
+  });
+
+  describe('Cenário: filial anterior ao endereço estruturado', () => {
+    it('Então GET e listagem devolvem endereco null, e o PATCH cria o endereço', async () => {
+      await inserirFilialSql({});
+      const lista = await app.http().get('/v1/painel/filiais').set(auth()).expect(200);
+      const [semEndereco] = lista.body.itens;
+      expect(semEndereco.endereco).toBeNull();
+
+      const detalhe = await app.http().get(`/v1/painel/filiais/${semEndereco.id}`).set(auth()).expect(200);
+      expect(detalhe.body.endereco).toBeNull();
+
+      const editada = await app
+        .http()
+        .patch(`/v1/painel/filiais/${semEndereco.id}`)
+        .set(auth())
+        .send({ endereco: umEnderecoDto() })
+        .expect(200);
+      expect(editada.body.endereco).toEqual(umEndereco());
+      const relida = await app.http().get(`/v1/painel/filiais/${semEndereco.id}`).set(auth()).expect(200);
+      expect(relida.body.endereco).toEqual(umEndereco());
+    });
+  });
+
+  describe('Cenário: endereço inválido não cria a filial', () => {
+    it('Então 400 com detalhe em endereco.cep e nada gravado', async () => {
+      const resposta = await app
+        .http()
+        .post('/v1/painel/filiais')
+        .set(auth())
+        .send({ nome: 'C', endereco: umEnderecoDto({ cep: '123' }) });
+      expect(resposta.status).toBe(400);
+      expect(resposta.body.erro.detalhes.campos['endereco.cep']).toBeDefined();
+      const [linhas] = await sql('SELECT id FROM filiais');
+      expect(linhas).toEqual([]);
     });
   });
 });

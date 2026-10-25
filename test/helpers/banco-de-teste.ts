@@ -12,6 +12,7 @@ export const TABELAS = [
   'categorias',
   'panfletos',
   'auditoria_alteracoes',
+  'filial_enderecos',
   'filiais',
   'lojista_ativacoes',
   'lojistas',

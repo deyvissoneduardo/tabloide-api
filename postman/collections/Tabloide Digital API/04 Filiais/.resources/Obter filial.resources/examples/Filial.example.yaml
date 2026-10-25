@@ -18,7 +18,15 @@ response:
       {
         "id": "0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02",
         "nome": "Centro",
-        "endereco": "Rua das Flores, 120 — Centro, Campinas/SP",
+        "endereco": {
+          "cep": "13010111",
+          "logradouro": "Rua das Flores",
+          "numero": "120",
+          "complemento": "Loja 2",
+          "bairro": "Centro",
+          "cidade": "Campinas",
+          "uf": "SP"
+        },
         "fusoHorario": "America/Sao_Paulo",
         "codigoPublico": "k7Qm2xPa",
         "urlPublica": "https://tabloide.app/f/k7Qm2xPa",
