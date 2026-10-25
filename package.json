@@ -16,7 +16,9 @@
     "db:migrate:undo:all": "sequelize-cli db:migrate:undo:all",
     "db:seed": "sequelize-cli db:seed:all",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "seed:carga": "node scripts/seed-carga.js"
+    "seed:carga": "node scripts/seed-carga.js",
+    "release": "bash scripts/release.sh",
+    "proteger:main": "bash scripts/proteger-main.sh"
   },
   "license": "UNLICENSED",
   "type": "commonjs",
