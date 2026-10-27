@@ -23,6 +23,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CategoriasModule } from './modules/categorias/categorias.module';
+import { EstruturasModule } from './modules/estruturas/estruturas.module';
 import { FiliaisModule } from './modules/filiais/filiais.module';
 import { LojistasModule } from './modules/lojistas/lojistas.module';
 import { MidiaLocalModule } from './modules/midia/midia-local.module';
@@ -65,6 +66,7 @@ import { SaudeModule } from './modules/saude/saude.module';
     PanfletosModule,
     CategoriasModule,
     ProdutosModule,
+    EstruturasModule,
     PublicoModule,
     SaudeModule,
     MidiaLocalModule,

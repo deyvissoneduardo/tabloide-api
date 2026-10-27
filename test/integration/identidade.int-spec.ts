@@ -31,6 +31,7 @@ describe('Funcionalidade: Identidade visual pela API (RN06)', () => {
         corPrimaria: null,
         corSecundaria: null,
         urlLogo: null,
+        sePanfleto: false,
       });
 
       const editada = await app
@@ -67,6 +68,39 @@ describe('Funcionalidade: Identidade visual pela API (RN06)', () => {
         corPrimaria: null,
         corSecundaria: null,
         urlLogo: null,
+        sePanfleto: false,
+      });
+    });
+  });
+
+  describe('Funcionalidade: Chave "mostrar só o panfleto" (RN44)', () => {
+    describe('Cenário: PATCH { sePanfleto: true } e GET devolvem sePanfleto true', () => {
+      it('Então a chave fica ligada', async () => {
+        const a = await umLojista().comStatus(StatusLojista.ATIVO).criar(app, banco.sequelize);
+        const comoA = { Authorization: `Bearer ${a.token}` };
+        const editada = await app
+          .http()
+          .patch('/v1/painel/lojista/identidade')
+          .set(comoA)
+          .send({ sePanfleto: true })
+          .expect(200);
+        expect(editada.body.sePanfleto).toBe(true);
+        expect(
+          (await app.http().get('/v1/painel/lojista/identidade').set(comoA).expect(200)).body.sePanfleto,
+        ).toBe(true);
+      });
+    });
+
+    describe('Cenário: lojista desativado muda a chave', () => {
+      it('Então 403 LOJISTA_DESATIVADO', async () => {
+        const a = await umLojista().comStatus(StatusLojista.DESATIVADO).criar(app, banco.sequelize);
+        const r = await app
+          .http()
+          .patch('/v1/painel/lojista/identidade')
+          .set({ Authorization: `Bearer ${a.token}` })
+          .send({ sePanfleto: true })
+          .expect(403);
+        expect(r.body.erro.codigo).toBe('LOJISTA_DESATIVADO');
       });
     });
   });

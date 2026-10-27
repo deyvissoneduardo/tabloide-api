@@ -17,7 +17,13 @@ export const ROTA_MIDIA_LOCAL = '/v1/midia-local';
               {
                 rootPath: path.resolve(config.get('MIDIA_DIR_LOCAL', { infer: true })),
                 serveRoot: ROTA_MIDIA_LOCAL,
-                serveStaticOptions: { maxAge: 31_536_000_000, immutable: true, index: false },
+                serveStaticOptions: {
+                  maxAge: 31_536_000_000,
+                  immutable: true,
+                  index: false,
+                  // T8: o pdf.js da página pública (localhost:5173) baixa o PDF de outra origem
+                  setHeaders: (res) => res.setHeader('Access-Control-Allow-Origin', '*'),
+                },
               },
             ]
           : [],

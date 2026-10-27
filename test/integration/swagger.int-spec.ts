@@ -144,5 +144,31 @@ describe('Funcionalidade: Documentação OpenAPI', () => {
         'PANFLETO_ATUAL_SEM_DATA_LIMITE',
       ]);
     });
+
+    it('E a estrutura da filial tem GET e PUT com ESTRUTURA_INVALIDA no 422 (RN45)', () => {
+      const rota = spec.paths['/v1/painel/filiais/{filialId}/estrutura']!;
+      expect(rota.get).toBeDefined();
+      expect(Object.keys(rota.put!.responses['422']!.content!['application/json']!.examples!)).toEqual([
+        'ESTRUTURA_INVALIDA',
+      ]);
+    });
+
+    it('E a identidade expõe sePanfleto e a página pública tem sePanfleto e estrutura (RN44)', () => {
+      expect(spec.components.schemas.IdentidadeView!.properties!.sePanfleto).toBeDefined();
+      const pagina = spec.components.schemas.PaginaPublicaJson!.properties!;
+      expect(pagina.sePanfleto).toBeDefined();
+      expect(pagina.estrutura).toBeDefined();
+      expect(pagina.categorias).toBeUndefined();
+    });
+
+    it('E o panfleto aceita os erros de PDF (RN13)', () => {
+      const respostas = spec.paths['/v1/painel/filiais/{filialId}/panfletos']!.post!.responses;
+      expect(Object.keys(respostas['422']!.content!['application/json']!.examples!)).toEqual(
+        expect.arrayContaining(['PDF_COM_VARIAS_PAGINAS', 'PDF_INVALIDO']),
+      );
+      expect(Object.keys(respostas['413']!.content!['application/json']!.examples!)).toContain(
+        'PDF_MUITO_GRANDE',
+      );
+    });
   });
 });

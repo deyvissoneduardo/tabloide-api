@@ -10,6 +10,7 @@ export interface AtributosCategoria {
   filialId: string;
   nome: string;
   nomeNormalizado: string;
+  posicao: number | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -17,7 +18,7 @@ export interface AtributosCategoria {
 
 export type AtributosCriacaoCategoria = Omit<
   AtributosCategoria,
-  'nomeNormalizado' | 'createdAt' | 'updatedAt' | 'deletedAt'
+  'nomeNormalizado' | 'posicao' | 'createdAt' | 'updatedAt' | 'deletedAt'
 >;
 
 /** Categorias próprias de cada filial (RN18). Exclusão lógica (RN25); a cascata é feita no service. */
@@ -40,6 +41,10 @@ export class Categoria extends Model<AtributosCategoria, AtributosCriacaoCategor
   /** D4.2: ordenação e busca sem acento; preenchido pelo hook. */
   @Column(DataType.STRING(80))
   declare nomeNormalizado: string;
+
+  /** RN45: ordem na filial; null = não posicionada (fim, alfabética). */
+  @Column(DataType.INTEGER)
+  declare posicao: CreationOptional<number | null>;
 
   @HasMany(() => Produto, { foreignKey: 'categoriaId', constraints: false })
   declare produtos?: Produto[];

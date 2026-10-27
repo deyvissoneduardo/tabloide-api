@@ -27,6 +27,7 @@ export function umaFilialPublica() {
       logoPath: null,
       corPrimaria: null,
       corSecundaria: null,
+      sePanfleto: false,
       status: StatusLojista.ATIVO,
     },
   };
@@ -37,6 +38,10 @@ export function umaFilialPublica() {
     },
     comFuso(fuso: string) {
       filial.fusoHorario = fuso;
+      return builder;
+    },
+    comSePanfleto(valor = true) {
+      filial.lojista.sePanfleto = valor;
       return builder;
     },
     build: () => structuredClone(filial),
@@ -54,7 +59,8 @@ export const umProduto = (nome: string, categoria: string, dados: Partial<Produt
   observacao: null,
   fotoPath: null,
   dataLimite: null,
-  categoria: { id: `c-${categoria}`, nome: categoria },
+  posicao: null,
+  categoria: { id: `c-${categoria}`, nome: categoria, posicao: null },
   ...dados,
 });
 

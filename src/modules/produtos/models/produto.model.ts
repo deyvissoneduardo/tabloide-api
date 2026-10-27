@@ -29,6 +29,7 @@ export interface AtributosProduto {
   fotoPath: string | null;
   dataInicio: DataISO;
   dataLimite: DataISO | null;
+  posicao: number | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -36,7 +37,7 @@ export interface AtributosProduto {
 
 export type AtributosCriacaoProduto = Omit<
   AtributosProduto,
-  'nomeNormalizado' | 'createdAt' | 'updatedAt' | 'deletedAt'
+  'nomeNormalizado' | 'posicao' | 'createdAt' | 'updatedAt' | 'deletedAt'
 >;
 
 /** Oferta com preço "de/por" em centavos e vigência (RN19, RN21, RN40, RN42). Exclusão lógica (RN25). */
@@ -88,6 +89,10 @@ export class Produto extends Model<AtributosProduto, AtributosCriacaoProduto> {
 
   @Column(DataType.DATEONLY)
   declare dataLimite: DataISO | null;
+
+  /** RN45: ordem dentro da categoria; null = não posicionado. */
+  @Column(DataType.INTEGER)
+  declare posicao: CreationOptional<number | null>;
 
   @BelongsTo(() => Categoria, { foreignKey: 'categoriaId', constraints: false })
   declare categoria?: Categoria;

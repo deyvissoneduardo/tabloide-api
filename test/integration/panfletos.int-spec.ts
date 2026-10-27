@@ -151,10 +151,10 @@ describe('Funcionalidade: Panfletos no banco real', () => {
       expect(arquivo.subarray(8, 12).toString('ascii')).toBe('WEBP');
     });
 
-    it('Cenário: PDF enviado como image/jpeg → 422 IMAGEM_INVALIDA', async () => {
+    it('Cenário: PDF ilegível enviado como image/jpeg → 422 PDF_INVALIDO (RN13: o tipo vem dos magic bytes)', async () => {
       const r = await enviarPanfleto(app, lojista.token, filial.id, {}, imagens.pdf());
       expect(r.status).toBe(422);
-      expect(r.body.erro.codigo).toBe('IMAGEM_INVALIDA');
+      expect(r.body.erro.codigo).toBe('PDF_INVALIDO');
     });
 
     it('Cenário: RN17 pela API', async () => {

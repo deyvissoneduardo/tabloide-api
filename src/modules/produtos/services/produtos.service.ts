@@ -222,7 +222,8 @@ export class ProdutosService {
       ) as Partial<ValoresEditaveis>;
       if (Object.keys(mudancas).length === 0) return this.paraView(produto, hoje, transaction);
 
-      await produto.update(mudancas, { transaction });
+      // T6/RN45: a posição era relativa à categoria antiga; não é auditada
+      await produto.update(categoria ? { ...mudancas, posicao: null } : mudancas, { transaction });
       await this.auditoria.registrarAlteracoes(
         tenantId,
         'PRODUTO',

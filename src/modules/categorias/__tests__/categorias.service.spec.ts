@@ -39,6 +39,7 @@ const linha = (dados: Record<string, unknown> = {}) => ({
   vigentes: '0',
   agendados: '0',
   vencidos: '0',
+  posicao: null,
   createdAt: CRIADO,
   updatedAt: CRIADO,
   ...dados,
@@ -112,6 +113,27 @@ describe('Funcionalidade: CategoriasService', () => {
       it('Então a consulta ordena por nome_normalizado e depois por id', async () => {
         await service.listar('t1', 'f1');
         expect(sqlDaConsulta()).toContain('ORDER BY c.nome_normalizado, c.id');
+      });
+    });
+
+    describe('Cenário: listar segue a ordem por posição (RN45)', () => {
+      it('Então as posicionadas vêm primeiro e as demais em ordem alfabética', async () => {
+        sequelize.query.mockResolvedValue([
+          linha({ id: 'c1', nome: 'Açougue' }),
+          linha({ id: 'c2', nome: 'Bebidas', posicao: 1 }),
+          linha({ id: 'c3', nome: 'Limpeza', posicao: 0 }),
+        ]);
+        expect((await service.listar('t1', 'f1')).map((c) => c.nome)).toEqual([
+          'Limpeza',
+          'Bebidas',
+          'Açougue',
+        ]);
+        expect(sqlDaConsulta()).toContain('c.posicao');
+      });
+
+      it('E a view não expõe a posição', async () => {
+        sequelize.query.mockResolvedValue([linha({ posicao: 2 })]);
+        expect((await service.listar('t1', 'f1'))[0]).not.toHaveProperty('posicao');
       });
     });
 

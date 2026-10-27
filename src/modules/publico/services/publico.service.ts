@@ -60,12 +60,16 @@ export class PublicoService {
 
     const hoje = hojeNoFuso(filial.fusoHorario, agora);
     const [panfleto, produtos] = await Promise.all([
-      this.query.buscarPanfletoVigente(filial.tenantId, filial.id, hoje),
+      filial.lojista.sePanfleto
+        ? this.query.buscarPanfletoVigente(filial.tenantId, filial.id, hoje)
+        : Promise.resolve(null),
       this.query.buscarProdutosVigentes(filial.tenantId, filial.id, hoje),
     ]);
 
+    // RN44 + T2: com o panfleto em exibição, a estrutura vai vazia; sem a chave, o panfleto nem é buscado
     const json = paginaPublicaView(
-      montarPagina({ filial, panfleto, produtos }),
+      montarPagina({ filial, panfleto, produtos: panfleto ? [] : produtos }),
+      filial.lojista.sePanfleto,
       (caminho) => this.midia.urlPublica(caminho) as string,
       hoje,
     );

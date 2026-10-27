@@ -9,7 +9,7 @@ import type { EditarIdentidadeDto } from '../dtos/editar-identidade.dto';
 import { Lojista } from '../models/lojista.model';
 import { identidadeView, type IdentidadeView } from '../views/identidade.view';
 
-const ATRIBUTOS_IDENTIDADE = ['id', 'nomeFantasia', 'corPrimaria', 'corSecundaria', 'logoPath'];
+const ATRIBUTOS_IDENTIDADE = ['id', 'nomeFantasia', 'corPrimaria', 'corSecundaria', 'logoPath', 'sePanfleto'];
 
 /**
  * Identidade visual do lojista (RN06): vale para todas as filiais, por isso o evento sai sem filialId.
@@ -35,10 +35,16 @@ export class IdentidadeService {
   }
 
   async editar(tenantId: string, dto: EditarIdentidadeDto): Promise<IdentidadeView> {
-    const campos: { nomeFantasia?: string; corPrimaria?: string | null; corSecundaria?: string | null } = {};
+    const campos: {
+      nomeFantasia?: string;
+      corPrimaria?: string | null;
+      corSecundaria?: string | null;
+      sePanfleto?: boolean;
+    } = {};
     if (dto.nomeFantasia !== undefined) campos.nomeFantasia = dto.nomeFantasia;
     if (dto.corPrimaria !== undefined) campos.corPrimaria = dto.corPrimaria;
     if (dto.corSecundaria !== undefined) campos.corSecundaria = dto.corSecundaria;
+    if (dto.sePanfleto !== undefined) campos.sePanfleto = dto.sePanfleto;
     await this.lojistaModel.update(campos, { where: { id: tenantId } });
     this.emitir(tenantId);
     return this.obter(tenantId);

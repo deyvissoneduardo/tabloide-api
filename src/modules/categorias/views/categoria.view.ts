@@ -5,6 +5,8 @@ export interface CategoriaComContagem {
   vigentes: string | number;
   agendados: string | number;
   vencidos: string | number;
+  /** RN45: só para ordenar; não sai na view. */
+  posicao: number | null;
   createdAt: Date;
   updatedAt: Date;
 }

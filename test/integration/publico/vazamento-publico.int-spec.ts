@@ -19,8 +19,9 @@ describe('Funcionalidade: A página pública nunca expõe dados de outro tenant 
   let fb: FilialCriada;
   const publica = (codigo: string) =>
     app.http().get(`/v1/publico/filiais/${codigo}`).set('X-Forwarded-For', ipNovo());
-  const nomes = (body: { categorias: Array<{ nome: string; produtos: Array<{ nome: string }> }> }) =>
-    body.categorias.flatMap((c) => c.produtos.map((p) => `${c.nome}/${p.nome}`));
+  const nomes = (body: {
+    estrutura: { categorias: Array<{ nome: string; produtos: Array<{ nome: string }> }> };
+  }) => body.estrutura.categorias.flatMap((c) => c.produtos.map((p) => `${c.nome}/${p.nome}`));
 
   beforeAll(async () => {
     banco = await iniciarBanco();
@@ -85,7 +86,17 @@ describe('Funcionalidade: A página pública nunca expõe dados de outro tenant 
 
   describe('Cenário: resposta sem identificadores internos', () => {
     it('Então nenhum UUID do banco aparece e nenhum path interno fica fora das URLs', async () => {
+      // RN44: com a chave ligada o panfleto de FA entra na resposta
+      const identidade = (sePanfleto: boolean) =>
+        app
+          .http()
+          .patch('/v1/painel/lojista/identidade')
+          .set('Authorization', `Bearer ${a.token}`)
+          .send({ sePanfleto })
+          .expect(200);
+      await identidade(true);
       const r = await publica(fa.codigoPublico);
+      await identidade(false);
       const [linhas] = await banco.sequelize.query(
         `SELECT id::text FROM lojistas UNION ALL SELECT id::text FROM filiais
          UNION ALL SELECT id::text FROM categorias UNION ALL SELECT id::text FROM produtos
@@ -95,7 +106,7 @@ describe('Funcionalidade: A página pública nunca expõe dados de outro tenant 
       // o tenant aparece só como prefixo do path dentro de URLs públicas
       const semUrls = r.text.replace(/"https?:\/\/[^"]+"/g, '""');
       for (const id of ids) expect(semUrls).not.toContain(id);
-      expect(r.body.panfleto.imagemUrl).toMatch(/^http:\/\/localhost\/v1\/midia-local\/.+\.webp$/);
+      expect(r.body.panfleto.arquivoUrl).toMatch(/^http:\/\/localhost\/v1\/midia-local\/.+\.webp$/);
       expect(semUrls).not.toMatch(/\.webp/);
     });
   });

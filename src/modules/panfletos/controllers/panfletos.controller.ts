@@ -40,7 +40,9 @@ export class PanfletosController {
 
   @Post()
   @UseInterceptors(UploadImagemInterceptor)
-  @ApiOperation({ summary: 'Cria panfleto com imagem, sem sobrepor períodos (RN13–RN17)' })
+  @ApiOperation({
+    summary: 'Cria panfleto com imagem ou PDF de 1 página, sem sobrepor períodos (RN13–RN17)',
+  })
   @ApiUpload({ campo: CAMPO_IMAGEM, obrigatorio: true, dto: CriarPanfletoDto })
   @ApiRespostasDeErro(
     CodigoErro.VALIDACAO_INVALIDA,
@@ -52,6 +54,9 @@ export class PanfletosController {
     CodigoErro.LOJISTA_DESATIVADO,
     CodigoErro.IMAGEM_INVALIDA,
     CodigoErro.IMAGEM_MUITO_GRANDE,
+    CodigoErro.PDF_COM_VARIAS_PAGINAS,
+    CodigoErro.PDF_INVALIDO,
+    CodigoErro.PDF_MUITO_GRANDE,
     CodigoErro.ARMAZENAMENTO_INDISPONIVEL,
   )
   criar(
@@ -112,7 +117,7 @@ export class PanfletosController {
 
   @Put(':id/imagem')
   @UseInterceptors(UploadImagemInterceptor)
-  @ApiOperation({ summary: 'Troca a imagem do panfleto' })
+  @ApiOperation({ summary: 'Troca a imagem do panfleto por outra imagem ou PDF de 1 página (RN13, D3.2)' })
   @ApiParamUuid('id')
   @ApiUpload({ campo: CAMPO_IMAGEM, obrigatorio: true })
   @ApiRespostasDeErro(
@@ -122,6 +127,9 @@ export class PanfletosController {
     CodigoErro.LOJISTA_DESATIVADO,
     CodigoErro.IMAGEM_INVALIDA,
     CodigoErro.IMAGEM_MUITO_GRANDE,
+    CodigoErro.PDF_COM_VARIAS_PAGINAS,
+    CodigoErro.PDF_INVALIDO,
+    CodigoErro.PDF_MUITO_GRANDE,
     CodigoErro.ARMAZENAMENTO_INDISPONIVEL,
   )
   trocarImagem(

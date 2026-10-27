@@ -2,12 +2,18 @@ import { ApiDataISO } from '../../../common/swagger/data-iso.decorator';
 import type { DataISO } from '../../../common/utils/date-only';
 import { calcularSituacao } from '../../vigencia/domain/situacao';
 import type { Situacao } from '../../vigencia/domain/vigencia.types';
+import type { TipoArquivoPanfleto } from '../domain/tipo-arquivo';
 import type { Panfleto } from '../models/panfleto.model';
 
 export class PanfletoView {
   id!: string;
   filialId!: string;
+  /** RN13: IMAGEM ou PDF de 1 página. */
+  tipo!: TipoArquivoPanfleto;
+  urlArquivo!: string;
+  /** Igual a urlArquivo; mantido para apps já instalados (T4), sai na fase de contração. */
   urlImagem!: string;
+  /** IMAGEM: px; PDF: pontos da página 1. */
   largura!: number;
   altura!: number;
   @ApiDataISO()
@@ -24,7 +30,7 @@ export class PanfletoView {
  * hoje é calculado uma vez por request, no fuso da filial. largura e altura deixam o front
  * reservar o espaço da imagem (RNF02). Nunca expõe imagemPath nem tenantId.
  */
-export function panfletoView(panfleto: Panfleto, hoje: DataISO, urlImagem: string): PanfletoView {
+export function panfletoView(panfleto: Panfleto, hoje: DataISO, urlArquivo: string): PanfletoView {
   const situacao = calcularSituacao(
     {
       dataInicio: panfleto.dataInicio,
@@ -36,7 +42,9 @@ export function panfletoView(panfleto: Panfleto, hoje: DataISO, urlImagem: strin
   return {
     id: panfleto.id,
     filialId: panfleto.filialId,
-    urlImagem,
+    tipo: panfleto.tipoArquivo ?? 'IMAGEM',
+    urlArquivo,
+    urlImagem: urlArquivo,
     largura: panfleto.imagemLargura,
     altura: panfleto.imagemAltura,
     dataInicio: panfleto.dataInicio,

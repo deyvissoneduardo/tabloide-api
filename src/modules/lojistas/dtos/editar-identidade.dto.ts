@@ -1,6 +1,6 @@
 import { ApiHideProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsOptional, IsString, Length, Matches, ValidateIf } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, Length, Matches, ValidateIf } from 'class-validator';
 import { NormalizarEspacos } from '../../../common/validators/transformacoes';
 import { AoMenosUmCampo } from '../../../common/validators/validadores';
 
@@ -27,6 +27,11 @@ export class EditarIdentidadeDto {
   @ValidateIf((o: EditarIdentidadeDto) => o.corSecundaria !== null && o.corSecundaria !== undefined)
   @Matches(COR_HEX, { message: MENSAGEM_COR })
   corSecundaria?: string | null;
+
+  /** RN44: true = a página pública mostra só o panfleto vigente. null é recusado (sem IsOptional de propósito). */
+  @ValidateIf((o: EditarIdentidadeDto) => o.sePanfleto !== undefined)
+  @IsBoolean({ message: 'sePanfleto deve ser verdadeiro ou falso.' })
+  sePanfleto?: boolean;
 
   @AoMenosUmCampo()
   @ApiHideProperty()
