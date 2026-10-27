@@ -10,7 +10,8 @@ request:
       {
         "nomeFantasia": "Mercado Bom Preço",
         "corPrimaria": "#C8102E",
-        "corSecundaria": "#ffd100"
+        "corSecundaria": "#ffd100",
+        "sePanfleto": false
       }
 response:
   statusCode: 200
@@ -25,6 +26,7 @@ response:
         "nomeFantasia": "Mercado Bom Preço",
         "corPrimaria": "#C8102E",
         "corSecundaria": "#FFD100",
-        "urlLogo": "https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/logo/0192f0e0.webp"
+        "urlLogo": "https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/logo/0192f0e0.webp",
+        "sePanfleto": false
       }
 order: 1000

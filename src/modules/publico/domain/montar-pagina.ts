@@ -1,7 +1,8 @@
 import type { DataISO } from '../../../common/utils/date-only';
-import { compararTextoPtBr } from '../../../common/utils/text';
+import { compararPorPosicao } from '../../../common/utils/ordem';
 import type { EnderecoFilial } from '../../filiais/domain/endereco';
 import type { StatusLojista } from '../../lojistas/models/status-lojista';
+import type { TipoArquivoPanfleto } from '../../panfletos/domain/tipo-arquivo';
 
 /** Consulta 1: filial pelo código, com identidade e status do lojista. */
 export interface FilialPublicaRow {
@@ -15,11 +16,14 @@ export interface FilialPublicaRow {
     logoPath: string | null;
     corPrimaria: string | null;
     corSecundaria: string | null;
+    /** RN44: mostrar só o panfleto vigente, quando houver. */
+    sePanfleto: boolean;
     status: StatusLojista;
   };
 }
 
 export interface PanfletoRow {
+  tipoArquivo: TipoArquivoPanfleto;
   imagemPath: string;
   imagemLargura: number;
   imagemAltura: number;
@@ -36,12 +40,14 @@ export interface ProdutoRow {
   observacao: string | null;
   fotoPath: string | null;
   dataLimite: DataISO | null;
-  categoria: { id: string; nome: string };
+  posicao: number | null;
+  categoria: { id: string; nome: string; posicao: number | null };
 }
 
 export interface CategoriaDaPagina {
   id: string;
   nome: string;
+  posicao: number | null;
   produtos: ProdutoRow[];
 }
 
@@ -51,33 +57,31 @@ export interface PaginaPublica {
   categorias: CategoriaDaPagina[];
 }
 
-const porNomeEId = (a: { nome: string; id: string }, b: { nome: string; id: string }) =>
-  compararTextoPtBr(a.nome, b.nome) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-
 /**
  * Agrupa por categoria em O(n), descarta grupos vazios (RN41) e ordena categorias e produtos
- * em ordem alfabética pt-BR (RN30). O desempate por id deixa a resposta e o ETag estáveis.
+ * na ordem do lojista, com os não posicionados no fim em ordem alfabética pt-BR (RN30, RN45).
+ * O desempate por id deixa a resposta e o ETag estáveis.
  */
 export function montarPagina(entrada: {
   filial: FilialPublicaRow;
   panfleto: PanfletoRow | null;
   produtos: ProdutoRow[];
   /** Grupos extras sem produtos: na prática nunca existem, mas o descarte é explícito. */
-  categoriasVazias?: Array<{ id: string; nome: string }>;
+  categoriasVazias?: Array<{ id: string; nome: string; posicao: number | null }>;
 }): PaginaPublica {
   const grupos = new Map<string, CategoriaDaPagina>();
   for (const c of entrada.categoriasVazias ?? []) grupos.set(c.id, { ...c, produtos: [] });
   for (const produto of entrada.produtos) {
-    const { id, nome } = produto.categoria;
+    const { id, nome, posicao } = produto.categoria;
     let grupo = grupos.get(id);
     if (!grupo) {
-      grupo = { id, nome, produtos: [] };
+      grupo = { id, nome, posicao, produtos: [] };
       grupos.set(id, grupo);
     }
     grupo.produtos.push(produto);
   }
 
-  const categorias = [...grupos.values()].filter((g) => g.produtos.length > 0).sort(porNomeEId);
-  for (const grupo of categorias) grupo.produtos.sort(porNomeEId);
+  const categorias = [...grupos.values()].filter((g) => g.produtos.length > 0).sort(compararPorPosicao);
+  for (const grupo of categorias) grupo.produtos.sort(compararPorPosicao);
   return { filial: entrada.filial, panfleto: entrada.panfleto, categorias };
 }

@@ -1,0 +1,26 @@
+$kind: http-request
+id: 72672a39-305f-5d25-9601-0bab969c5469
+description: |-
+  `categorias: []` apaga toda a ordem da filial: a página volta à ordem alfabética.
+url: "{{baseUrl}}/painel/filiais/:filialId/estrutura"
+method: PUT
+headers:
+  Content-Type: application/json
+pathVariables:
+  - key: filialId
+    value: "{{filialId}}"
+    description: Id (UUID v7) da filial do lojista logado.
+body:
+  type: json
+  content: |-
+    {
+      "categorias": []
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Limpar estrutura.resources/examples
+order: 3000

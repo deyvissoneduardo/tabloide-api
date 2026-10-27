@@ -60,7 +60,7 @@ describe('Funcionalidade: PanfletosService', () => {
   };
   const filiais = { obter: jest.fn() };
   const midia = {
-    processar: jest.fn(),
+    processarPanfleto: jest.fn(),
     salvar: jest.fn(),
     urlPublica: jest.fn((c: string) => `https://cdn/${c}`),
   };
@@ -77,7 +77,7 @@ describe('Funcionalidade: PanfletosService', () => {
     sequelize = sequelizeFake(t);
     midia.urlPublica.mockImplementation((c: string) => `https://cdn/${c}`);
     filiais.obter.mockResolvedValue({ id: 'f1', tenantId: 't1', fusoHorario: 'America/Sao_Paulo' });
-    midia.processar.mockResolvedValue(IMAGEM);
+    midia.processarPanfleto.mockResolvedValue(IMAGEM);
     midia.salvar.mockResolvedValue('t1/panfleto/novo.webp');
     panfletoModel.findAll.mockResolvedValue([]);
     panfletoModel.create.mockImplementation(async (v) => ({ ...v, createdAt: agora, deletedAt: null }));
@@ -228,14 +228,14 @@ describe('Funcionalidade: PanfletosService', () => {
       it('Então RECURSO_NAO_ENCONTRADO; processou a imagem, mas não salvou', async () => {
         filiais.obter.mockRejectedValue(naoEncontrado());
         await expect(criar()).rejects.toMatchObject({ codigo: CodigoErro.RECURSO_NAO_ENCONTRADO });
-        expect(midia.processar).toHaveBeenCalled();
+        expect(midia.processarPanfleto).toHaveBeenCalled();
         expect(midia.salvar).not.toHaveBeenCalled();
       });
     });
 
     describe('Cenário: imagem inválida', () => {
       it('Então IMAGEM_INVALIDA sem abrir transação', async () => {
-        midia.processar.mockRejectedValue(new AppError(CodigoErro.IMAGEM_INVALIDA));
+        midia.processarPanfleto.mockRejectedValue(new AppError(CodigoErro.IMAGEM_INVALIDA));
         await expect(criar()).rejects.toMatchObject({ codigo: CodigoErro.IMAGEM_INVALIDA });
         expect(sequelize.transaction).not.toHaveBeenCalled();
       });
@@ -244,7 +244,7 @@ describe('Funcionalidade: PanfletosService', () => {
     describe('Cenário: processamento antes da transação (D3.3)', () => {
       it('Então processar vem antes de sequelize.transaction', async () => {
         await criar();
-        expect(midia.processar.mock.invocationCallOrder[0]).toBeLessThan(
+        expect(midia.processarPanfleto.mock.invocationCallOrder[0]).toBeLessThan(
           sequelize.transaction.mock.invocationCallOrder[0]!,
         );
       });
@@ -529,6 +529,73 @@ describe('Funcionalidade: PanfletosService', () => {
     });
   });
 
+  describe('Funcionalidade: Panfleto em PDF (RN13)', () => {
+    const PDF = {
+      conteudo: Buffer.from('%PDF'),
+      largura: 595,
+      altura: 842,
+      contentType: 'application/pdf',
+      bytes: 4,
+    };
+
+    describe('Cenário: criar com PDF', () => {
+      it('Então grava tipoArquivo PDF, largura/altura em pontos e audita imagemPath', async () => {
+        midia.processarPanfleto.mockResolvedValue(PDF);
+        midia.salvar.mockResolvedValue('t1/panfleto/novo.pdf');
+        const view = await service.criar('t1', 'f1', {}, Buffer.from('%PDF'));
+        expect(panfletoModel.create.mock.calls[0]![0]).toMatchObject({
+          imagemPath: 't1/panfleto/novo.pdf',
+          imagemLargura: 595,
+          imagemAltura: 842,
+          tipoArquivo: 'PDF',
+        });
+        expect(auditoria.registrarCriacao.mock.calls[0]![3]).toMatchObject({
+          imagemPath: 't1/panfleto/novo.pdf',
+        });
+        expect(auditoria.registrarCriacao.mock.calls[0]![3]).not.toHaveProperty('tipoArquivo');
+        expect(view).toMatchObject({ tipo: 'PDF', urlArquivo: 'https://cdn/t1/panfleto/novo.pdf' });
+      });
+    });
+
+    describe('Cenário: PDF de 2 páginas', () => {
+      it('Então PDF_COM_VARIAS_PAGINAS e nada é salvo no storage', async () => {
+        midia.processarPanfleto.mockRejectedValue(
+          new AppError(CodigoErro.PDF_COM_VARIAS_PAGINAS, undefined, { paginas: 2 }),
+        );
+        await expect(service.criar('t1', 'f1', {}, Buffer.from('%PDF'))).rejects.toMatchObject({
+          codigo: CodigoErro.PDF_COM_VARIAS_PAGINAS,
+        });
+        expect(midia.salvar).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('Cenário: conflito de período com PDF', () => {
+      it('Então PANFLETO_PERIODO_SOBREPOSTO e nada é salvo no storage', async () => {
+        midia.processarPanfleto.mockResolvedValue(PDF);
+        panfletoModel.findAll.mockResolvedValue([{ id: 'p9', dataInicio: '2026-10-01', dataLimite: null }]);
+        await expect(service.criar('t1', 'f1', {}, Buffer.from('%PDF'))).rejects.toMatchObject({
+          codigo: expect.stringMatching(/^PANFLETO_/),
+        });
+        expect(midia.salvar).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('Cenário: trocar imagem por PDF e PDF por imagem', () => {
+      it('Então tipoArquivo vira PDF e depois volta para IMAGEM', async () => {
+        const panfleto = umPanfleto();
+        panfletoModel.findOne.mockResolvedValue(panfleto);
+        midia.processarPanfleto.mockResolvedValueOnce(PDF);
+        await service.trocarImagem('t1', 'f1', 'p1', Buffer.from('%PDF'));
+        expect(panfleto.update.mock.calls[0]![0]).toMatchObject({ tipoArquivo: 'PDF', imagemLargura: 595 });
+        await service.trocarImagem('t1', 'f1', 'p1', Buffer.from('img'));
+        expect(panfleto.update.mock.calls[1]![0]).toMatchObject({
+          tipoArquivo: 'IMAGEM',
+          imagemLargura: 1697,
+        });
+      });
+    });
+  });
+
   describe('Funcionalidade: Trocar imagem do panfleto (D3.2)', () => {
     const trocar = (atual: Record<string, unknown> = {}) => {
       const panfleto = umPanfleto(atual);
@@ -541,7 +608,12 @@ describe('Funcionalidade: PanfletosService', () => {
         const { panfleto, resultado } = trocar();
         const view = await resultado;
         expect(panfleto.update).toHaveBeenCalledWith(
-          { imagemPath: 't1/panfleto/novo.webp', imagemLargura: 1697, imagemAltura: 2400 },
+          {
+            imagemPath: 't1/panfleto/novo.webp',
+            imagemLargura: 1697,
+            imagemAltura: 2400,
+            tipoArquivo: 'IMAGEM',
+          },
           { transaction: t },
         );
         expect(auditoria.registrarAlteracoes).toHaveBeenCalledWith(
@@ -577,7 +649,7 @@ describe('Funcionalidade: PanfletosService', () => {
     describe('Cenário: arquivo anterior não é removido', () => {
       it('Então o MidiaService não tem nem recebe chamada de remoção', async () => {
         await trocar().resultado;
-        expect(Object.keys(midia)).toEqual(['processar', 'salvar', 'urlPublica']);
+        expect(Object.keys(midia)).toEqual(['processarPanfleto', 'salvar', 'urlPublica']);
       });
     });
 

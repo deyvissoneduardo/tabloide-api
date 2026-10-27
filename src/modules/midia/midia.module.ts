@@ -8,6 +8,7 @@ import {
 } from './interceptors/upload-imagem.interceptor';
 import { ImageProcessor } from './services/image-processor.service';
 import { MidiaService } from './services/midia.service';
+import { PdfProcessor } from './services/pdf-processor.service';
 import { DiskStorageAdapter } from './storage/disk-storage.adapter';
 import { STORAGE_PORT, type StoragePort } from './storage/storage.port';
 import { SupabaseStorageAdapter, type ClienteStorageSupabase } from './storage/supabase-storage.adapter';
@@ -26,6 +27,7 @@ export function criarStorage(config: AppConfig): StoragePort {
 @Module({
   providers: [
     ImageProcessor,
+    PdfProcessor,
     MidiaService,
     UploadImagemInterceptor,
     UploadFotoOpcionalInterceptor,

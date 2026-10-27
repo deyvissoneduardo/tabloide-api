@@ -39,7 +39,11 @@ export class SupabaseStorageAdapter implements StoragePort {
     private readonly esperar: (ms: number) => Promise<void> = esperarPadrao,
   ) {}
 
-  async salvar(conteudo: Buffer, caminho: string, contentType: 'image/webp'): Promise<void> {
+  async salvar(
+    conteudo: Buffer,
+    caminho: string,
+    contentType: 'image/webp' | 'application/pdf',
+  ): Promise<void> {
     const opcoes = { contentType, cacheControl: CACHE_CONTROL_MIDIA, upsert: false };
     let { error } = await this.cliente.storage.from(this.bucket).upload(caminho, conteudo, opcoes);
     if (error && ehTransitorio(error)) {

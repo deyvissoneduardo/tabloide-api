@@ -6,6 +6,7 @@ description: |-
   - `Cache-Control: public, max-age=30, stale-while-revalidate=300`
   - `ETag` fraco (não muda se os dados não mudarem)
   - `hoje` no fuso da filial; `validoAte` em panfleto e produtos só quando há data limite; `precoOriginalCentavos` só quando há "de/por".
+  - `panfleto` só quando `sePanfleto` está ligado e há panfleto vigente; nesse caso `estrutura.categorias` vem vazia. PDF: `largura`/`altura` em pontos.
 
   Mudanças no painel aparecem na hora (o cache do servidor é invalidado). Desativar o lojista no banco leva até 60 s para tirar a página do ar.
 url: "{{baseUrl}}/publico/filiais/:codigo"

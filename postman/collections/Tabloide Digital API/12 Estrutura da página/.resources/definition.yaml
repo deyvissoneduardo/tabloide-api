@@ -1,0 +1,9 @@
+$kind: collection
+description: |-
+  Ordem da página pública de cada filial (RN45): o lojista ordena as categorias (vertical) e os produtos de cada categoria (horizontal). É o que a seção "Página" do painel lê e grava.
+
+  - Itens **não posicionados** (novos ou omitidos no PUT) vão para o fim, em ordem alfabética pt-BR.
+  - Produto que muda de categoria perde a posição.
+  - Reordenar não altera `atualizadoEm`, não é auditado e não conta em limite.
+  - A página pública reflete a ordem nova na hora (o cache do servidor é invalidado); o cache HTTP do navegador pode levar até 30 s.
+order: 12000

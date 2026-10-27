@@ -19,7 +19,8 @@ const SQL_FILIAL_POR_CODIGO = `
   SELECT f.id, f.tenant_id AS "tenantId", f.nome, f.fuso_horario AS "fusoHorario",
          e.cep, e.logradouro, e.numero, e.complemento, e.bairro, e.cidade, e.uf,
          l.nome_fantasia AS "nomeFantasia", l.logo_path AS "logoPath",
-         l.cor_primaria AS "corPrimaria", l.cor_secundaria AS "corSecundaria", a.status
+         l.cor_primaria AS "corPrimaria", l.cor_secundaria AS "corSecundaria",
+         l.se_panfleto AS "sePanfleto", a.status
   FROM filiais f
   JOIN lojistas l          ON l.id = f.tenant_id
   JOIN lojista_ativacoes a ON a.lojista_id = l.id
@@ -39,6 +40,7 @@ interface LinhaFilial extends ColunasEndereco {
   logoPath: string | null;
   corPrimaria: string | null;
   corSecundaria: string | null;
+  sePanfleto: boolean;
   status: StatusLojista;
 }
 
@@ -57,12 +59,16 @@ export class PaginaPublicaQuery {
       type: QueryTypes.SELECT,
     });
     if (!linha) return null;
-    const { nomeFantasia, logoPath, corPrimaria, corSecundaria, status, ...resto } = linha;
+    const { nomeFantasia, logoPath, corPrimaria, corSecundaria, sePanfleto, status, ...resto } = linha;
     const { cep, logradouro, numero, complemento, bairro, cidade, uf, ...filial } = resto;
     // as colunas são NOT NULL: só vêm null juntas, quando a filial não tem endereço
     const endereco =
       cep === null ? null : ({ cep, logradouro, numero, complemento, bairro, cidade, uf } as EnderecoFilial);
-    return { ...filial, endereco, lojista: { nomeFantasia, logoPath, corPrimaria, corSecundaria, status } };
+    return {
+      ...filial,
+      endereco,
+      lojista: { nomeFantasia, logoPath, corPrimaria, corSecundaria, sePanfleto, status },
+    };
   }
 
   /**
@@ -82,7 +88,7 @@ export class PaginaPublicaQuery {
           literal(`daterange(data_inicio, data_limite, '[]') @> ${this.sequelize.escape(hoje)}::date`),
         ],
       },
-      attributes: ['imagemPath', 'imagemLargura', 'imagemAltura', 'dataLimite'],
+      attributes: ['tipoArquivo', 'imagemPath', 'imagemLargura', 'imagemAltura', 'dataLimite'],
       raw: true,
     });
     return linha as PanfletoRow | null;
@@ -90,8 +96,8 @@ export class PaginaPublicaQuery {
 
   /**
    * Consulta 3: produtos vigentes (RN23) de categorias não excluídas, pelo índice
-   * produtos_filial_ativos_idx. Sem ORDER BY: a ordem pt-BR é feita em memória, sem depender
-   * da collation do banco.
+   * produtos_filial_ativos_idx. Sem ORDER BY: a ordem (posição e depois pt-BR, RN45) é feita em
+   * memória, sem depender da collation do banco.
    */
   async buscarProdutosVigentes(tenantId: string, filialId: string, hoje: DataISO): Promise<ProdutoRow[]> {
     const linhas = await this.produtoModel.findAll({
@@ -111,9 +117,12 @@ export class PaginaPublicaQuery {
         'observacao',
         'fotoPath',
         'dataLimite',
+        'posicao',
       ],
       // paranoid do include: c.deleted_at IS NULL; o tenant também é exigido na categoria
-      include: [{ model: Categoria, attributes: ['id', 'nome'], required: true, where: { tenantId } }],
+      include: [
+        { model: Categoria, attributes: ['id', 'nome', 'posicao'], required: true, where: { tenantId } },
+      ],
       raw: true,
       nest: true,
     });

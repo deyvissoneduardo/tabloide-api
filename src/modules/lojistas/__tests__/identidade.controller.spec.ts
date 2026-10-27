@@ -48,6 +48,29 @@ describe('Funcionalidade: IdentidadeController', () => {
     });
   });
 
+  describe.each<[string, unknown]>([
+    ['"sim"', 'sim'],
+    ['1', 1],
+    ['null', null],
+  ])('Cenário: sePanfleto não booleano (%s)', (_rotulo, valor) => {
+    it('Então 400 VALIDACAO_INVALIDA com o campo sePanfleto, sem chamar o service', async () => {
+      const resposta = await http()
+        .patch('/v1/painel/lojista/identidade')
+        .send({ sePanfleto: valor })
+        .expect(400);
+      expect(resposta.body.erro.codigo).toBe('VALIDACAO_INVALIDA');
+      expect(JSON.stringify(resposta.body.erro.detalhes)).toContain('sePanfleto');
+      expect(identidade.editar).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Cenário: corpo só com sePanfleto é aceito (AoMenosUmCampo)', () => {
+    it('Então editar(T1, { sePanfleto: true })', async () => {
+      await http().patch('/v1/painel/lojista/identidade').send({ sePanfleto: true }).expect(200);
+      expect(identidade.editar).toHaveBeenCalledWith('T1', { sePanfleto: true });
+    });
+  });
+
   describe('Cenário: PUT logo usa o interceptor de upload', () => {
     it('Então o handler tem o UploadImagemInterceptor e repassa o buffer', async () => {
       expect(Reflect.getMetadata(INTERCEPTORS_METADATA, IdentidadeController.prototype.trocarLogo)).toContain(

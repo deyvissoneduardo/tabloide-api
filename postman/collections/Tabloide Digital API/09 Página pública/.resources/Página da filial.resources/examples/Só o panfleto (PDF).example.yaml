@@ -1,0 +1,57 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/publico/filiais/:codigo"
+  method: GET
+  headers:
+    - key: Accept-Encoding
+      value: gzip
+      description: A página é enviada já comprimida quando o cliente aceita gzip.
+  pathVariables:
+    - key: codigo
+      value: "{{codigoPublico}}"
+      description: Código público da filial (8 caracteres, alfabeto sem 0 1 i l o I O).
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json; charset=utf-8
+    Cache-Control: public, max-age=30, stale-while-revalidate=300
+    ETag: W/"Zr8Kq1mPx4Tn6Wb2"
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "lojista": {
+          "nome": "Mercado Bom Preço",
+          "logoUrl": "https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/logo/0192f0e0.webp",
+          "corPrimaria": "#C8102E",
+          "corSecundaria": "#FFD100"
+        },
+        "sePanfleto": true,
+        "filial": {
+          "nome": "Centro",
+          "endereco": {
+            "cep": "13010111",
+            "logradouro": "Rua das Flores",
+            "numero": "120",
+            "complemento": "Loja 2",
+            "bairro": "Centro",
+            "cidade": "Campinas",
+            "uf": "SP"
+          }
+        },
+        "panfleto": {
+          "tipo": "PDF",
+          "arquivoUrl": "https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c9.pdf",
+          "largura": 595,
+          "altura": 842,
+          "validoAte": "2026-10-31"
+        },
+        "estrutura": {
+          "categorias": []
+        },
+        "hoje": "2026-10-18",
+        "geradoEm": "2026-10-18T15:04:05.123Z"
+      }
+order: 1500

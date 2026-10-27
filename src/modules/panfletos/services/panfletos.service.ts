@@ -22,6 +22,7 @@ import { calcularSituacao } from '../../vigencia/domain/situacao';
 import { valorOuErro } from '../../vigencia/domain/valor-ou-erro';
 import { VigenciaService } from '../../vigencia/services/vigencia.service';
 import { encontrarConflito, type PeriodoPanfleto } from '../domain/conflito-periodo';
+import { tipoArquivo } from '../domain/tipo-arquivo';
 import type { CriarPanfletoDto } from '../dtos/criar-panfleto.dto';
 import type { EditarDatasPanfletoDto } from '../dtos/editar-datas-panfleto.dto';
 import type { ListarPanfletosQueryDto } from '../dtos/listar-panfletos-query.dto';
@@ -54,7 +55,7 @@ export class PanfletosService {
     dto: CriarPanfletoDto,
     arquivo: Buffer,
   ): Promise<PanfletoView> {
-    const imagem = await this.midia.processar(tenantId, arquivo, 'panfleto');
+    const imagem = await this.midia.processarPanfleto(tenantId, arquivo);
     let caminhoSalvo: string | null = null;
     try {
       return await this.sequelize.transaction(async (transaction) => {
@@ -75,6 +76,7 @@ export class PanfletosService {
             imagemPath: caminhoSalvo,
             imagemLargura: imagem.largura,
             imagemAltura: imagem.altura,
+            tipoArquivo: tipoArquivo(imagem),
             ...novo,
           },
           { transaction },
@@ -173,7 +175,7 @@ export class PanfletosService {
 
   /** D3.2: a imagem tem os preços; a troca é auditada e o arquivo anterior fica no storage. */
   async trocarImagem(tenantId: string, filialId: string, id: string, arquivo: Buffer): Promise<PanfletoView> {
-    const imagem = await this.midia.processar(tenantId, arquivo, 'panfleto');
+    const imagem = await this.midia.processarPanfleto(tenantId, arquivo);
     let caminhoSalvo: string | null = null;
     try {
       return await this.sequelize.transaction(async (transaction) => {
@@ -187,7 +189,12 @@ export class PanfletosService {
         caminhoSalvo = await this.midia.salvar(tenantId, 'panfleto', imagem);
         const anterior = panfleto.imagemPath;
         await panfleto.update(
-          { imagemPath: caminhoSalvo, imagemLargura: imagem.largura, imagemAltura: imagem.altura },
+          {
+            imagemPath: caminhoSalvo,
+            imagemLargura: imagem.largura,
+            imagemAltura: imagem.altura,
+            tipoArquivo: tipoArquivo(imagem),
+          },
           { transaction },
         );
         await this.auditoria.registrarAlteracoes(

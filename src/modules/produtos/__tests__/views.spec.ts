@@ -80,6 +80,7 @@ describe('Funcionalidade: View de categoria', () => {
           nome: 'Bebidas',
           vigentes: '12',
           agendados: '3',
+          posicao: 4,
           vencidos: '0',
           createdAt: new Date('2026-10-18T13:02:11Z'),
           updatedAt: new Date('2026-10-18T13:02:11Z'),

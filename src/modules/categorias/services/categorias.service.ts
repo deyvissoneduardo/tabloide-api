@@ -9,6 +9,7 @@ import { AppError } from '../../../common/errors/app.error';
 import { CodigoErro } from '../../../common/errors/codigos-erro';
 import { naoEncontrado } from '../../../common/errors/errors';
 import type { DataISO } from '../../../common/utils/date-only';
+import { ordenarPorPosicao } from '../../../common/utils/ordem';
 import { FiliaisService, type OpcoesObterFilial } from '../../filiais/services/filiais.service';
 import { Produto } from '../../produtos/models/produto.model';
 import { VigenciaService } from '../../vigencia/services/vigencia.service';
@@ -23,7 +24,7 @@ import { categoriaView, type CategoriaComContagem, type CategoriaView } from '..
  * o tenant_id está explícito em categorias e em produtos.
  */
 const SQL_CATEGORIAS_COM_CONTAGEM = `
-  SELECT c.id, c.nome, c.created_at AS "createdAt", c.updated_at AS "updatedAt",
+  SELECT c.id, c.nome, c.posicao, c.created_at AS "createdAt", c.updated_at AS "updatedAt",
          COUNT(p.id) FILTER (WHERE p.data_inicio <= :hoje AND (p.data_limite IS NULL OR p.data_limite >= :hoje)) AS vigentes,
          COUNT(p.id) FILTER (WHERE p.data_inicio > :hoje) AS agendados,
          COUNT(p.id) FILTER (WHERE p.data_limite < :hoje) AS vencidos
@@ -49,7 +50,8 @@ export class CategoriasService {
   async listar(tenantId: string, filialId: string): Promise<CategoriaView[]> {
     const filial = await this.filiais.obter(tenantId, filialId);
     const linhas = await this.comContagem(tenantId, filialId, this.vigencia.hojeDaFilial(filial));
-    return linhas.map(categoriaView);
+    // RN45: a mesma ordem da página pública
+    return ordenarPorPosicao(linhas).map(categoriaView);
   }
 
   /** Nome repetido na filial: o índice único vira CATEGORIA_JA_EXISTE no filtro (sem consulta prévia, sem corrida). */

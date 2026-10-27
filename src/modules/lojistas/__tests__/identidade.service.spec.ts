@@ -27,6 +27,7 @@ describe('Funcionalidade: Identidade visual do lojista (RN06)', () => {
       corPrimaria: null,
       corSecundaria: null,
       logoPath: null,
+      sePanfleto: false,
     });
     midia.urlPublica.mockImplementation((c: string | null) => (c ? `https://cdn/${c}` : null));
     avisos = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
@@ -40,10 +41,11 @@ describe('Funcionalidade: Identidade visual do lojista (RN06)', () => {
         corPrimaria: null,
         corSecundaria: null,
         urlLogo: null,
+        sePanfleto: false,
       });
       expect(lojistaModel.findOne).toHaveBeenCalledWith({
         where: { id: 't1' },
-        attributes: ['id', 'nomeFantasia', 'corPrimaria', 'corSecundaria', 'logoPath'],
+        attributes: ['id', 'nomeFantasia', 'corPrimaria', 'corSecundaria', 'logoPath', 'sePanfleto'],
       });
     });
   });
@@ -59,6 +61,30 @@ describe('Funcionalidade: Identidade visual do lojista (RN06)', () => {
     it('Então update recebe só corSecundaria, com where do tenant', async () => {
       await service.editar('t1', { corSecundaria: '#FFD100' });
       expect(lojistaModel.update).toHaveBeenCalledWith({ corSecundaria: '#FFD100' }, { where: { id: 't1' } });
+    });
+  });
+
+  describe('Funcionalidade: Chave "mostrar só o panfleto" (RN44)', () => {
+    describe('Cenário: ligar a chave', () => {
+      it('Então grava sePanfleto true, emite o evento só com tenantId e responde com a chave', async () => {
+        lojistaModel.findOne.mockResolvedValue({
+          id: 't1',
+          nomeFantasia: 'Mercado',
+          logoPath: null,
+          sePanfleto: true,
+        });
+        const resposta = await service.editar('t1', { sePanfleto: true });
+        expect(lojistaModel.update).toHaveBeenCalledWith({ sePanfleto: true }, { where: { id: 't1' } });
+        expect(eventos.emit).toHaveBeenCalledWith(EVENTO, { tenantId: 't1' });
+        expect(resposta.sePanfleto).toBe(true);
+      });
+    });
+
+    describe('Cenário: editar só as cores não mexe na chave', () => {
+      it('Então sePanfleto não está nos campos gravados', async () => {
+        await service.editar('t1', { corPrimaria: '#C8102E' });
+        expect(lojistaModel.update.mock.calls[0]![0]).not.toHaveProperty('sePanfleto');
+      });
     });
   });
 

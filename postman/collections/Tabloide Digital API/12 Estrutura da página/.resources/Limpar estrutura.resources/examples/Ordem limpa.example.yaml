@@ -1,0 +1,40 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/filiais/:filialId/estrutura"
+  method: PUT
+  headers:
+    Content-Type: application/json
+  pathVariables:
+    - key: filialId
+      value: "{{filialId}}"
+      description: Id (UUID v7) da filial do lojista logado.
+  body:
+    type: json
+    content: |-
+      {
+        "categorias": []
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "categorias": [
+          {
+            "id": "0192f0d0-1a2b-7c3d-8e4f-5a6b7c8d9e02",
+            "nome": "Açougue",
+            "produtos": []
+          },
+          {
+            "id": "0192f0d0-1a2b-7c3d-8e4f-5a6b7c8d9e01",
+            "nome": "Bebidas",
+            "produtos": []
+          }
+        ]
+      }
+order: 1000

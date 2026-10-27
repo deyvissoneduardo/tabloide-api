@@ -29,6 +29,11 @@ export const CONSTRAINT_PARA_CODIGO: Record<string, CodigoErro> = {
   produtos_preco_original_ck: CodigoErro.PRECO_ORIGINAL_INVALIDO,
   produtos_preco_original_max_ck: CodigoErro.VALIDACAO_INVALIDA,
   produtos_datas_ck: CodigoErro.DATA_LIMITE_INVALIDA,
+  // posição negativa só acontece por bug (RN45)
+  categorias_posicao_ck: CodigoErro.ERRO_INTERNO,
+  produtos_posicao_ck: CodigoErro.ERRO_INTERNO,
+  // o tipo vem dos magic bytes, nunca do usuário (RN13)
+  panfletos_tipo_arquivo_ck: CodigoErro.ERRO_INTERNO,
 };
 
 interface ErroPg {

@@ -1,3 +1,3 @@
 $kind: collection
-description: Panfleto = uma imagem com período de vigência (RN13–RN17). Por filial há no máximo um panfleto vigente e nenhum período pode se sobrepor; para agendar o próximo, o atual precisa ter data limite.
+description: Panfleto = uma imagem (JPEG, PNG ou WebP) ou um PDF de 1 página (até 2 MB), com período de vigência (RN13–RN17). O tipo é decidido pelo conteúdo do arquivo, não pelo Content-Type; a resposta traz `tipo` (`IMAGEM`/`PDF`) e `urlArquivo` (`urlImagem` continua igual a `urlArquivo`, para apps antigos). Por filial há no máximo um panfleto vigente e nenhum período pode se sobrepor; para agendar o próximo, o atual precisa ter data limite.
 order: 5000

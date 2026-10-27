@@ -168,13 +168,13 @@ Todas as tabelas de tenant têm `id uuid PK`, `tenant_id uuid NOT NULL FK lojist
 
 | Tabela | Fase | Colunas principais | Restrições e índices |
 | --- | --- | --- | --- |
-| `lojistas` | 1 | `nome_fantasia varchar(120)`, `nome_responsavel varchar(120)`, `email citext`, `senha_hash text`, `whatsapp varchar(20)` (E.164), `cnpj char(14) NULL`, `logo_path text NULL`, `cor_primaria char(7) NULL`, `cor_secundaria char(7) NULL` | `UNIQUE(email)` (RN37), `CHECK cor ~ '^#[0-9A-F]{6}$'` |
+| `lojistas` | 1 | `nome_fantasia varchar(120)`, `nome_responsavel varchar(120)`, `email citext`, `senha_hash text`, `whatsapp varchar(20)` (E.164), `cnpj char(14) NULL`, `logo_path text NULL`, `cor_primaria char(7) NULL`, `cor_secundaria char(7) NULL`, `se_panfleto boolean NOT NULL DEFAULT false` (RN44, página pública) | `UNIQUE(email)` (RN37), `CHECK cor ~ '^#[0-9A-F]{6}$'` |
 | `lojista_ativacoes` | 1 | `lojista_id uuid PK FK`, `status enum`, `funcionalidades jsonb DEFAULT '{}'`, `observacao text NULL`, `atualizado_em timestamptz` | criada junto com o lojista, na mesma transação |
 | `filiais` | 2 | `nome varchar(120)`, `endereco varchar(300)`, `fuso_horario varchar(64) DEFAULT 'America/Sao_Paulo'`, `codigo_publico varchar(8)` | `UNIQUE(codigo_publico)`; índice `(tenant_id) WHERE deleted_at IS NULL` |
 | `auditoria_alteracoes` | 2 | `tenant_id`, `entidade varchar(30)`, `entidade_id uuid`, `campo varchar(40)`, `valor_anterior text NULL`, `valor_novo text NULL`, `alterado_em timestamptz`, `request_id varchar(40)` | append-only; índice `(tenant_id, entidade, entidade_id, alterado_em)` |
-| `panfletos` | 3 | `filial_id FK`, `imagem_path text`, `imagem_largura int`, `imagem_altura int`, `data_inicio date NOT NULL`, `data_limite date NULL` | `CHECK (data_limite IS NULL OR data_limite >= data_inicio)`; `EXCLUDE USING gist (filial_id WITH =, daterange(data_inicio, data_limite, '[]') WITH &&) WHERE (deleted_at IS NULL)` (RN16, extensão `btree_gist`) |
-| `categorias` | 4 | `filial_id FK`, `nome varchar(80)` | índice `(filial_id) WHERE deleted_at IS NULL` |
-| `produtos` | 4 | `filial_id FK`, `categoria_id FK`, `nome varchar(120)`, `quantidade varchar(40) NULL`, `preco_promocional_centavos int`, `preco_original_centavos int NULL`, `descricao varchar(500) NULL`, `observacao varchar(200) NULL`, `foto_path text NULL`, `data_inicio date NOT NULL`, `data_limite date NULL` | `CHECK preco_promocional_centavos > 0`; `CHECK (preco_original_centavos IS NULL OR preco_original_centavos > preco_promocional_centavos)` (RN21); `CHECK` de datas; índice `produtos_filial_ativos_idx (tenant_id, filial_id, data_inicio) WHERE deleted_at IS NULL` |
+| `panfletos` | 3 | `filial_id FK`, `imagem_path text`, `imagem_largura int`, `imagem_altura int`, `data_inicio date NOT NULL`, `data_limite date NULL`, `tipo_arquivo varchar(10) NOT NULL DEFAULT 'IMAGEM'` (RN13, página pública; `imagem_*` guardam também o PDF) | `CHECK (data_limite IS NULL OR data_limite >= data_inicio)`; `panfletos_tipo_arquivo_ck CHECK (tipo_arquivo IN ('IMAGEM', 'PDF'))`; `EXCLUDE USING gist (filial_id WITH =, daterange(data_inicio, data_limite, '[]') WITH &&) WHERE (deleted_at IS NULL)` (RN16, extensão `btree_gist`) |
+| `categorias` | 4 | `filial_id FK`, `nome varchar(80)`, `posicao int NULL` (RN45, página pública) | índice `(filial_id) WHERE deleted_at IS NULL`; `categorias_posicao_ck CHECK (posicao IS NULL OR posicao >= 0)` |
+| `produtos` | 4 | `filial_id FK`, `categoria_id FK`, `nome varchar(120)`, `quantidade varchar(40) NULL`, `preco_promocional_centavos int`, `preco_original_centavos int NULL`, `descricao varchar(500) NULL`, `observacao varchar(200) NULL`, `foto_path text NULL`, `data_inicio date NOT NULL`, `data_limite date NULL`, `posicao int NULL` (RN45, página pública; dentro da categoria) | `CHECK preco_promocional_centavos > 0`; `produtos_posicao_ck CHECK (posicao IS NULL OR posicao >= 0)`; `CHECK (preco_original_centavos IS NULL OR preco_original_centavos > preco_promocional_centavos)` (RN21); `CHECK` de datas; índice `produtos_filial_ativos_idx (tenant_id, filial_id, data_inicio) WHERE deleted_at IS NULL` |
 | `lojista_limites` | 5 | `lojista_id PK FK`, `max_filiais int NULL`, `max_produtos_por_filial int NULL`, `max_imagem_bytes int NULL` | `NULL` = sem limite (RNF12, valores em aberto) |
 | `consumidores` | futuro | `tenant_id`, `nome`, `whatsapp` | só documentado (RN33/RN34); **não** criado no MVP |
 
@@ -224,6 +224,10 @@ O filtro global `AppExceptionFilter` converte tudo para:
 | `FUSO_HORARIO_INVALIDO` | 422 | RN38 |
 | `IMAGEM_INVALIDA` | 422 | Tipo/conteúdo (RNF05) |
 | `IMAGEM_MUITO_GRANDE` | 413 | Tamanho (RNF05/RNF12) |
+| `ESTRUTURA_INVALIDA` | 422 | Ordem da página com ids que não pertencem à filial, produto fora da categoria ou ids repetidos (RN45, página pública) |
+| `PDF_COM_VARIAS_PAGINAS` | 422 | PDF do panfleto com 0 ou 2+ páginas (RN13, página pública) |
+| `PDF_INVALIDO` | 422 | PDF do panfleto corrompido ou com senha (RN13, página pública) |
+| `PDF_MUITO_GRANDE` | 413 | PDF acima de `MAX_PDF_BYTES` (2 MB) ou do limite do plano (RN13, RNF12, página pública) |
 | `LIMITE_DO_PLANO_ATINGIDO` | 409 | RNF12 |
 | `MUITAS_TENTATIVAS` | 429 | Rate limit |
 | `ERRO_INTERNO` | 500 | Inesperado (sem detalhes vazados) |
@@ -291,6 +295,7 @@ Uma interface definida numa fase é a fonte de verdade para as seguintes: as fas
 | Contrato | Arquivo | Define | Consome |
 | --- | --- | --- | --- |
 | `ClockService.agora()`, `hojeNoFuso(fuso, agora)`, `DataISO`, `compararTextoPtBr`/`collatorPtBr` | `common/clock`, `common/utils/date-only.ts`, `common/utils/text.ts` | 1 | 2, 3, 4, 5 |
+| `compararPorPosicao` / `ordenarPorPosicao` (posição, depois nome pt-BR, depois id; RN30/RN45) | `common/utils/ordem.ts` | página pública | 4 (categorias), 5 (pública), estruturas |
 | `AppError` + catálogo de códigos, `AppExceptionFilter` (mapa de constraints) | `common/errors` | 1 | 2, 3, 4, 5 |
 | `@TenantScoped`, hooks de tenant e `{ skipTenantScope: true }` | `database/tenant-scope.hooks.ts` | 1 | 2, 3, 4, 5 (única exceção: consulta pública por código) |
 | `JwtAuthGuard`, `TenantStatusGuard`, `AdminKeyGuard`, `@TenantId()` | `common/guards`, `common/decorators` | 1 | 2, 3, 4, 5 |
@@ -302,6 +307,7 @@ Uma interface definida numa fase é a fonte de verdade para as seguintes: as fas
 | `VERIFICADOR_LIMITES` / `VerificadorLimites` (`verificarCriacaoFilial`, `verificarCriacaoProduto`, `maxImagemBytes`) com o no-op `SemLimitesVerificador` | `common/limites` | 2 | 2, 3, 4; implementação real (`LimitesService`) na 5 |
 | Evento `EVENTO_CONTEUDO_ALTERADO = 'filial.conteudo-alterado'`, payload `ConteudoAlteradoEvento { tenantId, filialId? }`, emitido em `afterCommit` | `common/eventos` | 2 | emitido em 2, 3, 4; consumido pelo cache na 5 |
 | `MidiaService.processar(tenantId, buffer, perfil)` / `salvar(tenantId, perfil, imagem)` / `urlPublica(caminho)`; `StoragePort` sem remoção; arquivo órfão só logado (`midia.arquivo_orfao`) | `modules/midia` | 3 | 4, 5 |
+| `MidiaService.processarPanfleto(tenantId, buffer)`: imagem (WebP) ou PDF de 1 página guardado como veio, decidido pelos magic bytes | `modules/midia` | página pública | 3 (panfletos) |
 | `filtroSituacao(situacoes, hoje)` e `condicaoAgendado/Vigente/Vencido(hoje)`; filtro `situacao` em CSV maiúsculo (`AGENDADO,VIGENTE,VENCIDO,EXCLUIDO`) | `modules/vigencia/consultas/filtro-situacao.ts` | 3 | 4 |
 | Índices `panfletos_periodo_sem_sobreposicao` (GiST) e `produtos_filial_ativos_idx` | migrations | 3, 4 | 5 (consultas públicas) |
 
@@ -327,7 +333,7 @@ Decisões que não estavam nos documentos de regras. As marcadas como **confirma
 | 2 | D9: evento único `filial.conteudo-alterado`, emitido após o commit | técnica |
 | 2 | D10/D11: QR Code gerado sob demanda com ETag; filiais ordenadas por `pt-BR-x-icu` | técnica |
 | 2 | Consulta de auditoria de entidade de outro tenant devolve 200 com lista vazia; UUID inválido no path devolve 404 | técnica |
-| 3 | D3.1: sem HEIC no MVP (só JPEG, PNG e WebP) | técnica |
+| 3 | D3.1: sem HEIC no MVP; PDF de 1 página aceito no panfleto (26/10/2026) | **confirmada** (PDF) |
 | 3 | D3.2: trocar a imagem de panfleto vigente ou agendado é permitido e auditado (`imagemPath`) | **confirmada** |
 | 3 | D3.3/D3.4: imagem processada antes da transação; órfão não é apagado, só logado | técnica |
 | 3 | D3.5: erro `ARMAZENAMENTO_INDISPONIVEL` (503) | técnica |

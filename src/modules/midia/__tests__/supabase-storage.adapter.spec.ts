@@ -35,6 +35,18 @@ describe('Funcionalidade: Armazenar no Supabase Storage', () => {
     });
   });
 
+  describe('Cenário: upload de PDF (RN13)', () => {
+    it('Então repassa contentType application/pdf', async () => {
+      upload.mockResolvedValue({ error: null });
+      await adapter.salvar(Buffer.from('%PDF'), 't1/panfleto/abc.pdf', 'application/pdf');
+      expect(upload).toHaveBeenCalledWith('t1/panfleto/abc.pdf', Buffer.from('%PDF'), {
+        contentType: 'application/pdf',
+        cacheControl: '31536000',
+        upsert: false,
+      });
+    });
+  });
+
   describe('Cenário: falha transitória seguida de sucesso', () => {
     it('Então não há erro e o upload é tentado 2 vezes após 200 ms', async () => {
       upload.mockResolvedValueOnce({ error: { message: 'unavailable', status: 503 } });

@@ -24,6 +24,11 @@ export class AppConfig {
     return this.config.get('MAX_IMAGEM_BYTES', { infer: true });
   }
 
+  /** Teto do PDF do panfleto (D4); o menor entre ele e o limite do plano vale. */
+  get maxPdfBytes(): number {
+    return this.config.get('MAX_PDF_BYTES', { infer: true });
+  }
+
   get imagemMaxPixels(): number {
     return this.config.get('IMAGEM_MAX_PIXELS', { infer: true });
   }

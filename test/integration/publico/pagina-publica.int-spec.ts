@@ -43,8 +43,11 @@ describe('Funcionalidade: Página pública ponta a ponta', () => {
         deletedAt: excluido ? new Date('2026-10-15T12:00:00Z') : null,
       },
     );
-  const nomes = (body: { categorias: Array<{ produtos: Array<{ nome: string }> }> }) =>
-    body.categorias.flatMap((c) => c.produtos.map((p) => p.nome));
+  const nomes = (body: { estrutura: { categorias: Array<{ produtos: Array<{ nome: string }> }> } }) =>
+    body.estrutura.categorias.flatMap((c) => c.produtos.map((p) => p.nome));
+  /** RN44: liga ou desliga "mostrar só o panfleto" pela rota real (o evento invalida o cache). */
+  const sePanfleto = (valor: boolean) =>
+    app.http().patch('/v1/painel/lojista/identidade').set(auth()).send({ sePanfleto: valor }).expect(200);
 
   beforeAll(async () => {
     banco = await iniciarBanco();
@@ -80,20 +83,23 @@ describe('Funcionalidade: Página pública ponta a ponta', () => {
       expect(r.body).toMatchObject({
         lojista: { nome: 'Mercado Bom Preço', logoUrl: null, corPrimaria: null, corSecundaria: null },
         filial: { nome: 'Centro', endereco: umEndereco() },
+        sePanfleto: false,
         panfleto: null,
-        categorias: [
-          {
-            nome: 'Mercearia',
-            produtos: [
-              {
-                nome: 'Açúcar refinado',
-                quantidade: '1 kg',
-                precoPromocionalCentavos: 459,
-                precoOriginalCentavos: 529,
-              },
-            ],
-          },
-        ],
+        estrutura: {
+          categorias: [
+            {
+              nome: 'Mercearia',
+              produtos: [
+                {
+                  nome: 'Açúcar refinado',
+                  quantidade: '1 kg',
+                  precoPromocionalCentavos: 459,
+                  precoOriginalCentavos: 529,
+                },
+              ],
+            },
+          ],
+        },
         hoje: '2026-10-18',
       });
       expect(r.body.geradoEm).toBe(AGORA_FIXO.toISOString());
@@ -105,9 +111,11 @@ describe('Funcionalidade: Página pública ponta a ponta', () => {
       await panfleto('2026-10-01', '2026-10-17');
       await panfleto('2026-10-18', '2026-10-25');
       await panfleto('2026-10-26', null);
+      await sePanfleto(true);
       const hoje = await publica();
       expect(hoje.body.panfleto).toEqual({
-        imagemUrl: expect.stringMatching(/2026-10-18\.webp$/),
+        tipo: 'IMAGEM',
+        arquivoUrl: expect.stringMatching(/2026-10-18\.webp$/),
         largura: 1600,
         altura: 2263,
         validoAte: '2026-10-25',
@@ -116,7 +124,7 @@ describe('Funcionalidade: Página pública ponta a ponta', () => {
       relogio.agora = new Date('2026-10-26T03:00:00Z');
       const depois = await publica();
       expect(depois.body.hoje).toBe('2026-10-26');
-      expect(depois.body.panfleto.imagemUrl).toMatch(/2026-10-26\.webp$/);
+      expect(depois.body.panfleto.arquivoUrl).toMatch(/2026-10-26\.webp$/);
       expect(depois.body.panfleto).not.toHaveProperty('validoAte');
     });
   });
@@ -124,6 +132,7 @@ describe('Funcionalidade: Página pública ponta a ponta', () => {
   describe('Cenário: panfleto excluído não aparece mesmo vigente', () => {
     it('Então panfleto é null', async () => {
       await panfleto('2026-10-10', '2026-10-25', true);
+      await sePanfleto(true);
       expect((await publica()).body.panfleto).toBeNull();
     });
   });
@@ -137,8 +146,8 @@ describe('Funcionalidade: Página pública ponta a ponta', () => {
       await produto({ nome: 'Excluído', inicio: '2026-10-01', limite: null, excluido: true });
       const r = await publica();
       expect(nomes(r.body)).toEqual(['Vence hoje', 'Vigente sem limite']);
-      expect(r.body.categorias[0].produtos[0].validoAte).toBe('2026-10-18');
-      expect(r.body.categorias[0].produtos[1]).not.toHaveProperty('validoAte');
+      expect(r.body.estrutura.categorias[0].produtos[0].validoAte).toBe('2026-10-18');
+      expect(r.body.estrutura.categorias[0].produtos[1]).not.toHaveProperty('validoAte');
     });
   });
 
@@ -156,7 +165,7 @@ describe('Funcionalidade: Página pública ponta a ponta', () => {
     it('Então a categoria some da página', async () => {
       await produto({ nome: 'Órfão', inicio: '2026-10-01', limite: null });
       await sql('UPDATE categorias SET deleted_at = now() WHERE id = :id', { id: categoria.id });
-      expect((await publica()).body.categorias).toEqual([]);
+      expect((await publica()).body.estrutura.categorias).toEqual([]);
     });
   });
 
@@ -169,16 +178,84 @@ describe('Funcionalidade: Página pública ponta a ponta', () => {
       await criarProduto(app, lojista.token, filial.id, bebidas.id, { nome: 'Suco' });
       await criarProduto(app, lojista.token, filial.id, acougue.id, { nome: 'Picanha' });
       const r = await publica();
-      expect(r.body.categorias.map((c: { nome: string }) => c.nome)).toEqual([
+      expect(r.body.estrutura.categorias.map((c: { nome: string }) => c.nome)).toEqual([
         'Açougue',
         'bebidas',
         'Mercearia',
       ]);
-      expect(r.body.categorias[2].produtos.map((p: { nome: string }) => p.nome)).toEqual([
+      expect(r.body.estrutura.categorias[2].produtos.map((p: { nome: string }) => p.nome)).toEqual([
         'abacate',
         'Açúcar',
         'Água',
       ]);
+    });
+  });
+
+  describe('Funcionalidade: Regra de exibição e ordem do lojista (RN44, RN45)', () => {
+    describe('Cenário: ordem gravada pelo PUT aparece na página', () => {
+      it('Então categorias e produtos seguem a ordem do lojista, com o não posicionado no fim', async () => {
+        const bebidas = await criarCategoria(app, lojista.token, filial.id, 'Bebidas');
+        const suco = await criarProduto(app, lojista.token, filial.id, bebidas.id, { nome: 'Suco' });
+        const agua = await criarProduto(app, lojista.token, filial.id, bebidas.id, { nome: 'Água' });
+        await criarProduto(app, lojista.token, filial.id, bebidas.id, { nome: 'Abacaxi' });
+        await criarProduto(app, lojista.token, filial.id, categoria.id, { nome: 'Arroz' });
+        await publica().expect(200);
+        await app
+          .http()
+          .put(`/v1/painel/filiais/${filial.id}/estrutura`)
+          .set(auth())
+          .send({ categorias: [{ id: bebidas.id, produtos: [suco.id, agua.id] }] })
+          .expect(200);
+        const r = await publica();
+        expect(r.body.estrutura.categorias.map((c: { nome: string }) => c.nome)).toEqual([
+          'Bebidas',
+          'Mercearia',
+        ]);
+        expect(nomes(r.body)).toEqual(['Suco', 'Água', 'Abacaxi', 'Arroz']);
+      });
+    });
+
+    describe('Cenário: chave ligada + panfleto vigente', () => {
+      it('Então só o panfleto, com a estrutura vazia', async () => {
+        await produto({ nome: 'Leite', inicio: '2026-10-01', limite: null });
+        await panfleto('2026-10-10', '2026-10-25');
+        await sePanfleto(true);
+        const r = await publica();
+        expect(r.body.sePanfleto).toBe(true);
+        expect(r.body.panfleto).toMatchObject({ tipo: 'IMAGEM' });
+        expect(r.body.estrutura).toEqual({ categorias: [] });
+      });
+    });
+
+    describe('Cenário: chave ligada sem panfleto vigente', () => {
+      it('Então a estrutura com as categorias e panfleto null', async () => {
+        await produto({ nome: 'Leite', inicio: '2026-10-01', limite: null });
+        await sePanfleto(true);
+        const r = await publica();
+        expect(r.body.panfleto).toBeNull();
+        expect(nomes(r.body)).toEqual(['Leite']);
+      });
+    });
+
+    describe('Cenário: chave desligada', () => {
+      it('Então a estrutura sem panfleto, mesmo com panfleto vigente', async () => {
+        await produto({ nome: 'Leite', inicio: '2026-10-01', limite: null });
+        await panfleto('2026-10-10', '2026-10-25');
+        const r = await publica();
+        expect(r.body.sePanfleto).toBe(false);
+        expect(r.body.panfleto).toBeNull();
+        expect(nomes(r.body)).toEqual(['Leite']);
+      });
+    });
+
+    describe('Cenário: resposta sem os campos antigos', () => {
+      it('Então não há imagemUrl nem categorias na raiz', async () => {
+        await panfleto('2026-10-10', '2026-10-25');
+        await sePanfleto(true);
+        const r = await publica();
+        expect(r.body).not.toHaveProperty('categorias');
+        expect(r.text).not.toContain('imagemUrl');
+      });
     });
   });
 
@@ -246,7 +323,7 @@ describe('Funcionalidade: Página pública ponta a ponta', () => {
       const nova = await publica().set('If-None-Match', etag);
       expect(nova.status).toBe(200);
       expect(nova.headers.etag).not.toBe(etag);
-      expect(nova.body.categorias[0].produtos[0].precoPromocionalCentavos).toBe(1999);
+      expect(nova.body.estrutura.categorias[0].produtos[0].precoPromocionalCentavos).toBe(1999);
     });
 
     it('E HEAD responde com o ETag e sem corpo', async () => {
@@ -289,6 +366,7 @@ describe('Funcionalidade: Página pública ponta a ponta', () => {
   describe('Cenário: só a consulta da filial dispensa o tenant', () => {
     it('Então as consultas de panfleto e produtos filtram por tenant_id', async () => {
       await produto({ nome: 'X', inicio: '2026-10-01', limite: null });
+      await sePanfleto(true); // RN44: sem a chave o panfleto nem é consultado
       const sequelize = app.app.get((await import('sequelize-typescript')).Sequelize);
       const espiao = jest.spyOn(sequelize, 'query');
       await publica().expect(200);

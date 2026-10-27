@@ -13,13 +13,14 @@ export interface AtributosLojista {
   logoPath: string | null;
   corPrimaria: string | null;
   corSecundaria: string | null;
+  sePanfleto: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export type AtributosCriacaoLojista = Omit<
   AtributosLojista,
-  'logoPath' | 'corPrimaria' | 'corSecundaria' | 'createdAt' | 'updatedAt'
+  'logoPath' | 'corPrimaria' | 'corSecundaria' | 'sePanfleto' | 'createdAt' | 'updatedAt'
 >;
 
 /** Lojista é o próprio tenant (tenant_id = lojistas.id); por isso não é @TenantScoped. */
@@ -60,6 +61,10 @@ export class Lojista extends Model<AtributosLojista, AtributosCriacaoLojista> {
 
   @Column(DataType.CHAR(7))
   declare corSecundaria: CreationOptional<string | null>;
+
+  /** RN44: a página pública mostra só o panfleto vigente, quando houver. */
+  @Column(DataType.BOOLEAN)
+  declare sePanfleto: CreationOptional<boolean>;
 
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;

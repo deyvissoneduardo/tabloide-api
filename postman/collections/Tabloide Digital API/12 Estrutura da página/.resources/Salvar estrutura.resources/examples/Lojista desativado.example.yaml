@@ -1,0 +1,34 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/filiais/:filialId/estrutura"
+  method: PUT
+  headers:
+    Content-Type: application/json
+  pathVariables:
+    - key: filialId
+      value: "{{filialId}}"
+      description: Id (UUID v7) da filial do lojista logado.
+  body:
+    type: json
+    content: |-
+      {
+        "categorias": [
+          { "id": "0192f0d0-1a2b-7c3d-8e4f-5a6b7c8d9e01", "produtos": ["0192f0d1-2b3c-7d4e-8f5a-6b7c8d9e0f02", "0192f0d1-2b3c-7d4e-8f5a-6b7c8d9e0f01"] }
+        ]
+      }
+response:
+  statusCode: 403
+  statusText: Forbidden
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "erro": {
+          "codigo": "LOJISTA_DESATIVADO",
+          "mensagem": "Sua conta está desativada. O painel está disponível só para consulta."
+        }
+      }
+order: 4000

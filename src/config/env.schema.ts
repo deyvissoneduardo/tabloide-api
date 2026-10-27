@@ -48,6 +48,12 @@ const envBase = z.object({
     .int()
     .positive()
     .default(10 * 1024 * 1024),
+  /** PDF do panfleto (D4): guardado como veio, por isso tem teto próprio. */
+  MAX_PDF_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(2 * 1024 * 1024),
   IMAGEM_MAX_PIXELS: z.coerce.number().int().positive().default(50_000_000),
   IMAGEM_CONCORRENCIA: z.coerce.number().int().min(1).max(16).default(2),
   /** Quantos proxies confiáveis há na frente da API (o IP real vem do X-Forwarded-For). */

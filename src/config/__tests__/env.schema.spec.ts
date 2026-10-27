@@ -47,6 +47,7 @@ describe('Funcionalidade: Validação das variáveis de ambiente', () => {
         TENANT_STATUS_CACHE_TTL_MS: 30000,
         LOG_LEVEL: 'info',
         FUSO_HORARIO_PADRAO: 'America/Sao_Paulo',
+        MAX_PDF_BYTES: 2 * 1024 * 1024,
       });
     });
   });
@@ -64,6 +65,8 @@ describe('Funcionalidade: Validação das variáveis de ambiente', () => {
     ['FUSO_HORARIO_PADRAO inválido', { FUSO_HORARIO_PADRAO: 'Marte/Olympus' }, 'FUSO_HORARIO_PADRAO'],
     ['SWAGGER_HABILITADO fora de true/false', { SWAGGER_HABILITADO: 'sim' }, 'SWAGGER_HABILITADO'],
     ['FUSO_HORARIO_PADRAO não geográfico', { FUSO_HORARIO_PADRAO: 'UTC' }, 'FUSO_HORARIO_PADRAO'],
+    ['MAX_PDF_BYTES zero', { MAX_PDF_BYTES: '0' }, 'MAX_PDF_BYTES'],
+    ['MAX_PDF_BYTES não numérico', { MAX_PDF_BYTES: 'dois' }, 'MAX_PDF_BYTES'],
   ])('Cenário: %s', (_nome, sobrescrita, variavel) => {
     it(`Então lança erro citando ${variavel}`, () => {
       expect(() => validarEnv({ ...envValido(), ...sobrescrita })).toThrow(variavel);

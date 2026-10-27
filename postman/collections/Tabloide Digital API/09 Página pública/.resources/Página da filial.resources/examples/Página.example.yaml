@@ -28,6 +28,7 @@ response:
           "corPrimaria": "#C8102E",
           "corSecundaria": "#FFD100"
         },
+        "sePanfleto": false,
         "filial": {
           "nome": "Centro",
           "endereco": {
@@ -40,47 +41,44 @@ response:
             "uf": "SP"
           }
         },
-        "panfleto": {
-          "imagemUrl": "https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp",
-          "largura": 1600,
-          "altura": 2263,
-          "validoAte": "2026-10-31"
+        "panfleto": null,
+        "estrutura": {
+          "categorias": [
+            {
+              "nome": "Bebidas",
+              "produtos": [
+                {
+                  "nome": "Refrigerante cola",
+                  "quantidade": "2 L",
+                  "precoPromocionalCentavos": 799,
+                  "precoOriginalCentavos": 1099,
+                  "observacao": "limite 3 por cliente",
+                  "fotoUrl": "https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/produto/0192f0d2.webp",
+                  "validoAte": "2026-10-20"
+                },
+                {
+                  "nome": "Água mineral",
+                  "quantidade": "1,5 L",
+                  "precoPromocionalCentavos": 249
+                }
+              ]
+            },
+            {
+              "nome": "Mercearia",
+              "produtos": [
+                {
+                  "nome": "Arroz Tipo 1",
+                  "quantidade": "5kg",
+                  "precoPromocionalCentavos": 2199,
+                  "precoOriginalCentavos": 2649,
+                  "observacao": "Limite 3 por cliente",
+                  "fotoUrl": "https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/produto/0192f0d1.webp",
+                  "validoAte": "2026-10-25"
+                }
+              ]
+            }
+          ]
         },
-        "categorias": [
-          {
-            "nome": "Bebidas",
-            "produtos": [
-              {
-                "nome": "Água mineral",
-                "quantidade": "1,5 L",
-                "precoPromocionalCentavos": 249
-              },
-              {
-                "nome": "Refrigerante cola",
-                "quantidade": "2 L",
-                "precoPromocionalCentavos": 799,
-                "precoOriginalCentavos": 1099,
-                "observacao": "limite 3 por cliente",
-                "fotoUrl": "https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/produto/0192f0d2.webp",
-                "validoAte": "2026-10-20"
-              }
-            ]
-          },
-          {
-            "nome": "Mercearia",
-            "produtos": [
-              {
-                "nome": "Arroz Tipo 1",
-                "quantidade": "5kg",
-                "precoPromocionalCentavos": 2199,
-                "precoOriginalCentavos": 2649,
-                "observacao": "Limite 3 por cliente",
-                "fotoUrl": "https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/produto/0192f0d1.webp",
-                "validoAte": "2026-10-25"
-              }
-            ]
-          }
-        ],
         "hoje": "2026-10-18",
         "geradoEm": "2026-10-18T15:04:05.123Z"
       }

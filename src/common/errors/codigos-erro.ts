@@ -22,6 +22,10 @@ export enum CodigoErro {
   ERRO_INTERNO = 'ERRO_INTERNO',
   ARMAZENAMENTO_INDISPONIVEL = 'ARMAZENAMENTO_INDISPONIVEL',
   CORPO_MUITO_GRANDE = 'CORPO_MUITO_GRANDE',
+  ESTRUTURA_INVALIDA = 'ESTRUTURA_INVALIDA',
+  PDF_COM_VARIAS_PAGINAS = 'PDF_COM_VARIAS_PAGINAS',
+  PDF_INVALIDO = 'PDF_INVALIDO',
+  PDF_MUITO_GRANDE = 'PDF_MUITO_GRANDE',
 }
 
 export const STATUS_POR_CODIGO: Record<CodigoErro, number> = {
@@ -48,6 +52,10 @@ export const STATUS_POR_CODIGO: Record<CodigoErro, number> = {
   [CodigoErro.ERRO_INTERNO]: 500,
   [CodigoErro.ARMAZENAMENTO_INDISPONIVEL]: 503,
   [CodigoErro.CORPO_MUITO_GRANDE]: 413,
+  [CodigoErro.ESTRUTURA_INVALIDA]: 422,
+  [CodigoErro.PDF_COM_VARIAS_PAGINAS]: 422,
+  [CodigoErro.PDF_INVALIDO]: 422,
+  [CodigoErro.PDF_MUITO_GRANDE]: 413,
 };
 
 export const MENSAGEM_POR_CODIGO: Record<CodigoErro, string> = {
@@ -76,4 +84,9 @@ export const MENSAGEM_POR_CODIGO: Record<CodigoErro, string> = {
   [CodigoErro.ERRO_INTERNO]: 'Erro interno. Tente novamente em instantes.',
   [CodigoErro.ARMAZENAMENTO_INDISPONIVEL]: 'Não foi possível salvar a imagem agora. Tente novamente.',
   [CodigoErro.CORPO_MUITO_GRANDE]: 'A requisição é maior que o tamanho permitido.',
+  [CodigoErro.ESTRUTURA_INVALIDA]:
+    'A ordem enviada não corresponde às categorias e produtos desta filial. Recarregue e tente de novo.',
+  [CodigoErro.PDF_COM_VARIAS_PAGINAS]: 'O PDF do panfleto precisa ter só 1 página.',
+  [CodigoErro.PDF_INVALIDO]: 'Não foi possível ler o PDF. Envie um PDF sem senha.',
+  [CodigoErro.PDF_MUITO_GRANDE]: 'O PDF é maior que o tamanho permitido.',
 };

@@ -481,8 +481,26 @@ describe('Funcionalidade: ProdutosService', () => {
           transaction: t,
           lock: 'SHARE',
         });
-        expect(produto.update).toHaveBeenCalledWith({ categoriaId: 'c2' }, { transaction: t });
+        expect(produto.update).toHaveBeenCalledWith({ categoriaId: 'c2', posicao: null }, { transaction: t });
         expect(view.categoria).toEqual(C2);
+      });
+    });
+
+    describe('Cenário: mudar a categoria zera a posição (RN45)', () => {
+      it('Então o update grava posicao null e a auditoria não registra posicao', async () => {
+        const { produto, resultado } = editar({ posicao: 3 }, { categoriaId: 'c2' });
+        await resultado;
+        expect(produto.update).toHaveBeenCalledWith({ categoriaId: 'c2', posicao: null }, { transaction: t });
+        const mudancasAuditadas = auditoria.registrarAlteracoes.mock.calls[0]![4] as Record<string, unknown>;
+        expect(mudancasAuditadas).not.toHaveProperty('posicao');
+      });
+    });
+
+    describe('Cenário: editar sem mudar a categoria mantém a posição', () => {
+      it('Então posicao não aparece nos campos gravados', async () => {
+        const { produto, resultado } = editar({ posicao: 3 }, { precoPromocionalCentavos: 1999 });
+        await resultado;
+        expect(produto.update.mock.calls[0]![0]).not.toHaveProperty('posicao');
       });
     });
 

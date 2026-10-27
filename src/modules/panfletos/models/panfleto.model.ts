@@ -2,6 +2,7 @@ import type { CreationOptional } from 'sequelize';
 import { Column, DataType, Model, PrimaryKey, Table } from 'sequelize-typescript';
 import type { DataISO } from '../../../common/utils/date-only';
 import { TenantScoped } from '../../../database/tenant-scoped.decorator';
+import type { TipoArquivoPanfleto } from '../domain/tipo-arquivo';
 
 export interface AtributosPanfleto {
   id: string;
@@ -10,6 +11,7 @@ export interface AtributosPanfleto {
   imagemPath: string;
   imagemLargura: number;
   imagemAltura: number;
+  tipoArquivo: TipoArquivoPanfleto;
   dataInicio: DataISO;
   dataLimite: DataISO | null;
   createdAt: Date;
@@ -17,9 +19,13 @@ export interface AtributosPanfleto {
   deletedAt: Date | null;
 }
 
-export type AtributosCriacaoPanfleto = Omit<AtributosPanfleto, 'createdAt' | 'updatedAt' | 'deletedAt'>;
+export type AtributosCriacaoPanfleto = Omit<
+  AtributosPanfleto,
+  'tipoArquivo' | 'createdAt' | 'updatedAt' | 'deletedAt'
+> &
+  Partial<Pick<AtributosPanfleto, 'tipoArquivo'>>;
 
-/** Uma imagem por panfleto (RN13); no máximo um vigente por filial, sem sobreposição (RN14, RN16). */
+/** Uma imagem ou um PDF de 1 página por panfleto (RN13); no máximo um vigente por filial, sem sobreposição (RN14, RN16). */
 @TenantScoped()
 @Table({ tableName: 'panfletos', paranoid: true })
 export class Panfleto extends Model<AtributosPanfleto, AtributosCriacaoPanfleto> {
@@ -41,6 +47,10 @@ export class Panfleto extends Model<AtributosPanfleto, AtributosCriacaoPanfleto>
 
   @Column(DataType.INTEGER)
   declare imagemAltura: number;
+
+  /** RN13: IMAGEM ou PDF; os campos imagem* guardam também o PDF (largura/altura em pontos). */
+  @Column(DataType.STRING(10))
+  declare tipoArquivo: CreationOptional<TipoArquivoPanfleto>;
 
   /** DATEONLY volta como string 'YYYY-MM-DD' no Sequelize 6. */
   @Column(DataType.DATEONLY)

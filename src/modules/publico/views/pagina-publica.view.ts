@@ -31,7 +31,10 @@ export class FilialPublicaJson {
 }
 
 export class PanfletoPublicoJson {
-  imagemUrl!: string;
+  /** RN13: imagem (WebP) ou PDF de 1 página. */
+  tipo!: 'IMAGEM' | 'PDF';
+  arquivoUrl!: string;
+  /** IMAGEM: px; PDF: pontos (1/72") da página 1, arredondados. */
   largura!: number;
   altura!: number;
   @ApiDataISO({ obrigatorio: false })
@@ -43,13 +46,21 @@ export class CategoriaPublicaJson {
   produtos!: ProdutoPublicoJson[];
 }
 
+/** Categorias na ordem do lojista (RN30, RN45); vazia quando o panfleto é exibido (RN44). */
+export class EstruturaPublicaJson {
+  categorias!: CategoriaPublicaJson[];
+}
+
 export class PaginaPublicaJson {
   lojista!: LojistaPublicoJson;
+  /** RN44: a escolha do lojista; a API já aplicou a regra em panfleto e estrutura. */
+  sePanfleto!: boolean;
   filial!: FilialPublicaJson;
+  /** Só quando sePanfleto e há panfleto vigente; senão null. */
   // união com null: o plugin não resolve sozinho
   @ApiProperty({ type: () => PanfletoPublicoJson, nullable: true })
   panfleto!: PanfletoPublicoJson | null;
-  categorias!: CategoriaPublicaJson[];
+  estrutura!: EstruturaPublicaJson;
   @ApiDataISO()
   hoje!: DataISO;
   geradoEm?: string;
@@ -78,7 +89,12 @@ function produtoJson(p: ProdutoRow, url: UrlPublica): ProdutoPublicoJson {
  * Só o que a página precisa (RNF05): nenhum id, tenant, fuso, status, path de storage nem
  * timestamp interno. geradoEm entra depois, fora do cálculo do ETag.
  */
-export function paginaPublicaView(pagina: PaginaPublica, url: UrlPublica, hoje: DataISO): PaginaPublicaJson {
+export function paginaPublicaView(
+  pagina: PaginaPublica,
+  sePanfleto: boolean,
+  url: UrlPublica,
+  hoje: DataISO,
+): PaginaPublicaJson {
   const { filial, panfleto } = pagina;
   return {
     lojista: {
@@ -87,17 +103,21 @@ export function paginaPublicaView(pagina: PaginaPublica, url: UrlPublica, hoje: 
       corPrimaria: filial.lojista.corPrimaria,
       corSecundaria: filial.lojista.corSecundaria,
     },
+    sePanfleto,
     filial: { nome: filial.nome, endereco: enderecoView(filial.endereco) },
     panfleto: panfleto && {
-      imagemUrl: url(panfleto.imagemPath),
+      tipo: panfleto.tipoArquivo,
+      arquivoUrl: url(panfleto.imagemPath),
       largura: panfleto.imagemLargura,
       altura: panfleto.imagemAltura,
       ...seHouver('validoAte', panfleto.dataLimite),
     },
-    categorias: pagina.categorias.map((c) => ({
-      nome: c.nome,
-      produtos: c.produtos.map((p) => produtoJson(p, url)),
-    })),
+    estrutura: {
+      categorias: pagina.categorias.map((c) => ({
+        nome: c.nome,
+        produtos: c.produtos.map((p) => produtoJson(p, url)),
+      })),
+    },
     hoje,
   };
 }

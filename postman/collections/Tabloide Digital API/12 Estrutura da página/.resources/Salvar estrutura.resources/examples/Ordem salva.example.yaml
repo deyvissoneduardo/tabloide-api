@@ -1,0 +1,71 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/filiais/:filialId/estrutura"
+  method: PUT
+  headers:
+    Content-Type: application/json
+  pathVariables:
+    - key: filialId
+      value: "{{filialId}}"
+      description: Id (UUID v7) da filial do lojista logado.
+  body:
+    type: json
+    content: |-
+      {
+        "categorias": [
+          { "id": "0192f0d0-1a2b-7c3d-8e4f-5a6b7c8d9e01", "produtos": ["0192f0d1-2b3c-7d4e-8f5a-6b7c8d9e0f02", "0192f0d1-2b3c-7d4e-8f5a-6b7c8d9e0f01"] }
+        ]
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "categorias": [
+          {
+            "id": "0192f0d0-1a2b-7c3d-8e4f-5a6b7c8d9e01",
+            "nome": "Bebidas",
+            "produtos": [
+              {
+                "id": "0192f0d1-2b3c-7d4e-8f5a-6b7c8d9e0f02",
+                "nome": "Refrigerante cola",
+                "quantidade": "2 L",
+                "descricao": null,
+                "observacao": "limite 3 por cliente",
+                "precoPromocionalCentavos": 799,
+                "precoOriginalCentavos": 1099,
+                "urlFoto": "https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/produto/0192f0d2.webp",
+                "dataInicio": "2026-10-18",
+                "dataLimite": "2026-10-20",
+                "situacao": "VIGENTE",
+                "editavel": true
+              },
+              {
+                "id": "0192f0d1-2b3c-7d4e-8f5a-6b7c8d9e0f01",
+                "nome": "Água mineral",
+                "quantidade": "1,5 L",
+                "descricao": null,
+                "observacao": null,
+                "precoPromocionalCentavos": 249,
+                "precoOriginalCentavos": null,
+                "urlFoto": null,
+                "dataInicio": "2026-10-25",
+                "dataLimite": null,
+                "situacao": "AGENDADO",
+                "editavel": true
+              }
+            ]
+          },
+          {
+            "id": "0192f0d0-1a2b-7c3d-8e4f-5a6b7c8d9e02",
+            "nome": "Açougue",
+            "produtos": []
+          }
+        ]
+      }
+order: 1000

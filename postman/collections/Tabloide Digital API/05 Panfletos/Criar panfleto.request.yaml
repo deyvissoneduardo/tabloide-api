@@ -1,7 +1,9 @@
 $kind: http-request
 id: 5180da6c-621a-550a-806d-247974c9ae30
 description: |-
-  Cria o panfleto (`multipart/form-data`). A imagem é processada (até 2400 px, WebP) antes da gravação; a criação é auditada.
+  Cria o panfleto (`multipart/form-data`). Imagem: processada (até 2400 px, WebP). PDF: precisa ter exatamente 1 página, sem senha, até `MAX_PDF_BYTES` (2 MB) e o limite do plano; é guardado como veio, e `largura`/`altura` vêm em pontos. A criação é auditada.
+
+  Erros de PDF: 422 `PDF_COM_VARIAS_PAGINAS` (`detalhes.paginas`), 422 `PDF_INVALIDO`, 413 `PDF_MUITO_GRANDE` (`detalhes.maxBytes`).
 
   Conflitos de período respondem 409 com `detalhes.conflitoCom` (id e datas do panfleto que conflita).
 url: "{{baseUrl}}/painel/filiais/:filialId/panfletos"
@@ -16,7 +18,7 @@ body:
     - type: file
       key: imagem
       src: "{{arquivoImagem}}"
-      description: Obrigatório. JPEG, PNG ou WebP.
+      description: Obrigatório. JPEG, PNG, WebP ou PDF de 1 página.
     - type: text
       key: dataInicio
       value: ""

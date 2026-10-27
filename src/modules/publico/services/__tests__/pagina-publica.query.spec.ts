@@ -34,6 +34,7 @@ describe('Funcionalidade: Consultas da página pública', () => {
           logoPath: null,
           corPrimaria: '#C8102E',
           corSecundaria: null,
+          sePanfleto: true,
           status: 'ATIVO',
         },
       ]);
@@ -48,11 +49,13 @@ describe('Funcionalidade: Consultas da página pública', () => {
           logoPath: null,
           corPrimaria: '#C8102E',
           corSecundaria: null,
+          sePanfleto: true,
           status: 'ATIVO',
         },
       });
       const [sql, opcoes] = sequelize.query.mock.calls[0]!;
       expect(sql).toContain('f.deleted_at IS NULL');
+      expect(sql).toContain('l.se_panfleto AS "sePanfleto"');
       expect(sql).toContain(
         'LEFT JOIN filial_enderecos e ON e.filial_id = f.id AND e.tenant_id = f.tenant_id',
       );
@@ -83,7 +86,7 @@ describe('Funcionalidade: Consultas da página pública', () => {
         `daterange(data_inicio, data_limite, '[]') @> '2026-10-18'::date`,
       );
       expect(opcoes).toMatchObject({
-        attributes: ['imagemPath', 'imagemLargura', 'imagemAltura', 'dataLimite'],
+        attributes: ['tipoArquivo', 'imagemPath', 'imagemLargura', 'imagemAltura', 'dataLimite'],
         raw: true,
       });
     });
@@ -97,8 +100,15 @@ describe('Funcionalidade: Consultas da página pública', () => {
       expect(opcoes.where).toMatchObject({ tenantId: 't1', filialId: 'f1', dataInicio: { [Op.lte]: HOJE } });
       expect(opcoes.where[Op.or]).toEqual([{ dataLimite: null }, { dataLimite: { [Op.gte]: HOJE } }]);
       expect(opcoes.include).toEqual([
-        { model: Categoria, attributes: ['id', 'nome'], required: true, where: { tenantId: 't1' } },
+        {
+          model: Categoria,
+          attributes: ['id', 'nome', 'posicao'],
+          required: true,
+          where: { tenantId: 't1' },
+        },
       ]);
+      // RN45: a posição do produto e a da categoria vêm para a ordenação em memória
+      expect(opcoes.attributes).toContain('posicao');
       expect(opcoes).toMatchObject({ raw: true, nest: true });
       expect(opcoes.order).toBeUndefined();
     });

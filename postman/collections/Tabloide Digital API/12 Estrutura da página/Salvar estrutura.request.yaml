@@ -1,0 +1,37 @@
+$kind: http-request
+id: 94ad2a4b-5f89-525c-91cb-bb1a6c60269e
+description: |-
+  **Substitui** a ordem da filial (RN45). A posição de cada categoria é o índice dela em `categorias`; a de cada produto, o índice dentro de `produtos` da sua categoria. Categoria ou produto omitido fica sem posição (fim, em ordem alfabética).
+
+  - Limites: até 500 categorias e 2000 produtos por categoria; ids UUID v7.
+  - Produto vencido é aceito (venceu entre o GET e o PUT); excluído não.
+  - Resposta: o mesmo corpo do GET, já na ordem nova.
+  - Erros: 400 `VALIDACAO_INVALIDA` (formato), 404 (filial de outro lojista), 403 `LOJISTA_DESATIVADO`, 422 `ESTRUTURA_INVALIDA` com `detalhes.problemas` (`CATEGORIA_DESCONHECIDA`, `PRODUTO_DESCONHECIDO`, `PRODUTO_FORA_DA_CATEGORIA`, `CATEGORIA_REPETIDA`, `PRODUTO_REPETIDO`).
+  - Dois PUT simultâneos: a última gravação vence, inteira.
+url: "{{baseUrl}}/painel/filiais/:filialId/estrutura"
+method: PUT
+headers:
+  Content-Type: application/json
+pathVariables:
+  - key: filialId
+    value: "{{filialId}}"
+    description: Id (UUID v7) da filial do lojista logado.
+body:
+  type: json
+  content: |-
+    {
+      "categorias": [
+        {
+          "id": "{{categoriaId}}",
+          "produtos": ["{{produtoId}}"]
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+    language: text/javascript
+examples: ./.resources/Salvar estrutura.resources/examples
+order: 2000

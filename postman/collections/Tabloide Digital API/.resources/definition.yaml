@@ -13,11 +13,11 @@ description: |
 
   1. Escolha o ambiente **Tabloide — dev** (API local em `http://localhost:3000/v1`) ou **Tabloide — prod**.
   2. Rode **Auth → Cadastrar lojista** (ou **Login**). O script da requisição grava `token` e `lojistaId` no ambiente; as demais rotas do painel usam o `token` automaticamente (auth Bearer herdada da coleção).
-  3. Rode **Filiais → Criar filial**: grava `filialId` e `codigoPublico`. Os módulos de panfletos, categorias e produtos usam esses ids, e cada "criar" grava o id do recurso criado (`panfletoId`, `categoriaId`, `produtoId`).
+  3. Rode **Filiais → Criar filial**: grava `filialId` e `codigoPublico`. Os módulos de panfletos, categorias e produtos usam esses ids, e cada "criar" grava o id do recurso criado (`panfletoId`, `categoriaId`, `produtoId`). A pasta **12 Estrutura da página** usa `categoriaId` e `produtoId` para gravar a ordem da página.
   4. A **página pública** só aparece para lojista **ATIVO**. Um lojista recém-cadastrado fica `AGUARDANDO_ATIVACAO` até o administrador ativá-lo no banco (veja `docs/operacao/runbook.md`).
   5. As rotas de **Admin** usam o header `X-Admin-Key` com a variável secreta `adminKey`; sem ela respondem 404.
 
-  Uploads: as requisições multipart apontam para `postman/arquivos/exemplo.jpg`. No app do Postman, defina a pasta do repositório `api/` como *working directory* (Settings → General) ou escolha outro arquivo no campo.
+  Uploads: as requisições multipart apontam para `postman/arquivos/exemplo.jpg` (e `postman/arquivos/exemplo.pdf` em **Trocar panfleto por PDF**). No app do Postman, defina a pasta do repositório `api/` como *working directory* (Settings → General) ou escolha outro arquivo no campo.
 
   ## Autenticação
 
@@ -56,8 +56,12 @@ description: |
   | `DATA_LIMITE_INVALIDA` | 422 | Data limite antes do início ou de hoje | Enviar limite ≥ início e ≥ hoje no fuso da filial |
   | `DATA_INICIO_INVALIDA` | 422 | Data de início no passado | Enviar início ≥ hoje, ou omitir para começar hoje |
   | `FUSO_HORARIO_INVALIDO` | 422 | Fuso IANA inválido | Enviar um fuso IANA válido (ex.: `America/Sao_Paulo`) |
-  | `IMAGEM_INVALIDA` | 422 | Arquivo não é JPEG, PNG ou WebP válido | Enviar JPEG, PNG ou WebP válido |
+  | `IMAGEM_INVALIDA` | 422 | Arquivo não é JPEG, PNG ou WebP válido (no panfleto, `detalhes.tiposAceitos` inclui `application/pdf`) | Enviar JPEG, PNG ou WebP válido (ou PDF no panfleto) |
+  | `PDF_COM_VARIAS_PAGINAS` | 422 | PDF do panfleto com 0 ou 2+ páginas (`detalhes.paginas`) | Enviar um PDF de exatamente 1 página |
+  | `PDF_INVALIDO` | 422 | PDF corrompido ou protegido por senha | Reexportar o PDF sem senha e enviar de novo |
+  | `ESTRUTURA_INVALIDA` | 422 | Ordem da página com ids que não são da filial, produto fora da sua categoria ou ids repetidos (`detalhes.problemas`) | Recarregar a estrutura (GET) e enviar de novo |
   | `IMAGEM_MUITO_GRANDE` | 413 | Imagem acima do limite (`detalhes.maxBytes`) | Reduzir a imagem abaixo de `detalhes.maxBytes` |
+  | `PDF_MUITO_GRANDE` | 413 | PDF acima de `MAX_PDF_BYTES` (2 MB) ou do limite do plano (`detalhes.maxBytes`) | Reduzir o PDF abaixo de `detalhes.maxBytes` |
   | `CORPO_MUITO_GRANDE` | 413 | JSON acima de 100 KB | Reduzir o corpo abaixo de 100 KB |
   | `MUITAS_TENTATIVAS` | 429 | Rate limit (header `Retry-After`) | Esperar o `Retry-After` (segundos) e repetir |
   | `ERRO_INTERNO` | 500 | Erro inesperado (sem detalhes; procure pelo `x-request-id` nos logs) | Repetir uma vez com espera; persistindo, reportar com o `x-request-id` |

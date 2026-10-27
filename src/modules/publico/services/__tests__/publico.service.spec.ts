@@ -104,13 +104,15 @@ describe('Funcionalidade: Obter página pública da filial (RN23, RN27–RN32, R
       query.buscarProdutosVigentes.mockResolvedValue([umProduto('Leite', 'Laticínios')]);
       const pagina = await obter();
       expect(pagina.panfleto).toBeNull();
-      expect(pagina.categorias).toHaveLength(1);
+      expect(pagina.estrutura.categorias).toHaveLength(1);
     });
   });
 
   describe('Cenário: panfleto vigente consultado com o hoje da filial', () => {
-    it('Então imagemUrl e validoAte preenchidos, consulta com (t1, f1, "2026-10-18")', async () => {
+    it('Então arquivoUrl e validoAte preenchidos, consulta com (t1, f1, "2026-10-18")', async () => {
+      query.buscarFilialPorCodigo.mockResolvedValue(umaFilialPublica().comSePanfleto().build());
       query.buscarPanfletoVigente.mockResolvedValue({
+        tipoArquivo: 'IMAGEM',
         imagemPath: 't1/panfleto/p.webp',
         imagemLargura: 1600,
         imagemAltura: 2263,
@@ -118,10 +120,75 @@ describe('Funcionalidade: Obter página pública da filial (RN23, RN27–RN32, R
       });
       const pagina = await obter();
       expect(pagina.panfleto).toMatchObject({
-        imagemUrl: 'https://cdn/t1/panfleto/p.webp',
+        tipo: 'IMAGEM',
+        arquivoUrl: 'https://cdn/t1/panfleto/p.webp',
         validoAte: '2026-10-25',
       });
       expect(query.buscarPanfletoVigente).toHaveBeenCalledWith('t1', 'f1', '2026-10-18');
+    });
+  });
+
+  describe('Funcionalidade: Regra de exibição da página (RN44, T2)', () => {
+    const panfletoVigente = {
+      tipoArquivo: 'IMAGEM',
+      imagemPath: 't1/panfleto/p.webp',
+      imagemLargura: 1600,
+      imagemAltura: 2263,
+      dataLimite: null,
+    };
+    beforeEach(() => query.buscarProdutosVigentes.mockResolvedValue([umProduto('Leite', 'Laticínios')]));
+
+    describe('Cenário: sePanfleto ligado e panfleto vigente', () => {
+      it('Então panfleto vem preenchido e estrutura.categorias vazia', async () => {
+        query.buscarFilialPorCodigo.mockResolvedValue(umaFilialPublica().comSePanfleto().build());
+        query.buscarPanfletoVigente.mockResolvedValue(panfletoVigente);
+        const pagina = await obter();
+        expect(pagina.sePanfleto).toBe(true);
+        expect(pagina.panfleto).toMatchObject({
+          tipo: 'IMAGEM',
+          arquivoUrl: 'https://cdn/t1/panfleto/p.webp',
+        });
+        expect(pagina.estrutura).toEqual({ categorias: [] });
+      });
+    });
+
+    describe('Cenário: sePanfleto ligado e sem panfleto vigente', () => {
+      it('Então panfleto null e estrutura com as categorias', async () => {
+        query.buscarFilialPorCodigo.mockResolvedValue(umaFilialPublica().comSePanfleto().build());
+        const pagina = await obter();
+        expect(pagina.panfleto).toBeNull();
+        expect(pagina.estrutura.categorias).toHaveLength(1);
+      });
+    });
+
+    describe('Cenário: sePanfleto desligado e panfleto vigente', () => {
+      it('Então buscarPanfletoVigente não é chamado, panfleto null e estrutura com as categorias', async () => {
+        query.buscarPanfletoVigente.mockResolvedValue(panfletoVigente);
+        const pagina = await obter();
+        expect(query.buscarPanfletoVigente).not.toHaveBeenCalled();
+        expect(pagina.sePanfleto).toBe(false);
+        expect(pagina.panfleto).toBeNull();
+        expect(pagina.estrutura.categorias).toHaveLength(1);
+      });
+    });
+
+    describe('Cenário: o ETag muda quando a chave muda', () => {
+      it('Então os ETags são diferentes', async () => {
+        const desligada = await service.obterPagina(CODIGO);
+        cache.limpar();
+        query.buscarFilialPorCodigo.mockResolvedValue(umaFilialPublica().comSePanfleto().build());
+        expect((await service.obterPagina(CODIGO)).etag).not.toBe(desligada.etag);
+      });
+    });
+
+    describe('Cenário: lojista não ativo continua 404 (RN35) com a chave ligada', () => {
+      it('Então 404 sem consultar o panfleto', async () => {
+        query.buscarFilialPorCodigo.mockResolvedValue(
+          umaFilialPublica().comSePanfleto().comStatus(StatusLojista.DESATIVADO).build(),
+        );
+        await expect(service.obterPagina(CODIGO)).rejects.toMatchObject(naoEncontrado);
+        expect(query.buscarPanfletoVigente).not.toHaveBeenCalled();
+      });
     });
   });
 
@@ -137,8 +204,11 @@ describe('Funcionalidade: Obter página pública da filial (RN23, RN27–RN32, R
         }),
       ]);
       const pagina = await obter();
-      expect(pagina.categorias.map((c: { nome: string }) => c.nome)).toEqual(['Limpeza', 'Mercearia']);
-      expect(pagina.categorias[1].produtos).toEqual([
+      expect(pagina.estrutura.categorias.map((c: { nome: string }) => c.nome)).toEqual([
+        'Limpeza',
+        'Mercearia',
+      ]);
+      expect(pagina.estrutura.categorias[1].produtos).toEqual([
         {
           nome: 'Açúcar',
           precoPromocionalCentavos: 799,
@@ -195,6 +265,7 @@ describe('Funcionalidade: Obter página pública da filial (RN23, RN27–RN32, R
 
   describe('Cenário: consultas 2 e 3 em paralelo', () => {
     it('Então as duas são chamadas antes que qualquer uma resolva', async () => {
+      query.buscarFilialPorCodigo.mockResolvedValue(umaFilialPublica().comSePanfleto().build());
       let liberar!: () => void;
       const barreira = new Promise<void>((r) => (liberar = r));
       query.buscarPanfletoVigente.mockImplementation(async () => (await barreira, null));
