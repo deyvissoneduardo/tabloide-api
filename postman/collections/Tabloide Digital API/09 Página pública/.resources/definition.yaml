@@ -2,7 +2,15 @@ $kind: collection
 description: |-
   O que o consumidor vê ao ler o QR Code (RN23, RN27–RN32, RN35, RN41). Sem autenticação, 300 requisições por minuto por IP.
 
-  Em uma resposta: identidade do lojista, filial, panfleto vigente e produtos vigentes agrupados por categoria, em ordem alfabética. Campos opcionais vazios são omitidos. Nunca expõe ids nem dados internos.
+  Em uma resposta: identidade do lojista, `sePanfleto`, filial e **ou** o panfleto **ou** a página montada (RN29, RN44):
+
+  | `sePanfleto` | Panfleto vigente | `panfleto` | `estrutura.categorias` |
+  | --- | --- | --- | --- |
+  | `true` | sim | preenchido (`tipo` `IMAGEM` ou `PDF`, `arquivoUrl`) | `[]` |
+  | `true` | não | `null` | produtos vigentes |
+  | `false` | sim ou não | `null` | produtos vigentes |
+
+  Categorias e produtos vêm na ordem definida pelo lojista (RN45, pasta **12 Estrutura da página**); os não posicionados vêm depois, em ordem alfabética. O cliente não reordena. Campos opcionais vazios são omitidos. Nunca expõe ids nem dados internos.
 
   Só funciona para lojista **ATIVO**: filial inexistente, excluída ou de lojista não ativo respondem o **mesmo** 404.
 order: 9000

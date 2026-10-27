@@ -11,8 +11,9 @@ Coleção com todas as rotas da API, separada por módulo, com documentação, e
 | `environments/Tabloide prod.environment.yaml` | Ambiente de produção (`https://api.tabloide.app/v1`), sem nenhum segredo preenchido |
 | `export/` | Coleção e ambientes em **v2.1 JSON**, para importar no app do Postman (*Import → arquivos*). É uma cópia gerada a partir da v3: depois de mudar a coleção, gere o export de novo ou importe a pasta v3 |
 | `arquivos/exemplo.jpg` | Imagem usada nos uploads |
+| `arquivos/exemplo.pdf` | PDF de 1 página usado em **Panfletos → Trocar panfleto por PDF** |
 
-Módulos (pastas): `01 Auth`, `02 Lojista`, `03 Identidade visual`, `04 Filiais`, `05 Panfletos`, `06 Categorias`, `07 Produtos`, `08 Auditoria`, `09 Página pública`, `10 Saúde`, `11 Admin`. A visão geral (autenticação, contrato de erros com "como tratar", rate limits e convenções) está na descrição da coleção.
+Módulos (pastas): `01 Auth`, `02 Lojista`, `03 Identidade visual`, `04 Filiais`, `05 Panfletos`, `06 Categorias`, `07 Produtos`, `08 Auditoria`, `09 Página pública`, `10 Saúde`, `11 Admin`, `12 Estrutura da página` (ordem das categorias e produtos da página de cada filial). A visão geral (autenticação, contrato de erros com "como tratar", rate limits e convenções) está na descrição da coleção.
 
 ## Variáveis
 
@@ -26,6 +27,7 @@ Módulos (pastas): `01 Auth`, `02 Lojista`, `03 Identidade visual`, `04 Filiais`
 | `panfletoId`, `categoriaId`, `produtoId` | default | Scripts dos respectivos "criar" |
 | `etag` | default | Script de **Página da filial** |
 | `arquivoImagem` | default | Caminho da imagem dos uploads, relativo à pasta `api/` |
+| `arquivoPdf` | default | Caminho do PDF de exemplo, relativo à pasta `api/` |
 
 ## Rodar pela linha de comando
 

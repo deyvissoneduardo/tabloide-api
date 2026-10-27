@@ -70,3 +70,8 @@ values:
     enabled: true
     type: default
     description: 'Caminho (relativo à pasta api/) da imagem enviada nos uploads.'
+  - key: arquivoPdf
+    value: 'postman/arquivos/exemplo.pdf'
+    enabled: true
+    type: default
+    description: 'Caminho (relativo à pasta api/) do PDF de 1 página enviado em Panfletos → Trocar panfleto por PDF.'

@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "b8199d83-6eee-59b3-aff6-4f0ce5ca23b7",
     "name": "Tabloide Digital API",
-    "description": "# Tabloide Digital API\n\nAPI REST do **Tabloide Digital**: o lojista cadastra filiais, panfletos, categorias e produtos em oferta no **painel**, e o consumidor vê a **página pública** da filial ao ler o QR Code.\n\n- Prefixo de todas as rotas: `/v1`.\n- Formato: JSON (`application/json; charset=utf-8`). Uploads usam `multipart/form-data`.\n- Stack: NestJS + Sequelize + PostgreSQL (Supabase em produção); imagens no Supabase Storage.\n\n## Como usar esta coleção\n\n1. Escolha o ambiente **Tabloide — dev** (API local em `http://localhost:3000/v1`) ou **Tabloide — prod**.\n2. Rode **Auth → Cadastrar lojista** (ou **Login**). O script da requisição grava `token` e `lojistaId` no ambiente; as demais rotas do painel usam o `token` automaticamente (auth Bearer herdada da coleção).\n3. Rode **Filiais → Criar filial**: grava `filialId` e `codigoPublico`. Os módulos de panfletos, categorias e produtos usam esses ids, e cada \"criar\" grava o id do recurso criado (`panfletoId`, `categoriaId`, `produtoId`).\n4. A **página pública** só aparece para lojista **ATIVO**. Um lojista recém-cadastrado fica `AGUARDANDO_ATIVACAO` até o administrador ativá-lo no banco (veja `docs/operacao/runbook.md`).\n5. As rotas de **Admin** usam o header `X-Admin-Key` com a variável secreta `adminKey`; sem ela respondem 404.\n\nUploads: as requisições multipart apontam para `postman/arquivos/exemplo.jpg`. No app do Postman, defina a pasta do repositório `api/` como *working directory* (Settings → General) ou escolha outro arquivo no campo.\n\n## Autenticação\n\n| Rotas | Como |\n| --- | --- |\n| `/v1/painel/*` | `Authorization: Bearer <token>` (JWT HS256, validade `JWT_EXPIRES_IN`, padrão 8 h). O tenant vem **sempre** do token, nunca do corpo |\n| `/v1/auth/*`, `/v1/publico/*`, `/v1/saude/*` | Sem autenticação |\n| `/v1/admin/*` | Header `X-Admin-Key` (segredo do servidor). Chave ausente ou errada responde **404**, para não revelar a rota |\n\nLojista **DESATIVADO** pode ler o painel, mas toda escrita responde `403 LOJISTA_DESATIVADO`.\n\n## Contrato de erros\n\nTodo erro tem o mesmo formato e o header `x-request-id` (use-o ao reportar problemas):\n\n```json\n{ \"erro\": { \"codigo\": \"VALIDACAO_INVALIDA\", \"mensagem\": \"Dados inválidos.\", \"detalhes\": { \"campos\": { \"nome\": [\"...\"] } } } }\n```\n\n| Código | HTTP | Quando | Como tratar |\n| --- | --- | --- | --- |\n| `VALIDACAO_INVALIDA` | 400 | Corpo, query ou campo desconhecido inválido (`detalhes.campos` lista as mensagens por campo) | Corrigir a entrada conforme `detalhes.campos`; não repetir igual |\n| `NAO_AUTENTICADO` | 401 | Token ausente, inválido ou expirado | Fazer login de novo e repetir com o novo token |\n| `CREDENCIAIS_INVALIDAS` | 401 | E-mail ou senha incorretos no login | Pedir e-mail e senha de novo; não repetir em loop (rate limit) |\n| `LOJISTA_DESATIVADO` | 403 | Escrita por lojista desativado | Não recuperável pelo cliente: só leitura até o administrador reativar |\n| `RECURSO_NAO_ENCONTRADO` | 404 | Não existe, foi excluído, pertence a outro lojista ou o id não é UUID v7 | Conferir o id e a filial do path; não repetir |\n| `EMAIL_JA_CADASTRADO` | 409 | Cadastro com e-mail já usado | Usar outro e-mail ou fazer login |\n| `PANFLETO_PERIODO_SOBREPOSTO` | 409 | Período de panfleto sobrepõe outro da filial (`detalhes.conflitoCom`) | Ajustar as datas para não cruzar `detalhes.conflitoCom` |\n| `PANFLETO_ATUAL_SEM_DATA_LIMITE` | 409 | Agendar panfleto enquanto o atual não tem data limite | Definir `dataLimite` no panfleto atual e repetir |\n| `CATEGORIA_COM_PRODUTOS_ATIVOS` | 409 | Excluir categoria com produtos vigentes ou agendados (`detalhes.vigentes/agendados`) | Excluir ou mover os produtos ativos e repetir |\n| `CATEGORIA_JA_EXISTE` | 409 | Nome de categoria repetido na filial (sem diferenciar acento e caixa) | Escolher outro nome ou usar a categoria existente |\n| `ITEM_NAO_EDITAVEL` | 409 | Alterar item vencido ou excluído | Não recuperável: cadastrar um novo item |\n| `DATA_INICIO_IMUTAVEL` | 409 | Mudar a data de início de item já vigente | Não enviar `dataInicio` (ou reenviar o valor atual) |\n| `LIMITE_DO_PLANO_ATINGIDO` | 409 | Limite de filiais ou produtos do lojista (`detalhes.recurso/limite`) | Excluir itens antigos ou pedir aumento do limite ao administrador |\n| `PRECO_ORIGINAL_INVALIDO` | 422 | Preço original menor ou igual ao promocional | Enviar original maior que o promocional, ou `null` |\n| `DATA_LIMITE_INVALIDA` | 422 | Data limite antes do início ou de hoje | Enviar limite ≥ início e ≥ hoje no fuso da filial |\n| `DATA_INICIO_INVALIDA` | 422 | Data de início no passado | Enviar início ≥ hoje, ou omitir para começar hoje |\n| `FUSO_HORARIO_INVALIDO` | 422 | Fuso IANA inválido | Enviar um fuso IANA válido (ex.: `America/Sao_Paulo`) |\n| `IMAGEM_INVALIDA` | 422 | Arquivo não é JPEG, PNG ou WebP válido | Enviar JPEG, PNG ou WebP válido |\n| `IMAGEM_MUITO_GRANDE` | 413 | Imagem acima do limite (`detalhes.maxBytes`) | Reduzir a imagem abaixo de `detalhes.maxBytes` |\n| `CORPO_MUITO_GRANDE` | 413 | JSON acima de 100 KB | Reduzir o corpo abaixo de 100 KB |\n| `MUITAS_TENTATIVAS` | 429 | Rate limit (header `Retry-After`) | Esperar o `Retry-After` (segundos) e repetir |\n| `ERRO_INTERNO` | 500 | Erro inesperado (sem detalhes; procure pelo `x-request-id` nos logs) | Repetir uma vez com espera; persistindo, reportar com o `x-request-id` |\n| `ARMAZENAMENTO_INDISPONIVEL` | 503 | Storage de imagens fora do ar | Temporário: repetir com espera exponencial |\n\n## Rate limits\n\n| Rota | Limite |\n| --- | --- |\n| `POST /auth/login` | 5 tentativas a cada 15 min por IP + e-mail |\n| `POST /auth/cadastro` | 10 por hora por IP |\n| `/admin/lojistas/*` | 10 por minuto por IP |\n| `/publico/*` | 300 por minuto por IP |\n| `/painel/*` | 600 por minuto por sessão (token) |\n\n## Convenções\n\n- **Ids**: UUID v7. Id malformado responde 404, igual a inexistente.\n- **Datas**: `AAAA-MM-DD`, sem hora. \"Hoje\" é calculado no **fuso da filial** (`fusoHorario`, padrão `America/Sao_Paulo`). O início vale a partir de 00:00 e a data limite até 23:59:59 locais.\n- **Situação** de panfletos e produtos: `AGENDADO` (início no futuro), `VIGENTE`, `VENCIDO` (limite no passado), `EXCLUIDO`. Só vigentes e agendados são editáveis.\n- **Preços** em centavos inteiros (`2199` = R$ 21,99), até `99999999`.\n- **Paginação**: `pagina` (≥ 1, padrão 1) e `porPagina` (1–100, padrão 50). Resposta `{ itens, total, pagina, porPagina }`.\n- **Exclusão** é sempre lógica: o item sai das listas, mas continua consultável pelo id.\n- **PATCH** é parcial: campo ausente não muda; `null` limpa os campos opcionais que aceitam.\n- Toda alteração de preço, data, fuso ou imagem fica na **auditoria**.\n",
+    "description": "# Tabloide Digital API\n\nAPI REST do **Tabloide Digital**: o lojista cadastra filiais, panfletos, categorias e produtos em oferta no **painel**, e o consumidor vê a **página pública** da filial ao ler o QR Code.\n\n- Prefixo de todas as rotas: `/v1`.\n- Formato: JSON (`application/json; charset=utf-8`). Uploads usam `multipart/form-data`.\n- Stack: NestJS + Sequelize + PostgreSQL (Supabase em produção); imagens no Supabase Storage.\n\n## Como usar esta coleção\n\n1. Escolha o ambiente **Tabloide — dev** (API local em `http://localhost:3000/v1`) ou **Tabloide — prod**.\n2. Rode **Auth → Cadastrar lojista** (ou **Login**). O script da requisição grava `token` e `lojistaId` no ambiente; as demais rotas do painel usam o `token` automaticamente (auth Bearer herdada da coleção).\n3. Rode **Filiais → Criar filial**: grava `filialId` e `codigoPublico`. Os módulos de panfletos, categorias e produtos usam esses ids, e cada \"criar\" grava o id do recurso criado (`panfletoId`, `categoriaId`, `produtoId`). A pasta **12 Estrutura da página** usa `categoriaId` e `produtoId` para gravar a ordem da página.\n4. A **página pública** só aparece para lojista **ATIVO**. Um lojista recém-cadastrado fica `AGUARDANDO_ATIVACAO` até o administrador ativá-lo no banco (veja `docs/operacao/runbook.md`).\n5. As rotas de **Admin** usam o header `X-Admin-Key` com a variável secreta `adminKey`; sem ela respondem 404.\n\nUploads: as requisições multipart apontam para `postman/arquivos/exemplo.jpg` (e `postman/arquivos/exemplo.pdf` em **Trocar panfleto por PDF**). No app do Postman, defina a pasta do repositório `api/` como *working directory* (Settings → General) ou escolha outro arquivo no campo.\n\n## Autenticação\n\n| Rotas | Como |\n| --- | --- |\n| `/v1/painel/*` | `Authorization: Bearer <token>` (JWT HS256, validade `JWT_EXPIRES_IN`, padrão 8 h). O tenant vem **sempre** do token, nunca do corpo |\n| `/v1/auth/*`, `/v1/publico/*`, `/v1/saude/*` | Sem autenticação |\n| `/v1/admin/*` | Header `X-Admin-Key` (segredo do servidor). Chave ausente ou errada responde **404**, para não revelar a rota |\n\nLojista **DESATIVADO** pode ler o painel, mas toda escrita responde `403 LOJISTA_DESATIVADO`.\n\n## Contrato de erros\n\nTodo erro tem o mesmo formato e o header `x-request-id` (use-o ao reportar problemas):\n\n```json\n{ \"erro\": { \"codigo\": \"VALIDACAO_INVALIDA\", \"mensagem\": \"Dados inválidos.\", \"detalhes\": { \"campos\": { \"nome\": [\"...\"] } } } }\n```\n\n| Código | HTTP | Quando | Como tratar |\n| --- | --- | --- | --- |\n| `VALIDACAO_INVALIDA` | 400 | Corpo, query ou campo desconhecido inválido (`detalhes.campos` lista as mensagens por campo) | Corrigir a entrada conforme `detalhes.campos`; não repetir igual |\n| `NAO_AUTENTICADO` | 401 | Token ausente, inválido ou expirado | Fazer login de novo e repetir com o novo token |\n| `CREDENCIAIS_INVALIDAS` | 401 | E-mail ou senha incorretos no login | Pedir e-mail e senha de novo; não repetir em loop (rate limit) |\n| `LOJISTA_DESATIVADO` | 403 | Escrita por lojista desativado | Não recuperável pelo cliente: só leitura até o administrador reativar |\n| `RECURSO_NAO_ENCONTRADO` | 404 | Não existe, foi excluído, pertence a outro lojista ou o id não é UUID v7 | Conferir o id e a filial do path; não repetir |\n| `EMAIL_JA_CADASTRADO` | 409 | Cadastro com e-mail já usado | Usar outro e-mail ou fazer login |\n| `PANFLETO_PERIODO_SOBREPOSTO` | 409 | Período de panfleto sobrepõe outro da filial (`detalhes.conflitoCom`) | Ajustar as datas para não cruzar `detalhes.conflitoCom` |\n| `PANFLETO_ATUAL_SEM_DATA_LIMITE` | 409 | Agendar panfleto enquanto o atual não tem data limite | Definir `dataLimite` no panfleto atual e repetir |\n| `CATEGORIA_COM_PRODUTOS_ATIVOS` | 409 | Excluir categoria com produtos vigentes ou agendados (`detalhes.vigentes/agendados`) | Excluir ou mover os produtos ativos e repetir |\n| `CATEGORIA_JA_EXISTE` | 409 | Nome de categoria repetido na filial (sem diferenciar acento e caixa) | Escolher outro nome ou usar a categoria existente |\n| `ITEM_NAO_EDITAVEL` | 409 | Alterar item vencido ou excluído | Não recuperável: cadastrar um novo item |\n| `DATA_INICIO_IMUTAVEL` | 409 | Mudar a data de início de item já vigente | Não enviar `dataInicio` (ou reenviar o valor atual) |\n| `LIMITE_DO_PLANO_ATINGIDO` | 409 | Limite de filiais ou produtos do lojista (`detalhes.recurso/limite`) | Excluir itens antigos ou pedir aumento do limite ao administrador |\n| `PRECO_ORIGINAL_INVALIDO` | 422 | Preço original menor ou igual ao promocional | Enviar original maior que o promocional, ou `null` |\n| `DATA_LIMITE_INVALIDA` | 422 | Data limite antes do início ou de hoje | Enviar limite ≥ início e ≥ hoje no fuso da filial |\n| `DATA_INICIO_INVALIDA` | 422 | Data de início no passado | Enviar início ≥ hoje, ou omitir para começar hoje |\n| `FUSO_HORARIO_INVALIDO` | 422 | Fuso IANA inválido | Enviar um fuso IANA válido (ex.: `America/Sao_Paulo`) |\n| `IMAGEM_INVALIDA` | 422 | Arquivo não é JPEG, PNG ou WebP válido (no panfleto, `detalhes.tiposAceitos` inclui `application/pdf`) | Enviar JPEG, PNG ou WebP válido (ou PDF no panfleto) |\n| `PDF_COM_VARIAS_PAGINAS` | 422 | PDF do panfleto com 0 ou 2+ páginas (`detalhes.paginas`) | Enviar um PDF de exatamente 1 página |\n| `PDF_INVALIDO` | 422 | PDF corrompido ou protegido por senha | Reexportar o PDF sem senha e enviar de novo |\n| `ESTRUTURA_INVALIDA` | 422 | Ordem da página com ids que não são da filial, produto fora da sua categoria ou ids repetidos (`detalhes.problemas`) | Recarregar a estrutura (GET) e enviar de novo |\n| `IMAGEM_MUITO_GRANDE` | 413 | Imagem acima do limite (`detalhes.maxBytes`) | Reduzir a imagem abaixo de `detalhes.maxBytes` |\n| `PDF_MUITO_GRANDE` | 413 | PDF acima de `MAX_PDF_BYTES` (2 MB) ou do limite do plano (`detalhes.maxBytes`) | Reduzir o PDF abaixo de `detalhes.maxBytes` |\n| `CORPO_MUITO_GRANDE` | 413 | JSON acima de 100 KB | Reduzir o corpo abaixo de 100 KB |\n| `MUITAS_TENTATIVAS` | 429 | Rate limit (header `Retry-After`) | Esperar o `Retry-After` (segundos) e repetir |\n| `ERRO_INTERNO` | 500 | Erro inesperado (sem detalhes; procure pelo `x-request-id` nos logs) | Repetir uma vez com espera; persistindo, reportar com o `x-request-id` |\n| `ARMAZENAMENTO_INDISPONIVEL` | 503 | Storage de imagens fora do ar | Temporário: repetir com espera exponencial |\n\n## Rate limits\n\n| Rota | Limite |\n| --- | --- |\n| `POST /auth/login` | 5 tentativas a cada 15 min por IP + e-mail |\n| `POST /auth/cadastro` | 10 por hora por IP |\n| `/admin/lojistas/*` | 10 por minuto por IP |\n| `/publico/*` | 300 por minuto por IP |\n| `/painel/*` | 600 por minuto por sessão (token) |\n\n## Convenções\n\n- **Ids**: UUID v7. Id malformado responde 404, igual a inexistente.\n- **Datas**: `AAAA-MM-DD`, sem hora. \"Hoje\" é calculado no **fuso da filial** (`fusoHorario`, padrão `America/Sao_Paulo`). O início vale a partir de 00:00 e a data limite até 23:59:59 locais.\n- **Situação** de panfletos e produtos: `AGENDADO` (início no futuro), `VIGENTE`, `VENCIDO` (limite no passado), `EXCLUIDO`. Só vigentes e agendados são editáveis.\n- **Preços** em centavos inteiros (`2199` = R$ 21,99), até `99999999`.\n- **Paginação**: `pagina` (≥ 1, padrão 1) e `porPagina` (1–100, padrão 50). Resposta `{ itens, total, pagina, porPagina }`.\n- **Exclusão** é sempre lógica: o item sai das listas, mas continua consultável pelo id.\n- **PATCH** é parcial: campo ausente não muda; `null` limpa os campos opcionais que aceitam.\n- Toda alteração de preço, data, fuso ou imagem fica na **auditoria**.\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -42,9 +42,6 @@
               ]
             },
             "description": "Cria a conta do lojista (RN01, RN02) e já devolve a sessão. A conta nasce `AGUARDANDO_ATIVACAO`: o painel funciona, mas a página pública só aparece depois que o administrador ativa o lojista.\n\n| Campo | Regra |\n| --- | --- |\n| `nomeFantasia` | obrigatório, 2–120 caracteres (espaços aparados) |\n| `nomeResponsavel` | obrigatório, 2–120 caracteres |\n| `email` | obrigatório, e-mail válido, até 254; único na plataforma (sem diferenciar maiúsculas) |\n| `senha` | 8–128 caracteres com ao menos uma letra e um número |\n| `whatsapp` | celular ou fixo brasileiro com DDD; aceita máscara e sai em E.164 (`+5511987654321`) |\n| `cnpj` | opcional; aceita máscara; dígitos verificadores conferidos |\n\nCampos desconhecidos são recusados (400). Rate limit: 10 cadastros por hora por IP.",
-            "auth": {
-              "type": "noauth"
-            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"nomeFantasia\": \"Mercado Bom Preço\",\n  \"nomeResponsavel\": \"Ana Souza\",\n  \"email\": \"{{email}}\",\n  \"senha\": \"{{senha}}\",\n  \"whatsapp\": \"(11) 98765-4321\",\n  \"cnpj\": \"11.222.333/0001-81\"\n}",
@@ -53,6 +50,9 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [
@@ -77,9 +77,6 @@
                   ]
                 },
                 "description": "Cria a conta do lojista (RN01, RN02) e já devolve a sessão. A conta nasce `AGUARDANDO_ATIVACAO`: o painel funciona, mas a página pública só aparece depois que o administrador ativa o lojista.\n\n| Campo | Regra |\n| --- | --- |\n| `nomeFantasia` | obrigatório, 2–120 caracteres (espaços aparados) |\n| `nomeResponsavel` | obrigatório, 2–120 caracteres |\n| `email` | obrigatório, e-mail válido, até 254; único na plataforma (sem diferenciar maiúsculas) |\n| `senha` | 8–128 caracteres com ao menos uma letra e um número |\n| `whatsapp` | celular ou fixo brasileiro com DDD; aceita máscara e sai em E.164 (`+5511987654321`) |\n| `cnpj` | opcional; aceita máscara; dígitos verificadores conferidos |\n\nCampos desconhecidos são recusados (400). Rate limit: 10 cadastros por hora por IP.",
-                "auth": {
-                  "type": "noauth"
-                },
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"nomeFantasia\": \"Mercado Bom Preço\",\n  \"nomeResponsavel\": \"Ana Souza\",\n  \"email\": \"{{email}}\",\n  \"senha\": \"{{senha}}\",\n  \"whatsapp\": \"(11) 98765-4321\",\n  \"cnpj\": \"11.222.333/0001-81\"\n}",
@@ -88,6 +85,9 @@
                       "language": "json"
                     }
                   }
+                },
+                "auth": {
+                  "type": "noauth"
                 }
               },
               "status": "Created",
@@ -126,9 +126,6 @@
                   ]
                 },
                 "description": "Cria a conta do lojista (RN01, RN02) e já devolve a sessão. A conta nasce `AGUARDANDO_ATIVACAO`: o painel funciona, mas a página pública só aparece depois que o administrador ativa o lojista.\n\n| Campo | Regra |\n| --- | --- |\n| `nomeFantasia` | obrigatório, 2–120 caracteres (espaços aparados) |\n| `nomeResponsavel` | obrigatório, 2–120 caracteres |\n| `email` | obrigatório, e-mail válido, até 254; único na plataforma (sem diferenciar maiúsculas) |\n| `senha` | 8–128 caracteres com ao menos uma letra e um número |\n| `whatsapp` | celular ou fixo brasileiro com DDD; aceita máscara e sai em E.164 (`+5511987654321`) |\n| `cnpj` | opcional; aceita máscara; dígitos verificadores conferidos |\n\nCampos desconhecidos são recusados (400). Rate limit: 10 cadastros por hora por IP.",
-                "auth": {
-                  "type": "noauth"
-                },
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"nomeFantasia\": \"Mercado Bom Preço\",\n  \"nomeResponsavel\": \"Ana Souza\",\n  \"email\": \"{{email}}\",\n  \"senha\": \"{{senha}}\",\n  \"whatsapp\": \"(11) 98765-4321\",\n  \"cnpj\": \"11.222.333/0001-81\"\n}",
@@ -137,6 +134,9 @@
                       "language": "json"
                     }
                   }
+                },
+                "auth": {
+                  "type": "noauth"
                 }
               },
               "status": "Conflict",
@@ -175,9 +175,6 @@
                   ]
                 },
                 "description": "Cria a conta do lojista (RN01, RN02) e já devolve a sessão. A conta nasce `AGUARDANDO_ATIVACAO`: o painel funciona, mas a página pública só aparece depois que o administrador ativa o lojista.\n\n| Campo | Regra |\n| --- | --- |\n| `nomeFantasia` | obrigatório, 2–120 caracteres (espaços aparados) |\n| `nomeResponsavel` | obrigatório, 2–120 caracteres |\n| `email` | obrigatório, e-mail válido, até 254; único na plataforma (sem diferenciar maiúsculas) |\n| `senha` | 8–128 caracteres com ao menos uma letra e um número |\n| `whatsapp` | celular ou fixo brasileiro com DDD; aceita máscara e sai em E.164 (`+5511987654321`) |\n| `cnpj` | opcional; aceita máscara; dígitos verificadores conferidos |\n\nCampos desconhecidos são recusados (400). Rate limit: 10 cadastros por hora por IP.",
-                "auth": {
-                  "type": "noauth"
-                },
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"nomeFantasia\": \"Mercado Bom Preço\",\n  \"nomeResponsavel\": \"Ana Souza\",\n  \"email\": \"{{email}}\",\n  \"senha\": \"{{senha}}\",\n  \"whatsapp\": \"(11) 98765-4321\",\n  \"cnpj\": \"11.222.333/0001-81\"\n}",
@@ -186,6 +183,9 @@
                       "language": "json"
                     }
                   }
+                },
+                "auth": {
+                  "type": "noauth"
                 }
               },
               "status": "Bad Request",
@@ -244,9 +244,6 @@
               ]
             },
             "description": "Autentica o lojista (RN05) e devolve um JWT válido por `JWT_EXPIRES_IN` (padrão 8 h). Não há refresh: ao expirar, faça login de novo.\n\nRate limit: 5 tentativas a cada 15 min por IP + e-mail; depois, 429 com `Retry-After`. E-mail inexistente e senha errada respondem igual (401 `CREDENCIAIS_INVALIDAS`).",
-            "auth": {
-              "type": "noauth"
-            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"{{email}}\",\n  \"senha\": \"{{senha}}\"\n}",
@@ -255,6 +252,9 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [
@@ -279,9 +279,6 @@
                   ]
                 },
                 "description": "Autentica o lojista (RN05) e devolve um JWT válido por `JWT_EXPIRES_IN` (padrão 8 h). Não há refresh: ao expirar, faça login de novo.\n\nRate limit: 5 tentativas a cada 15 min por IP + e-mail; depois, 429 com `Retry-After`. E-mail inexistente e senha errada respondem igual (401 `CREDENCIAIS_INVALIDAS`).",
-                "auth": {
-                  "type": "noauth"
-                },
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"email\": \"{{email}}\",\n  \"senha\": \"{{senha}}\"\n}",
@@ -290,6 +287,9 @@
                       "language": "json"
                     }
                   }
+                },
+                "auth": {
+                  "type": "noauth"
                 }
               },
               "status": "OK",
@@ -328,9 +328,6 @@
                   ]
                 },
                 "description": "Autentica o lojista (RN05) e devolve um JWT válido por `JWT_EXPIRES_IN` (padrão 8 h). Não há refresh: ao expirar, faça login de novo.\n\nRate limit: 5 tentativas a cada 15 min por IP + e-mail; depois, 429 com `Retry-After`. E-mail inexistente e senha errada respondem igual (401 `CREDENCIAIS_INVALIDAS`).",
-                "auth": {
-                  "type": "noauth"
-                },
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"email\": \"{{email}}\",\n  \"senha\": \"{{senha}}\"\n}",
@@ -339,6 +336,9 @@
                       "language": "json"
                     }
                   }
+                },
+                "auth": {
+                  "type": "noauth"
                 }
               },
               "status": "Unauthorized",
@@ -377,9 +377,6 @@
                   ]
                 },
                 "description": "Autentica o lojista (RN05) e devolve um JWT válido por `JWT_EXPIRES_IN` (padrão 8 h). Não há refresh: ao expirar, faça login de novo.\n\nRate limit: 5 tentativas a cada 15 min por IP + e-mail; depois, 429 com `Retry-After`. E-mail inexistente e senha errada respondem igual (401 `CREDENCIAIS_INVALIDAS`).",
-                "auth": {
-                  "type": "noauth"
-                },
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"email\": \"{{email}}\",\n  \"senha\": \"{{senha}}\"\n}",
@@ -388,6 +385,9 @@
                       "language": "json"
                     }
                   }
+                },
+                "auth": {
+                  "type": "noauth"
                 }
               },
               "status": "Too Many Requests",
@@ -726,7 +726,7 @@
                   "value": "0192f0f0-1111-7000-8000-00000000abcd"
                 }
               ],
-              "body": "{\n  \"nomeFantasia\": \"Mercado Bom Preço\",\n  \"corPrimaria\": \"#C8102E\",\n  \"corSecundaria\": \"#FFD100\",\n  \"urlLogo\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/logo/0192f0e0.webp\"\n}",
+              "body": "{\n  \"nomeFantasia\": \"Mercado Bom Preço\",\n  \"corPrimaria\": \"#C8102E\",\n  \"corSecundaria\": \"#FFD100\",\n  \"urlLogo\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/logo/0192f0e0.webp\",\n  \"sePanfleto\": false\n}",
               "_postman_previewlanguage": "json"
             }
           ],
@@ -765,10 +765,10 @@
                 "identidade"
               ]
             },
-            "description": "Edição parcial de `nomeFantasia` (2–120), `corPrimaria` e `corSecundaria` (`#RRGGBB`; minúsculas são convertidas; `null` remove a cor). Corpo vazio responde 400.",
+            "description": "Edição parcial de `nomeFantasia` (2–120), `corPrimaria` e `corSecundaria` (`#RRGGBB`; minúsculas são convertidas; `null` remove a cor) e `sePanfleto` (RN44, só `true`/`false`; `null` responde 400). Com `sePanfleto: true`, a página pública de cada filial com panfleto vigente mostra **só o panfleto**; filial sem panfleto vigente mostra os produtos. Vale para todas as filiais. Corpo vazio responde 400.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nomeFantasia\": \"Mercado Bom Preço\",\n  \"corPrimaria\": \"#C8102E\",\n  \"corSecundaria\": \"#ffd100\"\n}",
+              "raw": "{\n  \"nomeFantasia\": \"Mercado Bom Preço\",\n  \"corPrimaria\": \"#C8102E\",\n  \"corSecundaria\": \"#ffd100\",\n  \"sePanfleto\": false\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -798,10 +798,10 @@
                     "identidade"
                   ]
                 },
-                "description": "Edição parcial de `nomeFantasia` (2–120), `corPrimaria` e `corSecundaria` (`#RRGGBB`; minúsculas são convertidas; `null` remove a cor). Corpo vazio responde 400.",
+                "description": "Edição parcial de `nomeFantasia` (2–120), `corPrimaria` e `corSecundaria` (`#RRGGBB`; minúsculas são convertidas; `null` remove a cor) e `sePanfleto` (RN44, só `true`/`false`; `null` responde 400). Com `sePanfleto: true`, a página pública de cada filial com panfleto vigente mostra **só o panfleto**; filial sem panfleto vigente mostra os produtos. Vale para todas as filiais. Corpo vazio responde 400.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"nomeFantasia\": \"Mercado Bom Preço\",\n  \"corPrimaria\": \"#C8102E\",\n  \"corSecundaria\": \"#ffd100\"\n}",
+                  "raw": "{\n  \"nomeFantasia\": \"Mercado Bom Preço\",\n  \"corPrimaria\": \"#C8102E\",\n  \"corSecundaria\": \"#ffd100\",\n  \"sePanfleto\": false\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -821,7 +821,7 @@
                   "value": "0192f0f0-1111-7000-8000-00000000abcd"
                 }
               ],
-              "body": "{\n  \"nomeFantasia\": \"Mercado Bom Preço\",\n  \"corPrimaria\": \"#C8102E\",\n  \"corSecundaria\": \"#FFD100\",\n  \"urlLogo\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/logo/0192f0e0.webp\"\n}",
+              "body": "{\n  \"nomeFantasia\": \"Mercado Bom Preço\",\n  \"corPrimaria\": \"#C8102E\",\n  \"corSecundaria\": \"#FFD100\",\n  \"urlLogo\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/logo/0192f0e0.webp\",\n  \"sePanfleto\": false\n}",
               "_postman_previewlanguage": "json"
             },
             {
@@ -845,7 +845,7 @@
                     "identidade"
                   ]
                 },
-                "description": "Edição parcial de `nomeFantasia` (2–120), `corPrimaria` e `corSecundaria` (`#RRGGBB`; minúsculas são convertidas; `null` remove a cor). Corpo vazio responde 400.",
+                "description": "Edição parcial de `nomeFantasia` (2–120), `corPrimaria` e `corSecundaria` (`#RRGGBB`; minúsculas são convertidas; `null` remove a cor) e `sePanfleto` (RN44, só `true`/`false`; `null` responde 400). Com `sePanfleto: true`, a página pública de cada filial com panfleto vigente mostra **só o panfleto**; filial sem panfleto vigente mostra os produtos. Vale para todas as filiais. Corpo vazio responde 400.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"nomeFantasia\": \"Mercado Bom Preço\",\n  \"corPrimaria\": \"#C8102E\",\n  \"corSecundaria\": \"#ffd100\"\n}",
@@ -869,6 +869,53 @@
                 }
               ],
               "body": "{\n  \"erro\": {\n    \"codigo\": \"VALIDACAO_INVALIDA\",\n    \"mensagem\": \"Dados inválidos.\",\n    \"detalhes\": {\n      \"campos\": {\n        \"corPrimaria\": [\n          \"Informe a cor no formato #RRGGBB.\"\n        ]\n      }\n    }\n  }\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Chave inválida",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/painel/lojista/identidade",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "painel",
+                    "lojista",
+                    "identidade"
+                  ]
+                },
+                "description": "Edição parcial de `nomeFantasia` (2–120), `corPrimaria` e `corSecundaria` (`#RRGGBB`; minúsculas são convertidas; `null` remove a cor) e `sePanfleto` (RN44, só `true`/`false`; `null` responde 400). Com `sePanfleto: true`, a página pública de cada filial com panfleto vigente mostra **só o panfleto**; filial sem panfleto vigente mostra os produtos. Vale para todas as filiais. Corpo vazio responde 400.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"sePanfleto\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "x-request-id",
+                  "value": "0192f0f0-1111-7000-8000-00000000abcd"
+                }
+              ],
+              "body": "{\n  \"erro\": {\n    \"codigo\": \"VALIDACAO_INVALIDA\",\n    \"mensagem\": \"Dados inválidos.\",\n    \"detalhes\": {\n      \"campos\": {\n        \"sePanfleto\": [\"sePanfleto deve ser verdadeiro ou falso.\"]\n      }\n    }\n  }\n}",
               "_postman_previewlanguage": "json"
             }
           ],
@@ -1777,7 +1824,7 @@
     },
     {
       "name": "05 Panfletos",
-      "description": "Panfleto = uma imagem com período de vigência (RN13–RN17). Por filial há no máximo um panfleto vigente e nenhum período pode se sobrepor; para agendar o próximo, o atual precisa ter data limite.",
+      "description": "Panfleto = uma imagem (JPEG, PNG ou WebP) ou um PDF de 1 página (até 2 MB), com período de vigência (RN13–RN17). O tipo é decidido pelo conteúdo do arquivo, não pelo Content-Type; a resposta traz `tipo` (`IMAGEM`/`PDF`) e `urlArquivo` (`urlImagem` continua igual a `urlArquivo`, para apps antigos). Por filial há no máximo um panfleto vigente e nenhum período pode se sobrepor; para agendar o próximo, o atual precisa ter data limite.",
       "item": [
         {
           "name": "Criar panfleto",
@@ -1804,14 +1851,14 @@
                 }
               ]
             },
-            "description": "Cria o panfleto (`multipart/form-data`). A imagem é processada (até 2400 px, WebP) antes da gravação; a criação é auditada.\n\nConflitos de período respondem 409 com `detalhes.conflitoCom` (id e datas do panfleto que conflita).",
+            "description": "Cria o panfleto (`multipart/form-data`). Imagem: processada (até 2400 px, WebP). PDF: precisa ter exatamente 1 página, sem senha, até `MAX_PDF_BYTES` (2 MB) e o limite do plano; é guardado como veio, e `largura`/`altura` vêm em pontos. A criação é auditada.\n\nErros de PDF: 422 `PDF_COM_VARIAS_PAGINAS` (`detalhes.paginas`), 422 `PDF_INVALIDO`, 413 `PDF_MUITO_GRANDE` (`detalhes.maxBytes`).\n\nConflitos de período respondem 409 com `detalhes.conflitoCom` (id e datas do panfleto que conflita).",
             "body": {
               "mode": "formdata",
               "formdata": [
                 {
                   "key": "imagem",
                   "type": "file",
-                  "description": "Obrigatório. JPEG, PNG ou WebP.",
+                  "description": "Obrigatório. JPEG, PNG, WebP ou PDF de 1 página.",
                   "src": "{{arquivoImagem}}"
                 },
                 {
@@ -1855,14 +1902,14 @@
                     }
                   ]
                 },
-                "description": "Cria o panfleto (`multipart/form-data`). A imagem é processada (até 2400 px, WebP) antes da gravação; a criação é auditada.\n\nConflitos de período respondem 409 com `detalhes.conflitoCom` (id e datas do panfleto que conflita).",
+                "description": "Cria o panfleto (`multipart/form-data`). Imagem: processada (até 2400 px, WebP). PDF: precisa ter exatamente 1 página, sem senha, até `MAX_PDF_BYTES` (2 MB) e o limite do plano; é guardado como veio, e `largura`/`altura` vêm em pontos. A criação é auditada.\n\nErros de PDF: 422 `PDF_COM_VARIAS_PAGINAS` (`detalhes.paginas`), 422 `PDF_INVALIDO`, 413 `PDF_MUITO_GRANDE` (`detalhes.maxBytes`).\n\nConflitos de período respondem 409 com `detalhes.conflitoCom` (id e datas do panfleto que conflita).",
                 "body": {
                   "mode": "formdata",
                   "formdata": [
                     {
                       "key": "imagem",
                       "type": "file",
-                      "description": "Obrigatório. JPEG, PNG ou WebP.",
+                      "description": "Obrigatório. JPEG, PNG, WebP ou PDF de 1 página.",
                       "src": "{{arquivoImagem}}"
                     },
                     {
@@ -1893,7 +1940,7 @@
                   "value": "0192f0f0-1111-7000-8000-00000000abcd"
                 }
               ],
-              "body": "{\n  \"id\": \"0192f0c0-8e40-7d32-9f5c-3e4f5a6b7c03\",\n  \"filialId\": \"0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02\",\n  \"urlImagem\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp\",\n  \"largura\": 1600,\n  \"altura\": 2263,\n  \"dataInicio\": \"2026-10-18\",\n  \"dataLimite\": \"2026-10-31\",\n  \"situacao\": \"VIGENTE\",\n  \"editavel\": true,\n  \"criadoEm\": \"2026-10-18T13:10:00.000Z\",\n  \"excluidoEm\": null\n}",
+              "body": "{\n  \"id\": \"0192f0c0-8e40-7d32-9f5c-3e4f5a6b7c03\",\n  \"filialId\": \"0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02\",\n  \"tipo\": \"IMAGEM\",\n  \"urlArquivo\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp\",\n  \"urlImagem\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp\",\n  \"largura\": 1600,\n  \"altura\": 2263,\n  \"dataInicio\": \"2026-10-18\",\n  \"dataLimite\": \"2026-10-31\",\n  \"situacao\": \"VIGENTE\",\n  \"editavel\": true,\n  \"criadoEm\": \"2026-10-18T13:10:00.000Z\",\n  \"excluidoEm\": null\n}",
               "_postman_previewlanguage": "json"
             },
             {
@@ -1920,14 +1967,14 @@
                     }
                   ]
                 },
-                "description": "Cria o panfleto (`multipart/form-data`). A imagem é processada (até 2400 px, WebP) antes da gravação; a criação é auditada.\n\nConflitos de período respondem 409 com `detalhes.conflitoCom` (id e datas do panfleto que conflita).",
+                "description": "Cria o panfleto (`multipart/form-data`). Imagem: processada (até 2400 px, WebP). PDF: precisa ter exatamente 1 página, sem senha, até `MAX_PDF_BYTES` (2 MB) e o limite do plano; é guardado como veio, e `largura`/`altura` vêm em pontos. A criação é auditada.\n\nErros de PDF: 422 `PDF_COM_VARIAS_PAGINAS` (`detalhes.paginas`), 422 `PDF_INVALIDO`, 413 `PDF_MUITO_GRANDE` (`detalhes.maxBytes`).\n\nConflitos de período respondem 409 com `detalhes.conflitoCom` (id e datas do panfleto que conflita).",
                 "body": {
                   "mode": "formdata",
                   "formdata": [
                     {
                       "key": "imagem",
                       "type": "file",
-                      "description": "Obrigatório. JPEG, PNG ou WebP.",
+                      "description": "Obrigatório. JPEG, PNG, WebP ou PDF de 1 página.",
                       "src": "{{arquivoImagem}}"
                     },
                     {
@@ -1985,14 +2032,14 @@
                     }
                   ]
                 },
-                "description": "Cria o panfleto (`multipart/form-data`). A imagem é processada (até 2400 px, WebP) antes da gravação; a criação é auditada.\n\nConflitos de período respondem 409 com `detalhes.conflitoCom` (id e datas do panfleto que conflita).",
+                "description": "Cria o panfleto (`multipart/form-data`). Imagem: processada (até 2400 px, WebP). PDF: precisa ter exatamente 1 página, sem senha, até `MAX_PDF_BYTES` (2 MB) e o limite do plano; é guardado como veio, e `largura`/`altura` vêm em pontos. A criação é auditada.\n\nErros de PDF: 422 `PDF_COM_VARIAS_PAGINAS` (`detalhes.paginas`), 422 `PDF_INVALIDO`, 413 `PDF_MUITO_GRANDE` (`detalhes.maxBytes`).\n\nConflitos de período respondem 409 com `detalhes.conflitoCom` (id e datas do panfleto que conflita).",
                 "body": {
                   "mode": "formdata",
                   "formdata": [
                     {
                       "key": "imagem",
                       "type": "file",
-                      "description": "Obrigatório. JPEG, PNG ou WebP.",
+                      "description": "Obrigatório. JPEG, PNG, WebP ou PDF de 1 página.",
                       "src": "{{arquivoImagem}}"
                     },
                     {
@@ -2050,14 +2097,14 @@
                     }
                   ]
                 },
-                "description": "Cria o panfleto (`multipart/form-data`). A imagem é processada (até 2400 px, WebP) antes da gravação; a criação é auditada.\n\nConflitos de período respondem 409 com `detalhes.conflitoCom` (id e datas do panfleto que conflita).",
+                "description": "Cria o panfleto (`multipart/form-data`). Imagem: processada (até 2400 px, WebP). PDF: precisa ter exatamente 1 página, sem senha, até `MAX_PDF_BYTES` (2 MB) e o limite do plano; é guardado como veio, e `largura`/`altura` vêm em pontos. A criação é auditada.\n\nErros de PDF: 422 `PDF_COM_VARIAS_PAGINAS` (`detalhes.paginas`), 422 `PDF_INVALIDO`, 413 `PDF_MUITO_GRANDE` (`detalhes.maxBytes`).\n\nConflitos de período respondem 409 com `detalhes.conflitoCom` (id e datas do panfleto que conflita).",
                 "body": {
                   "mode": "formdata",
                   "formdata": [
                     {
                       "key": "imagem",
                       "type": "file",
-                      "description": "Obrigatório. JPEG, PNG ou WebP.",
+                      "description": "Obrigatório. JPEG, PNG, WebP ou PDF de 1 página.",
                       "src": "{{arquivoImagem}}"
                     },
                     {
@@ -2209,7 +2256,7 @@
                   "value": "0192f0f0-1111-7000-8000-00000000abcd"
                 }
               ],
-              "body": "{\n  \"itens\": [\n    {\n      \"id\": \"0192f0c0-8e40-7d32-9f5c-3e4f5a6b7c03\",\n      \"filialId\": \"0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02\",\n      \"urlImagem\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp\",\n      \"largura\": 1600,\n      \"altura\": 2263,\n      \"dataInicio\": \"2026-10-18\",\n      \"dataLimite\": \"2026-10-31\",\n      \"situacao\": \"VIGENTE\",\n      \"editavel\": true,\n      \"criadoEm\": \"2026-10-18T13:10:00.000Z\",\n      \"excluidoEm\": null\n    }\n  ],\n  \"total\": 1,\n  \"pagina\": 1,\n  \"porPagina\": 50\n}",
+              "body": "{\n  \"itens\": [\n    {\n      \"id\": \"0192f0c0-8e40-7d32-9f5c-3e4f5a6b7c03\",\n      \"filialId\": \"0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02\",\n      \"tipo\": \"IMAGEM\",\n      \"urlArquivo\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp\",\n      \"urlImagem\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp\",\n      \"largura\": 1600,\n      \"altura\": 2263,\n      \"dataInicio\": \"2026-10-18\",\n      \"dataLimite\": \"2026-10-31\",\n      \"situacao\": \"VIGENTE\",\n      \"editavel\": true,\n      \"criadoEm\": \"2026-10-18T13:10:00.000Z\",\n      \"excluidoEm\": null\n    }\n  ],\n  \"total\": 1,\n  \"pagina\": 1,\n  \"porPagina\": 50\n}",
               "_postman_previewlanguage": "json"
             }
           ],
@@ -2304,7 +2351,7 @@
                   "value": "0192f0f0-1111-7000-8000-00000000abcd"
                 }
               ],
-              "body": "{\n  \"id\": \"0192f0c0-8e40-7d32-9f5c-3e4f5a6b7c03\",\n  \"filialId\": \"0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02\",\n  \"urlImagem\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp\",\n  \"largura\": 1600,\n  \"altura\": 2263,\n  \"dataInicio\": \"2026-10-18\",\n  \"dataLimite\": \"2026-10-31\",\n  \"situacao\": \"VIGENTE\",\n  \"editavel\": true,\n  \"criadoEm\": \"2026-10-18T13:10:00.000Z\",\n  \"excluidoEm\": null\n}",
+              "body": "{\n  \"id\": \"0192f0c0-8e40-7d32-9f5c-3e4f5a6b7c03\",\n  \"filialId\": \"0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02\",\n  \"tipo\": \"IMAGEM\",\n  \"urlArquivo\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp\",\n  \"urlImagem\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp\",\n  \"largura\": 1600,\n  \"altura\": 2263,\n  \"dataInicio\": \"2026-10-18\",\n  \"dataLimite\": \"2026-10-31\",\n  \"situacao\": \"VIGENTE\",\n  \"editavel\": true,\n  \"criadoEm\": \"2026-10-18T13:10:00.000Z\",\n  \"excluidoEm\": null\n}",
               "_postman_previewlanguage": "json"
             },
             {
@@ -2474,7 +2521,7 @@
                   "value": "0192f0f0-1111-7000-8000-00000000abcd"
                 }
               ],
-              "body": "{\n  \"id\": \"0192f0c0-8e40-7d32-9f5c-3e4f5a6b7c03\",\n  \"filialId\": \"0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02\",\n  \"urlImagem\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp\",\n  \"largura\": 1600,\n  \"altura\": 2263,\n  \"dataInicio\": \"2026-10-18\",\n  \"dataLimite\": \"2027-01-15\",\n  \"situacao\": \"VIGENTE\",\n  \"editavel\": true,\n  \"criadoEm\": \"2026-10-18T13:10:00.000Z\",\n  \"excluidoEm\": null\n}",
+              "body": "{\n  \"id\": \"0192f0c0-8e40-7d32-9f5c-3e4f5a6b7c03\",\n  \"filialId\": \"0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02\",\n  \"tipo\": \"IMAGEM\",\n  \"urlArquivo\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp\",\n  \"urlImagem\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp\",\n  \"largura\": 1600,\n  \"altura\": 2263,\n  \"dataInicio\": \"2026-10-18\",\n  \"dataLimite\": \"2027-01-15\",\n  \"situacao\": \"VIGENTE\",\n  \"editavel\": true,\n  \"criadoEm\": \"2026-10-18T13:10:00.000Z\",\n  \"excluidoEm\": null\n}",
               "_postman_previewlanguage": "json"
             },
             {
@@ -2584,14 +2631,14 @@
                 }
               ]
             },
-            "description": "Troca a imagem de um panfleto vigente ou agendado. A troca é auditada e a imagem anterior continua no storage.",
+            "description": "Troca o arquivo de um panfleto vigente ou agendado por outra imagem ou por um PDF de 1 página (mesmas regras do cadastro; o `tipo` acompanha o arquivo novo). A troca é auditada e o arquivo anterior continua no storage.",
             "body": {
               "mode": "formdata",
               "formdata": [
                 {
                   "key": "imagem",
                   "type": "file",
-                  "description": "Obrigatório. JPEG, PNG ou WebP.",
+                  "description": "Obrigatório. JPEG, PNG, WebP ou PDF de 1 página.",
                   "src": "{{arquivoImagem}}"
                 }
               ]
@@ -2629,14 +2676,14 @@
                     }
                   ]
                 },
-                "description": "Troca a imagem de um panfleto vigente ou agendado. A troca é auditada e a imagem anterior continua no storage.",
+                "description": "Troca o arquivo de um panfleto vigente ou agendado por outra imagem ou por um PDF de 1 página (mesmas regras do cadastro; o `tipo` acompanha o arquivo novo). A troca é auditada e o arquivo anterior continua no storage.",
                 "body": {
                   "mode": "formdata",
                   "formdata": [
                     {
                       "key": "imagem",
                       "type": "file",
-                      "description": "Obrigatório. JPEG, PNG ou WebP.",
+                      "description": "Obrigatório. JPEG, PNG, WebP ou PDF de 1 página.",
                       "src": "{{arquivoImagem}}"
                     }
                   ]
@@ -2654,7 +2701,7 @@
                   "value": "0192f0f0-1111-7000-8000-00000000abcd"
                 }
               ],
-              "body": "{\n  \"id\": \"0192f0c0-8e40-7d32-9f5c-3e4f5a6b7c03\",\n  \"filialId\": \"0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02\",\n  \"urlImagem\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp\",\n  \"largura\": 1600,\n  \"altura\": 2263,\n  \"dataInicio\": \"2026-10-18\",\n  \"dataLimite\": \"2026-10-31\",\n  \"situacao\": \"VIGENTE\",\n  \"editavel\": true,\n  \"criadoEm\": \"2026-10-18T13:10:00.000Z\",\n  \"excluidoEm\": null\n}",
+              "body": "{\n  \"id\": \"0192f0c0-8e40-7d32-9f5c-3e4f5a6b7c03\",\n  \"filialId\": \"0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02\",\n  \"tipo\": \"IMAGEM\",\n  \"urlArquivo\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp\",\n  \"urlImagem\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp\",\n  \"largura\": 1600,\n  \"altura\": 2263,\n  \"dataInicio\": \"2026-10-18\",\n  \"dataLimite\": \"2026-10-31\",\n  \"situacao\": \"VIGENTE\",\n  \"editavel\": true,\n  \"criadoEm\": \"2026-10-18T13:10:00.000Z\",\n  \"excluidoEm\": null\n}",
               "_postman_previewlanguage": "json"
             },
             {
@@ -2688,14 +2735,14 @@
                     }
                   ]
                 },
-                "description": "Troca a imagem de um panfleto vigente ou agendado. A troca é auditada e a imagem anterior continua no storage.",
+                "description": "Troca o arquivo de um panfleto vigente ou agendado por outra imagem ou por um PDF de 1 página (mesmas regras do cadastro; o `tipo` acompanha o arquivo novo). A troca é auditada e o arquivo anterior continua no storage.",
                 "body": {
                   "mode": "formdata",
                   "formdata": [
                     {
                       "key": "imagem",
                       "type": "file",
-                      "description": "Obrigatório. JPEG, PNG ou WebP.",
+                      "description": "Obrigatório. JPEG, PNG, WebP ou PDF de 1 página.",
                       "src": "{{arquivoImagem}}"
                     }
                   ]
@@ -2725,6 +2772,303 @@
                 "exec": [
                   "pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));",
                   "pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Trocar panfleto por PDF",
+          "id": "78c177bd-9f54-5f7b-996d-a402faa66496",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/painel/filiais/:filialId/panfletos/:id/imagem",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "painel",
+                "filiais",
+                ":filialId",
+                "panfletos",
+                ":id",
+                "imagem"
+              ],
+              "variable": [
+                {
+                  "key": "filialId",
+                  "value": "{{filialId}}",
+                  "description": "Id (UUID v7) da filial do lojista logado."
+                },
+                {
+                  "key": "id",
+                  "value": "{{panfletoId}}",
+                  "description": "Id (UUID v7) do panfleto."
+                }
+              ]
+            },
+            "description": "Igual a **Trocar imagem do panfleto**, enviando o PDF de exemplo (`{{arquivoPdf}}`, 1 página A4). A resposta vem com `tipo: \"PDF\"`, `urlArquivo` terminando em `.pdf` e `largura`/`altura` em pontos (595 × 842).\n\nNa página pública, com `sePanfleto` ligado, o panfleto aparece como `{ \"tipo\": \"PDF\", \"arquivoUrl\": \"…pdf\" }` e a página React o desenha com pdf.js.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "imagem",
+                  "type": "file",
+                  "description": "Obrigatório. PDF de exatamente 1 página, sem senha, até 2 MB.",
+                  "src": "{{arquivoPdf}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "PDF aceito",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/painel/filiais/:filialId/panfletos/:id/imagem",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "painel",
+                    "filiais",
+                    ":filialId",
+                    "panfletos",
+                    ":id",
+                    "imagem"
+                  ],
+                  "variable": [
+                    {
+                      "key": "filialId",
+                      "value": "{{filialId}}",
+                      "description": "Id (UUID v7) da filial do lojista logado."
+                    },
+                    {
+                      "key": "id",
+                      "value": "{{panfletoId}}",
+                      "description": "Id (UUID v7) do panfleto."
+                    }
+                  ]
+                },
+                "description": "Igual a **Trocar imagem do panfleto**, enviando o PDF de exemplo (`{{arquivoPdf}}`, 1 página A4). A resposta vem com `tipo: \"PDF\"`, `urlArquivo` terminando em `.pdf` e `largura`/`altura` em pontos (595 × 842).\n\nNa página pública, com `sePanfleto` ligado, o panfleto aparece como `{ \"tipo\": \"PDF\", \"arquivoUrl\": \"…pdf\" }` e a página React o desenha com pdf.js.",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "imagem",
+                      "type": "file",
+                      "description": "Obrigatório. PDF de exatamente 1 página, sem senha, até 2 MB.",
+                      "src": "{{arquivoPdf}}"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "x-request-id",
+                  "value": "0192f0f0-1111-7000-8000-00000000abcd"
+                }
+              ],
+              "body": "{\n  \"id\": \"0192f0c0-8e40-7d32-9f5c-3e4f5a6b7c03\",\n  \"filialId\": \"0192f0b4-7d3f-7c21-8e4b-2d3e4f5a6b02\",\n  \"tipo\": \"PDF\",\n  \"urlArquivo\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c9.pdf\",\n  \"urlImagem\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c9.pdf\",\n  \"largura\": 595,\n  \"altura\": 842,\n  \"dataInicio\": \"2026-10-18\",\n  \"dataLimite\": \"2026-10-31\",\n  \"situacao\": \"VIGENTE\",\n  \"editavel\": true,\n  \"criadoEm\": \"2026-10-18T13:10:00.000Z\",\n  \"excluidoEm\": null\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "PDF com várias páginas",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/painel/filiais/:filialId/panfletos/:id/imagem",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "painel",
+                    "filiais",
+                    ":filialId",
+                    "panfletos",
+                    ":id",
+                    "imagem"
+                  ],
+                  "variable": [
+                    {
+                      "key": "filialId",
+                      "value": "{{filialId}}",
+                      "description": "Id (UUID v7) da filial do lojista logado."
+                    },
+                    {
+                      "key": "id",
+                      "value": "{{panfletoId}}",
+                      "description": "Id (UUID v7) do panfleto."
+                    }
+                  ]
+                },
+                "description": "Igual a **Trocar imagem do panfleto**, enviando o PDF de exemplo (`{{arquivoPdf}}`, 1 página A4). A resposta vem com `tipo: \"PDF\"`, `urlArquivo` terminando em `.pdf` e `largura`/`altura` em pontos (595 × 842).\n\nNa página pública, com `sePanfleto` ligado, o panfleto aparece como `{ \"tipo\": \"PDF\", \"arquivoUrl\": \"…pdf\" }` e a página React o desenha com pdf.js.",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "imagem",
+                      "type": "file",
+                      "description": "Obrigatório. PDF de exatamente 1 página, sem senha, até 2 MB.",
+                      "src": "{{arquivoPdf}}"
+                    }
+                  ]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "x-request-id",
+                  "value": "0192f0f0-1111-7000-8000-00000000abcd"
+                }
+              ],
+              "body": "{\n  \"erro\": {\n    \"codigo\": \"PDF_COM_VARIAS_PAGINAS\",\n    \"mensagem\": \"O PDF do panfleto precisa ter só 1 página.\",\n    \"detalhes\": { \"paginas\": 3 }\n  }\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "PDF inválido",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/painel/filiais/:filialId/panfletos/:id/imagem",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "painel",
+                    "filiais",
+                    ":filialId",
+                    "panfletos",
+                    ":id",
+                    "imagem"
+                  ],
+                  "variable": [
+                    {
+                      "key": "filialId",
+                      "value": "{{filialId}}",
+                      "description": "Id (UUID v7) da filial do lojista logado."
+                    },
+                    {
+                      "key": "id",
+                      "value": "{{panfletoId}}",
+                      "description": "Id (UUID v7) do panfleto."
+                    }
+                  ]
+                },
+                "description": "Igual a **Trocar imagem do panfleto**, enviando o PDF de exemplo (`{{arquivoPdf}}`, 1 página A4). A resposta vem com `tipo: \"PDF\"`, `urlArquivo` terminando em `.pdf` e `largura`/`altura` em pontos (595 × 842).\n\nNa página pública, com `sePanfleto` ligado, o panfleto aparece como `{ \"tipo\": \"PDF\", \"arquivoUrl\": \"…pdf\" }` e a página React o desenha com pdf.js.",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "imagem",
+                      "type": "file",
+                      "description": "Obrigatório. PDF de exatamente 1 página, sem senha, até 2 MB.",
+                      "src": "{{arquivoPdf}}"
+                    }
+                  ]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "x-request-id",
+                  "value": "0192f0f0-1111-7000-8000-00000000abcd"
+                }
+              ],
+              "body": "{\n  \"erro\": {\n    \"codigo\": \"PDF_INVALIDO\",\n    \"mensagem\": \"Não foi possível ler o PDF. Envie um PDF sem senha.\"\n  }\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "PDF muito grande",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/painel/filiais/:filialId/panfletos/:id/imagem",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "painel",
+                    "filiais",
+                    ":filialId",
+                    "panfletos",
+                    ":id",
+                    "imagem"
+                  ],
+                  "variable": [
+                    {
+                      "key": "filialId",
+                      "value": "{{filialId}}",
+                      "description": "Id (UUID v7) da filial do lojista logado."
+                    },
+                    {
+                      "key": "id",
+                      "value": "{{panfletoId}}",
+                      "description": "Id (UUID v7) do panfleto."
+                    }
+                  ]
+                },
+                "description": "Igual a **Trocar imagem do panfleto**, enviando o PDF de exemplo (`{{arquivoPdf}}`, 1 página A4). A resposta vem com `tipo: \"PDF\"`, `urlArquivo` terminando em `.pdf` e `largura`/`altura` em pontos (595 × 842).\n\nNa página pública, com `sePanfleto` ligado, o panfleto aparece como `{ \"tipo\": \"PDF\", \"arquivoUrl\": \"…pdf\" }` e a página React o desenha com pdf.js.",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "imagem",
+                      "type": "file",
+                      "description": "Obrigatório. PDF de exatamente 1 página, sem senha, até 2 MB.",
+                      "src": "{{arquivoPdf}}"
+                    }
+                  ]
+                }
+              },
+              "status": "Payload Too Large",
+              "code": 413,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "x-request-id",
+                  "value": "0192f0f0-1111-7000-8000-00000000abcd"
+                }
+              ],
+              "body": "{\n  \"erro\": {\n    \"codigo\": \"PDF_MUITO_GRANDE\",\n    \"mensagem\": \"O PDF é maior que o tamanho permitido.\",\n    \"detalhes\": { \"maxBytes\": 2097152 }\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));",
+                  "pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));",
+                  "if (pm.response.code === 200) pm.test('Tipo PDF', () => pm.expect(pm.response.json().tipo).to.eql('PDF'));"
                 ]
               }
             }
@@ -4715,7 +5059,7 @@
     },
     {
       "name": "09 Página pública",
-      "description": "O que o consumidor vê ao ler o QR Code (RN23, RN27–RN32, RN35, RN41). Sem autenticação, 300 requisições por minuto por IP.\n\nEm uma resposta: identidade do lojista, filial, panfleto vigente e produtos vigentes agrupados por categoria, em ordem alfabética. Campos opcionais vazios são omitidos. Nunca expõe ids nem dados internos.\n\nSó funciona para lojista **ATIVO**: filial inexistente, excluída ou de lojista não ativo respondem o **mesmo** 404.",
+      "description": "O que o consumidor vê ao ler o QR Code (RN23, RN27–RN32, RN35, RN41). Sem autenticação, 300 requisições por minuto por IP.\n\nEm uma resposta: identidade do lojista, `sePanfleto`, filial e **ou** o panfleto **ou** a página montada (RN29, RN44):\n\n| `sePanfleto` | Panfleto vigente | `panfleto` | `estrutura.categorias` |\n| --- | --- | --- | --- |\n| `true` | sim | preenchido (`tipo` `IMAGEM` ou `PDF`, `arquivoUrl`) | `[]` |\n| `true` | não | `null` | produtos vigentes |\n| `false` | sim ou não | `null` | produtos vigentes |\n\nCategorias e produtos vêm na ordem definida pelo lojista (RN45, pasta **12 Estrutura da página**); os não posicionados vêm depois, em ordem alfabética. O cliente não reordena. Campos opcionais vazios são omitidos. Nunca expõe ids nem dados internos.\n\nSó funciona para lojista **ATIVO**: filial inexistente, excluída ou de lojista não ativo respondem o **mesmo** 404.",
       "item": [
         {
           "name": "Página da filial",
@@ -4747,7 +5091,7 @@
                 }
               ]
             },
-            "description": "Responde 200 com:\n\n- `Cache-Control: public, max-age=30, stale-while-revalidate=300`\n- `ETag` fraco (não muda se os dados não mudarem)\n- `hoje` no fuso da filial; `validoAte` em panfleto e produtos só quando há data limite; `precoOriginalCentavos` só quando há \"de/por\".\n\nMudanças no painel aparecem na hora (o cache do servidor é invalidado). Desativar o lojista no banco leva até 60 s para tirar a página do ar.",
+            "description": "Responde 200 com:\n\n- `Cache-Control: public, max-age=30, stale-while-revalidate=300`\n- `ETag` fraco (não muda se os dados não mudarem)\n- `hoje` no fuso da filial; `validoAte` em panfleto e produtos só quando há data limite; `precoOriginalCentavos` só quando há \"de/por\".\n- `panfleto` só quando `sePanfleto` está ligado e há panfleto vigente; nesse caso `estrutura.categorias` vem vazia. PDF: `largura`/`altura` em pontos.\n\nMudanças no painel aparecem na hora (o cache do servidor é invalidado). Desativar o lojista no banco leva até 60 s para tirar a página do ar.",
             "auth": {
               "type": "noauth"
             }
@@ -4782,7 +5126,7 @@
                     }
                   ]
                 },
-                "description": "Responde 200 com:\n\n- `Cache-Control: public, max-age=30, stale-while-revalidate=300`\n- `ETag` fraco (não muda se os dados não mudarem)\n- `hoje` no fuso da filial; `validoAte` em panfleto e produtos só quando há data limite; `precoOriginalCentavos` só quando há \"de/por\".\n\nMudanças no painel aparecem na hora (o cache do servidor é invalidado). Desativar o lojista no banco leva até 60 s para tirar a página do ar.",
+                "description": "Responde 200 com:\n\n- `Cache-Control: public, max-age=30, stale-while-revalidate=300`\n- `ETag` fraco (não muda se os dados não mudarem)\n- `hoje` no fuso da filial; `validoAte` em panfleto e produtos só quando há data limite; `precoOriginalCentavos` só quando há \"de/por\".\n- `panfleto` só quando `sePanfleto` está ligado e há panfleto vigente; nesse caso `estrutura.categorias` vem vazia. PDF: `largura`/`altura` em pontos.\n\nMudanças no painel aparecem na hora (o cache do servidor é invalidado). Desativar o lojista no banco leva até 60 s para tirar a página do ar.",
                 "auth": {
                   "type": "noauth"
                 }
@@ -4807,7 +5151,64 @@
                   "value": "0192f0f0-1111-7000-8000-00000000abcd"
                 }
               ],
-              "body": "{\n  \"lojista\": {\n    \"nome\": \"Mercado Bom Preço\",\n    \"logoUrl\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/logo/0192f0e0.webp\",\n    \"corPrimaria\": \"#C8102E\",\n    \"corSecundaria\": \"#FFD100\"\n  },\n  \"filial\": {\n    \"nome\": \"Centro\",\n    \"endereco\": {\n      \"cep\": \"13010111\",\n      \"logradouro\": \"Rua das Flores\",\n      \"numero\": \"120\",\n      \"complemento\": \"Loja 2\",\n      \"bairro\": \"Centro\",\n      \"cidade\": \"Campinas\",\n      \"uf\": \"SP\"\n    }\n  },\n  \"panfleto\": {\n    \"imagemUrl\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c0.webp\",\n    \"largura\": 1600,\n    \"altura\": 2263,\n    \"validoAte\": \"2026-10-31\"\n  },\n  \"categorias\": [\n    {\n      \"nome\": \"Bebidas\",\n      \"produtos\": [\n        {\n          \"nome\": \"Água mineral\",\n          \"quantidade\": \"1,5 L\",\n          \"precoPromocionalCentavos\": 249\n        },\n        {\n          \"nome\": \"Refrigerante cola\",\n          \"quantidade\": \"2 L\",\n          \"precoPromocionalCentavos\": 799,\n          \"precoOriginalCentavos\": 1099,\n          \"observacao\": \"limite 3 por cliente\",\n          \"fotoUrl\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/produto/0192f0d2.webp\",\n          \"validoAte\": \"2026-10-20\"\n        }\n      ]\n    },\n    {\n      \"nome\": \"Mercearia\",\n      \"produtos\": [\n        {\n          \"nome\": \"Arroz Tipo 1\",\n          \"quantidade\": \"5kg\",\n          \"precoPromocionalCentavos\": 2199,\n          \"precoOriginalCentavos\": 2649,\n          \"observacao\": \"Limite 3 por cliente\",\n          \"fotoUrl\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/produto/0192f0d1.webp\",\n          \"validoAte\": \"2026-10-25\"\n        }\n      ]\n    }\n  ],\n  \"hoje\": \"2026-10-18\",\n  \"geradoEm\": \"2026-10-18T15:04:05.123Z\"\n}",
+              "body": "{\n  \"lojista\": {\n    \"nome\": \"Mercado Bom Preço\",\n    \"logoUrl\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/logo/0192f0e0.webp\",\n    \"corPrimaria\": \"#C8102E\",\n    \"corSecundaria\": \"#FFD100\"\n  },\n  \"sePanfleto\": false,\n  \"filial\": {\n    \"nome\": \"Centro\",\n    \"endereco\": {\n      \"cep\": \"13010111\",\n      \"logradouro\": \"Rua das Flores\",\n      \"numero\": \"120\",\n      \"complemento\": \"Loja 2\",\n      \"bairro\": \"Centro\",\n      \"cidade\": \"Campinas\",\n      \"uf\": \"SP\"\n    }\n  },\n  \"panfleto\": null,\n  \"estrutura\": {\n    \"categorias\": [\n      {\n        \"nome\": \"Bebidas\",\n        \"produtos\": [\n          {\n            \"nome\": \"Refrigerante cola\",\n            \"quantidade\": \"2 L\",\n            \"precoPromocionalCentavos\": 799,\n            \"precoOriginalCentavos\": 1099,\n            \"observacao\": \"limite 3 por cliente\",\n            \"fotoUrl\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/produto/0192f0d2.webp\",\n            \"validoAte\": \"2026-10-20\"\n          },\n          {\n            \"nome\": \"Água mineral\",\n            \"quantidade\": \"1,5 L\",\n            \"precoPromocionalCentavos\": 249\n          }\n        ]\n      },\n      {\n        \"nome\": \"Mercearia\",\n        \"produtos\": [\n          {\n            \"nome\": \"Arroz Tipo 1\",\n            \"quantidade\": \"5kg\",\n            \"precoPromocionalCentavos\": 2199,\n            \"precoOriginalCentavos\": 2649,\n            \"observacao\": \"Limite 3 por cliente\",\n            \"fotoUrl\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/produto/0192f0d1.webp\",\n            \"validoAte\": \"2026-10-25\"\n          }\n        ]\n      }\n    ]\n  },\n  \"hoje\": \"2026-10-18\",\n  \"geradoEm\": \"2026-10-18T15:04:05.123Z\"\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Só o panfleto (PDF)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept-Encoding",
+                    "value": "gzip",
+                    "description": "A página é enviada já comprimida quando o cliente aceita gzip."
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/publico/filiais/:codigo",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "publico",
+                    "filiais",
+                    ":codigo"
+                  ],
+                  "variable": [
+                    {
+                      "key": "codigo",
+                      "value": "{{codigoPublico}}",
+                      "description": "Código público da filial (8 caracteres, alfabeto sem 0 1 i l o I O)."
+                    }
+                  ]
+                },
+                "description": "Responde 200 com:\n\n- `Cache-Control: public, max-age=30, stale-while-revalidate=300`\n- `ETag` fraco (não muda se os dados não mudarem)\n- `hoje` no fuso da filial; `validoAte` em panfleto e produtos só quando há data limite; `precoOriginalCentavos` só quando há \"de/por\".\n- `panfleto` só quando `sePanfleto` está ligado e há panfleto vigente; nesse caso `estrutura.categorias` vem vazia. PDF: `largura`/`altura` em pontos.\n\nMudanças no painel aparecem na hora (o cache do servidor é invalidado). Desativar o lojista no banco leva até 60 s para tirar a página do ar.",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "public, max-age=30, stale-while-revalidate=300"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"Zr8Kq1mPx4Tn6Wb2\""
+                },
+                {
+                  "key": "x-request-id",
+                  "value": "0192f0f0-1111-7000-8000-00000000abcd"
+                }
+              ],
+              "body": "{\n  \"lojista\": {\n    \"nome\": \"Mercado Bom Preço\",\n    \"logoUrl\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/logo/0192f0e0.webp\",\n    \"corPrimaria\": \"#C8102E\",\n    \"corSecundaria\": \"#FFD100\"\n  },\n  \"sePanfleto\": true,\n  \"filial\": {\n    \"nome\": \"Centro\",\n    \"endereco\": {\n      \"cep\": \"13010111\",\n      \"logradouro\": \"Rua das Flores\",\n      \"numero\": \"120\",\n      \"complemento\": \"Loja 2\",\n      \"bairro\": \"Centro\",\n      \"cidade\": \"Campinas\",\n      \"uf\": \"SP\"\n    }\n  },\n  \"panfleto\": {\n    \"tipo\": \"PDF\",\n    \"arquivoUrl\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/panfleto/0192f0c9.pdf\",\n    \"largura\": 595,\n    \"altura\": 842,\n    \"validoAte\": \"2026-10-31\"\n  },\n  \"estrutura\": {\n    \"categorias\": []\n  },\n  \"hoje\": \"2026-10-18\",\n  \"geradoEm\": \"2026-10-18T15:04:05.123Z\"\n}",
               "_postman_previewlanguage": "json"
             },
             {
@@ -4839,7 +5240,7 @@
                     }
                   ]
                 },
-                "description": "Responde 200 com:\n\n- `Cache-Control: public, max-age=30, stale-while-revalidate=300`\n- `ETag` fraco (não muda se os dados não mudarem)\n- `hoje` no fuso da filial; `validoAte` em panfleto e produtos só quando há data limite; `precoOriginalCentavos` só quando há \"de/por\".\n\nMudanças no painel aparecem na hora (o cache do servidor é invalidado). Desativar o lojista no banco leva até 60 s para tirar a página do ar.",
+                "description": "Responde 200 com:\n\n- `Cache-Control: public, max-age=30, stale-while-revalidate=300`\n- `ETag` fraco (não muda se os dados não mudarem)\n- `hoje` no fuso da filial; `validoAte` em panfleto e produtos só quando há data limite; `precoOriginalCentavos` só quando há \"de/por\".\n- `panfleto` só quando `sePanfleto` está ligado e há panfleto vigente; nesse caso `estrutura.categorias` vem vazia. PDF: `largura`/`altura` em pontos.\n\nMudanças no painel aparecem na hora (o cache do servidor é invalidado). Desativar o lojista no banco leva até 60 s para tirar a página do ar.",
                 "auth": {
                   "type": "noauth"
                 }
@@ -4892,7 +5293,7 @@
                     }
                   ]
                 },
-                "description": "Responde 200 com:\n\n- `Cache-Control: public, max-age=30, stale-while-revalidate=300`\n- `ETag` fraco (não muda se os dados não mudarem)\n- `hoje` no fuso da filial; `validoAte` em panfleto e produtos só quando há data limite; `precoOriginalCentavos` só quando há \"de/por\".\n\nMudanças no painel aparecem na hora (o cache do servidor é invalidado). Desativar o lojista no banco leva até 60 s para tirar a página do ar.",
+                "description": "Responde 200 com:\n\n- `Cache-Control: public, max-age=30, stale-while-revalidate=300`\n- `ETag` fraco (não muda se os dados não mudarem)\n- `hoje` no fuso da filial; `validoAte` em panfleto e produtos só quando há data limite; `precoOriginalCentavos` só quando há \"de/por\".\n- `panfleto` só quando `sePanfleto` está ligado e há panfleto vigente; nesse caso `estrutura.categorias` vem vazia. PDF: `largura`/`altura` em pontos.\n\nMudanças no painel aparecem na hora (o cache do servidor é invalidado). Desativar o lojista no banco leva até 60 s para tirar a página do ar.",
                 "auth": {
                   "type": "noauth"
                 }
@@ -5289,9 +5690,6 @@
               ]
             },
             "description": "Redefine a senha (RN36): 8–128 caracteres com letra e número. Responde 204. Limite de 10 por minuto. Depois de rodar, o Login da coleção usa `senha`: atualize a variável se for continuar.",
-            "auth": {
-              "type": "noauth"
-            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"novaSenha\": \"{{novaSenha}}\"\n}",
@@ -5300,6 +5698,9 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [
@@ -5338,9 +5739,6 @@
                   ]
                 },
                 "description": "Redefine a senha (RN36): 8–128 caracteres com letra e número. Responde 204. Limite de 10 por minuto. Depois de rodar, o Login da coleção usa `senha`: atualize a variável se for continuar.",
-                "auth": {
-                  "type": "noauth"
-                },
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"novaSenha\": \"{{novaSenha}}\"\n}",
@@ -5349,6 +5747,9 @@
                       "language": "json"
                     }
                   }
+                },
+                "auth": {
+                  "type": "noauth"
                 }
               },
               "status": "No Content",
@@ -5396,9 +5797,6 @@
                   ]
                 },
                 "description": "Redefine a senha (RN36): 8–128 caracteres com letra e número. Responde 204. Limite de 10 por minuto. Depois de rodar, o Login da coleção usa `senha`: atualize a variável se for continuar.",
-                "auth": {
-                  "type": "noauth"
-                },
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"novaSenha\": \"{{novaSenha}}\"\n}",
@@ -5407,6 +5805,9 @@
                       "language": "json"
                     }
                   }
+                },
+                "auth": {
+                  "type": "noauth"
                 }
               },
               "status": "Not Found",
@@ -5505,6 +5906,524 @@
                 }
               ],
               "body": "# HELP publico_cache_total Leituras do cache da página pública por resultado\n# TYPE publico_cache_total counter\npublico_cache_total{resultado=\"hit\"} 183\npublico_cache_total{resultado=\"miss\"} 17\n"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));",
+                  "pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "12 Estrutura da página",
+      "description": "Ordem da página pública de cada filial (RN45): o lojista ordena as categorias (vertical) e os produtos de cada categoria (horizontal). É o que a seção \"Página\" do painel lê e grava.\n\n- Itens **não posicionados** (novos ou omitidos no PUT) vão para o fim, em ordem alfabética pt-BR.\n- Produto que muda de categoria perde a posição.\n- Reordenar não altera `atualizadoEm`, não é auditado e não conta em limite.\n- A página pública reflete a ordem nova na hora (o cache do servidor é invalidado); o cache HTTP do navegador pode levar até 30 s.",
+      "item": [
+        {
+          "name": "Obter estrutura",
+          "id": "ad65bac9-6322-59f1-8239-3823f852e7eb",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/painel/filiais/:filialId/estrutura",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "painel",
+                "filiais",
+                ":filialId",
+                "estrutura"
+              ],
+              "variable": [
+                {
+                  "key": "filialId",
+                  "value": "{{filialId}}",
+                  "description": "Id (UUID v7) da filial do lojista logado."
+                }
+              ]
+            },
+            "description": "Devolve **todas** as categorias não excluídas da filial e, em cada uma, só os produtos **vigentes e agendados**, já na ordem da página (posição definida pelo lojista; depois alfabética).\n\nNunca expõe a posição numérica: a ordem é a do array."
+          },
+          "response": [
+            {
+              "name": "Estrutura",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/painel/filiais/:filialId/estrutura",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "painel",
+                    "filiais",
+                    ":filialId",
+                    "estrutura"
+                  ],
+                  "variable": [
+                    {
+                      "key": "filialId",
+                      "value": "{{filialId}}",
+                      "description": "Id (UUID v7) da filial do lojista logado."
+                    }
+                  ]
+                },
+                "description": "Devolve **todas** as categorias não excluídas da filial e, em cada uma, só os produtos **vigentes e agendados**, já na ordem da página (posição definida pelo lojista; depois alfabética).\n\nNunca expõe a posição numérica: a ordem é a do array."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "x-request-id",
+                  "value": "0192f0f0-1111-7000-8000-00000000abcd"
+                }
+              ],
+              "body": "{\n  \"categorias\": [\n    {\n      \"id\": \"0192f0d0-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"nome\": \"Bebidas\",\n      \"produtos\": [\n        {\n          \"id\": \"0192f0d1-2b3c-7d4e-8f5a-6b7c8d9e0f02\",\n          \"nome\": \"Refrigerante cola\",\n          \"quantidade\": \"2 L\",\n          \"descricao\": null,\n          \"observacao\": \"limite 3 por cliente\",\n          \"precoPromocionalCentavos\": 799,\n          \"precoOriginalCentavos\": 1099,\n          \"urlFoto\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/produto/0192f0d2.webp\",\n          \"dataInicio\": \"2026-10-18\",\n          \"dataLimite\": \"2026-10-20\",\n          \"situacao\": \"VIGENTE\",\n          \"editavel\": true\n        },\n        {\n          \"id\": \"0192f0d1-2b3c-7d4e-8f5a-6b7c8d9e0f01\",\n          \"nome\": \"Água mineral\",\n          \"quantidade\": \"1,5 L\",\n          \"descricao\": null,\n          \"observacao\": null,\n          \"precoPromocionalCentavos\": 249,\n          \"precoOriginalCentavos\": null,\n          \"urlFoto\": null,\n          \"dataInicio\": \"2026-10-25\",\n          \"dataLimite\": null,\n          \"situacao\": \"AGENDADO\",\n          \"editavel\": true\n        }\n      ]\n    },\n    {\n      \"id\": \"0192f0d0-1a2b-7c3d-8e4f-5a6b7c8d9e02\",\n      \"nome\": \"Açougue\",\n      \"produtos\": []\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Filial não encontrada",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/painel/filiais/:filialId/estrutura",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "painel",
+                    "filiais",
+                    ":filialId",
+                    "estrutura"
+                  ],
+                  "variable": [
+                    {
+                      "key": "filialId",
+                      "value": "{{filialId}}",
+                      "description": "Id (UUID v7) da filial do lojista logado."
+                    }
+                  ]
+                },
+                "description": "Devolve **todas** as categorias não excluídas da filial e, em cada uma, só os produtos **vigentes e agendados**, já na ordem da página (posição definida pelo lojista; depois alfabética).\n\nNunca expõe a posição numérica: a ordem é a do array."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "x-request-id",
+                  "value": "0192f0f0-1111-7000-8000-00000000abcd"
+                }
+              ],
+              "body": "{\n  \"erro\": {\n    \"codigo\": \"RECURSO_NAO_ENCONTRADO\",\n    \"mensagem\": \"Não encontrado.\"\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));",
+                  "pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));",
+                  "if (pm.response.code === 200) pm.test('Tem categorias', () => pm.expect(pm.response.json().categorias).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Salvar estrutura",
+          "id": "94ad2a4b-5f89-525c-91cb-bb1a6c60269e",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/painel/filiais/:filialId/estrutura",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "painel",
+                "filiais",
+                ":filialId",
+                "estrutura"
+              ],
+              "variable": [
+                {
+                  "key": "filialId",
+                  "value": "{{filialId}}",
+                  "description": "Id (UUID v7) da filial do lojista logado."
+                }
+              ]
+            },
+            "description": "**Substitui** a ordem da filial (RN45). A posição de cada categoria é o índice dela em `categorias`; a de cada produto, o índice dentro de `produtos` da sua categoria. Categoria ou produto omitido fica sem posição (fim, em ordem alfabética).\n\n- Limites: até 500 categorias e 2000 produtos por categoria; ids UUID v7.\n- Produto vencido é aceito (venceu entre o GET e o PUT); excluído não.\n- Resposta: o mesmo corpo do GET, já na ordem nova.\n- Erros: 400 `VALIDACAO_INVALIDA` (formato), 404 (filial de outro lojista), 403 `LOJISTA_DESATIVADO`, 422 `ESTRUTURA_INVALIDA` com `detalhes.problemas` (`CATEGORIA_DESCONHECIDA`, `PRODUTO_DESCONHECIDO`, `PRODUTO_FORA_DA_CATEGORIA`, `CATEGORIA_REPETIDA`, `PRODUTO_REPETIDO`).\n- Dois PUT simultâneos: a última gravação vence, inteira.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categorias\": [\n    {\n      \"id\": \"{{categoriaId}}\",\n      \"produtos\": [\"{{produtoId}}\"]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "Ordem salva",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/painel/filiais/:filialId/estrutura",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "painel",
+                    "filiais",
+                    ":filialId",
+                    "estrutura"
+                  ],
+                  "variable": [
+                    {
+                      "key": "filialId",
+                      "value": "{{filialId}}",
+                      "description": "Id (UUID v7) da filial do lojista logado."
+                    }
+                  ]
+                },
+                "description": "**Substitui** a ordem da filial (RN45). A posição de cada categoria é o índice dela em `categorias`; a de cada produto, o índice dentro de `produtos` da sua categoria. Categoria ou produto omitido fica sem posição (fim, em ordem alfabética).\n\n- Limites: até 500 categorias e 2000 produtos por categoria; ids UUID v7.\n- Produto vencido é aceito (venceu entre o GET e o PUT); excluído não.\n- Resposta: o mesmo corpo do GET, já na ordem nova.\n- Erros: 400 `VALIDACAO_INVALIDA` (formato), 404 (filial de outro lojista), 403 `LOJISTA_DESATIVADO`, 422 `ESTRUTURA_INVALIDA` com `detalhes.problemas` (`CATEGORIA_DESCONHECIDA`, `PRODUTO_DESCONHECIDO`, `PRODUTO_FORA_DA_CATEGORIA`, `CATEGORIA_REPETIDA`, `PRODUTO_REPETIDO`).\n- Dois PUT simultâneos: a última gravação vence, inteira.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"categorias\": [\n    { \"id\": \"0192f0d0-1a2b-7c3d-8e4f-5a6b7c8d9e01\", \"produtos\": [\"0192f0d1-2b3c-7d4e-8f5a-6b7c8d9e0f02\", \"0192f0d1-2b3c-7d4e-8f5a-6b7c8d9e0f01\"] }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "x-request-id",
+                  "value": "0192f0f0-1111-7000-8000-00000000abcd"
+                }
+              ],
+              "body": "{\n  \"categorias\": [\n    {\n      \"id\": \"0192f0d0-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"nome\": \"Bebidas\",\n      \"produtos\": [\n        {\n          \"id\": \"0192f0d1-2b3c-7d4e-8f5a-6b7c8d9e0f02\",\n          \"nome\": \"Refrigerante cola\",\n          \"quantidade\": \"2 L\",\n          \"descricao\": null,\n          \"observacao\": \"limite 3 por cliente\",\n          \"precoPromocionalCentavos\": 799,\n          \"precoOriginalCentavos\": 1099,\n          \"urlFoto\": \"https://xyz.supabase.co/storage/v1/object/public/midia/0192f0a1-6c2e-7b10-9f3a-1c2d3e4f5a01/produto/0192f0d2.webp\",\n          \"dataInicio\": \"2026-10-18\",\n          \"dataLimite\": \"2026-10-20\",\n          \"situacao\": \"VIGENTE\",\n          \"editavel\": true\n        },\n        {\n          \"id\": \"0192f0d1-2b3c-7d4e-8f5a-6b7c8d9e0f01\",\n          \"nome\": \"Água mineral\",\n          \"quantidade\": \"1,5 L\",\n          \"descricao\": null,\n          \"observacao\": null,\n          \"precoPromocionalCentavos\": 249,\n          \"precoOriginalCentavos\": null,\n          \"urlFoto\": null,\n          \"dataInicio\": \"2026-10-25\",\n          \"dataLimite\": null,\n          \"situacao\": \"AGENDADO\",\n          \"editavel\": true\n        }\n      ]\n    },\n    {\n      \"id\": \"0192f0d0-1a2b-7c3d-8e4f-5a6b7c8d9e02\",\n      \"nome\": \"Açougue\",\n      \"produtos\": []\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Estrutura inválida",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/painel/filiais/:filialId/estrutura",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "painel",
+                    "filiais",
+                    ":filialId",
+                    "estrutura"
+                  ],
+                  "variable": [
+                    {
+                      "key": "filialId",
+                      "value": "{{filialId}}",
+                      "description": "Id (UUID v7) da filial do lojista logado."
+                    }
+                  ]
+                },
+                "description": "**Substitui** a ordem da filial (RN45). A posição de cada categoria é o índice dela em `categorias`; a de cada produto, o índice dentro de `produtos` da sua categoria. Categoria ou produto omitido fica sem posição (fim, em ordem alfabética).\n\n- Limites: até 500 categorias e 2000 produtos por categoria; ids UUID v7.\n- Produto vencido é aceito (venceu entre o GET e o PUT); excluído não.\n- Resposta: o mesmo corpo do GET, já na ordem nova.\n- Erros: 400 `VALIDACAO_INVALIDA` (formato), 404 (filial de outro lojista), 403 `LOJISTA_DESATIVADO`, 422 `ESTRUTURA_INVALIDA` com `detalhes.problemas` (`CATEGORIA_DESCONHECIDA`, `PRODUTO_DESCONHECIDO`, `PRODUTO_FORA_DA_CATEGORIA`, `CATEGORIA_REPETIDA`, `PRODUTO_REPETIDO`).\n- Dois PUT simultâneos: a última gravação vence, inteira.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"categorias\": [\n    { \"id\": \"0192f0d0-1a2b-7c3d-8e4f-5a6b7c8d9e02\", \"produtos\": [\"0192f0d1-2b3c-7d4e-8f5a-6b7c8d9e0f01\"] },\n    { \"id\": \"0192f0d0-1a2b-7c3d-8e4f-5a6b7c8d9e02\", \"produtos\": [] }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "x-request-id",
+                  "value": "0192f0f0-1111-7000-8000-00000000abcd"
+                }
+              ],
+              "body": "{\n  \"erro\": {\n    \"codigo\": \"ESTRUTURA_INVALIDA\",\n    \"mensagem\": \"A ordem enviada não corresponde às categorias e produtos desta filial. Recarregue e tente de novo.\",\n    \"detalhes\": {\n      \"problemas\": [\n        { \"tipo\": \"PRODUTO_FORA_DA_CATEGORIA\", \"id\": \"0192f0d1-2b3c-7d4e-8f5a-6b7c8d9e0f01\" },\n        { \"tipo\": \"CATEGORIA_REPETIDA\", \"id\": \"0192f0d0-1a2b-7c3d-8e4f-5a6b7c8d9e02\" }\n      ]\n    }\n  }\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Id inválido",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/painel/filiais/:filialId/estrutura",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "painel",
+                    "filiais",
+                    ":filialId",
+                    "estrutura"
+                  ],
+                  "variable": [
+                    {
+                      "key": "filialId",
+                      "value": "{{filialId}}",
+                      "description": "Id (UUID v7) da filial do lojista logado."
+                    }
+                  ]
+                },
+                "description": "**Substitui** a ordem da filial (RN45). A posição de cada categoria é o índice dela em `categorias`; a de cada produto, o índice dentro de `produtos` da sua categoria. Categoria ou produto omitido fica sem posição (fim, em ordem alfabética).\n\n- Limites: até 500 categorias e 2000 produtos por categoria; ids UUID v7.\n- Produto vencido é aceito (venceu entre o GET e o PUT); excluído não.\n- Resposta: o mesmo corpo do GET, já na ordem nova.\n- Erros: 400 `VALIDACAO_INVALIDA` (formato), 404 (filial de outro lojista), 403 `LOJISTA_DESATIVADO`, 422 `ESTRUTURA_INVALIDA` com `detalhes.problemas` (`CATEGORIA_DESCONHECIDA`, `PRODUTO_DESCONHECIDO`, `PRODUTO_FORA_DA_CATEGORIA`, `CATEGORIA_REPETIDA`, `PRODUTO_REPETIDO`).\n- Dois PUT simultâneos: a última gravação vence, inteira.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"categorias\": [\n    { \"id\": \"abc\", \"produtos\": [] }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "x-request-id",
+                  "value": "0192f0f0-1111-7000-8000-00000000abcd"
+                }
+              ],
+              "body": "{\n  \"erro\": {\n    \"codigo\": \"VALIDACAO_INVALIDA\",\n    \"mensagem\": \"Dados inválidos.\",\n    \"detalhes\": {\n      \"campos\": {\n        \"categorias.0.id\": [\"id de categoria inválido.\"]\n      }\n    }\n  }\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Lojista desativado",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/painel/filiais/:filialId/estrutura",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "painel",
+                    "filiais",
+                    ":filialId",
+                    "estrutura"
+                  ],
+                  "variable": [
+                    {
+                      "key": "filialId",
+                      "value": "{{filialId}}",
+                      "description": "Id (UUID v7) da filial do lojista logado."
+                    }
+                  ]
+                },
+                "description": "**Substitui** a ordem da filial (RN45). A posição de cada categoria é o índice dela em `categorias`; a de cada produto, o índice dentro de `produtos` da sua categoria. Categoria ou produto omitido fica sem posição (fim, em ordem alfabética).\n\n- Limites: até 500 categorias e 2000 produtos por categoria; ids UUID v7.\n- Produto vencido é aceito (venceu entre o GET e o PUT); excluído não.\n- Resposta: o mesmo corpo do GET, já na ordem nova.\n- Erros: 400 `VALIDACAO_INVALIDA` (formato), 404 (filial de outro lojista), 403 `LOJISTA_DESATIVADO`, 422 `ESTRUTURA_INVALIDA` com `detalhes.problemas` (`CATEGORIA_DESCONHECIDA`, `PRODUTO_DESCONHECIDO`, `PRODUTO_FORA_DA_CATEGORIA`, `CATEGORIA_REPETIDA`, `PRODUTO_REPETIDO`).\n- Dois PUT simultâneos: a última gravação vence, inteira.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"categorias\": [\n    { \"id\": \"0192f0d0-1a2b-7c3d-8e4f-5a6b7c8d9e01\", \"produtos\": [\"0192f0d1-2b3c-7d4e-8f5a-6b7c8d9e0f02\", \"0192f0d1-2b3c-7d4e-8f5a-6b7c8d9e0f01\"] }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "x-request-id",
+                  "value": "0192f0f0-1111-7000-8000-00000000abcd"
+                }
+              ],
+              "body": "{\n  \"erro\": {\n    \"codigo\": \"LOJISTA_DESATIVADO\",\n    \"mensagem\": \"Sua conta está desativada. O painel está disponível só para consulta.\"\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));",
+                  "pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Limpar estrutura",
+          "id": "72672a39-305f-5d25-9601-0bab969c5469",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/painel/filiais/:filialId/estrutura",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "painel",
+                "filiais",
+                ":filialId",
+                "estrutura"
+              ],
+              "variable": [
+                {
+                  "key": "filialId",
+                  "value": "{{filialId}}",
+                  "description": "Id (UUID v7) da filial do lojista logado."
+                }
+              ]
+            },
+            "description": "`categorias: []` apaga toda a ordem da filial: a página volta à ordem alfabética.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categorias\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "Ordem limpa",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/painel/filiais/:filialId/estrutura",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "painel",
+                    "filiais",
+                    ":filialId",
+                    "estrutura"
+                  ],
+                  "variable": [
+                    {
+                      "key": "filialId",
+                      "value": "{{filialId}}",
+                      "description": "Id (UUID v7) da filial do lojista logado."
+                    }
+                  ]
+                },
+                "description": "`categorias: []` apaga toda a ordem da filial: a página volta à ordem alfabética.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"categorias\": []\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "x-request-id",
+                  "value": "0192f0f0-1111-7000-8000-00000000abcd"
+                }
+              ],
+              "body": "{\n  \"categorias\": [\n    {\n      \"id\": \"0192f0d0-1a2b-7c3d-8e4f-5a6b7c8d9e02\",\n      \"nome\": \"Açougue\",\n      \"produtos\": []\n    },\n    {\n      \"id\": \"0192f0d0-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"nome\": \"Bebidas\",\n      \"produtos\": []\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json"
             }
           ],
           "event": [

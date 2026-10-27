@@ -1,0 +1,21 @@
+$kind: http-request
+id: ad65bac9-6322-59f1-8239-3823f852e7eb
+description: |-
+  Devolve **todas** as categorias não excluídas da filial e, em cada uma, só os produtos **vigentes e agendados**, já na ordem da página (posição definida pelo lojista; depois alfabética).
+
+  Nunca expõe a posição numérica: a ordem é a do array.
+url: "{{baseUrl}}/painel/filiais/:filialId/estrutura"
+method: GET
+pathVariables:
+  - key: filialId
+    value: "{{filialId}}"
+    description: Id (UUID v7) da filial do lojista logado.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+      if (pm.response.code === 200) pm.test('Tem categorias', () => pm.expect(pm.response.json().categorias).to.be.an('array'));
+    language: text/javascript
+examples: ./.resources/Obter estrutura.resources/examples
+order: 1000

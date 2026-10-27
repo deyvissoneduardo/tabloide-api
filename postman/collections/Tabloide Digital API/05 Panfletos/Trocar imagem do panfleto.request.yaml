@@ -1,6 +1,6 @@
 $kind: http-request
 id: 666ee1e8-44a5-5a17-8857-19cc50cf4d85
-description: Troca a imagem de um panfleto vigente ou agendado. A troca é auditada e a imagem anterior continua no storage.
+description: Troca o arquivo de um panfleto vigente ou agendado por outra imagem ou por um PDF de 1 página (mesmas regras do cadastro; o `tipo` acompanha o arquivo novo). A troca é auditada e o arquivo anterior continua no storage.
 url: "{{baseUrl}}/painel/filiais/:filialId/panfletos/:id/imagem"
 method: PUT
 pathVariables:
@@ -16,7 +16,7 @@ body:
     - type: file
       key: imagem
       src: "{{arquivoImagem}}"
-      description: Obrigatório. JPEG, PNG ou WebP.
+      description: Obrigatório. JPEG, PNG, WebP ou PDF de 1 página.
 scripts:
   - type: afterResponse
     code: |-

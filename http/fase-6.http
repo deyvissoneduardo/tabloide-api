@@ -1,0 +1,125 @@
+# Tabloide Digital API — Fase 6: página montada pelo lojista e PDF no panfleto
+# Ordem da página por filial (RN45), chave "mostrar só o panfleto" (RN44) e panfleto em PDF de
+# 1 página (RN13). Ajuste "< ./panfleto.pdf" para um PDF local de 1 página (até 2 MB).
+
+@base = http://localhost:3000/v1
+
+### Login
+# @name login
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "ana@bompreco.com.br", "senha": "senhaForte1" }
+
+@token = {{login.response.body.token}}
+
+### Filial
+# @name filial
+POST {{base}}/painel/filiais
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Centro",
+  "endereco": { "cep": "01310-100", "logradouro": "Rua A", "numero": "100", "bairro": "Centro", "cidade": "São Paulo", "uf": "SP" }
+}
+
+@filialId = {{filial.response.body.id}}
+@codigo = {{filial.response.body.codigoPublico}}
+
+### Categorias
+# @name bebidas
+POST {{base}}/painel/filiais/{{filialId}}/categorias
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Bebidas" }
+
+@bebidasId = {{bebidas.response.body.id}}
+
+###
+# @name acougue
+POST {{base}}/painel/filiais/{{filialId}}/categorias
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Açougue" }
+
+@acougueId = {{acougue.response.body.id}}
+
+### Produtos
+# @name suco
+POST {{base}}/painel/filiais/{{filialId}}/produtos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Suco de uva", "categoriaId": "{{bebidasId}}", "precoPromocionalCentavos": 899 }
+
+@sucoId = {{suco.response.body.id}}
+
+###
+# @name agua
+POST {{base}}/painel/filiais/{{filialId}}/produtos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Água mineral", "categoriaId": "{{bebidasId}}", "precoPromocionalCentavos": 199 }
+
+@aguaId = {{agua.response.body.id}}
+
+### Estrutura atual: todas as categorias, produtos vigentes e agendados, em ordem alfabética
+GET {{base}}/painel/filiais/{{filialId}}/estrutura
+Authorization: Bearer {{token}}
+
+### Grava a ordem (RN45): Bebidas primeiro, "Suco" antes de "Água"; Açougue omitido vai para o fim
+PUT {{base}}/painel/filiais/{{filialId}}/estrutura
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "categorias": [{ "id": "{{bebidasId}}", "produtos": ["{{sucoId}}", "{{aguaId}}"] }] }
+
+### Produto na categoria errada → 422 ESTRUTURA_INVALIDA (PRODUTO_FORA_DA_CATEGORIA)
+PUT {{base}}/painel/filiais/{{filialId}}/estrutura
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "categorias": [{ "id": "{{acougueId}}", "produtos": ["{{sucoId}}"] }] }
+
+### Limpa a ordem (volta ao alfabético)
+PUT {{base}}/painel/filiais/{{filialId}}/estrutura
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "categorias": [] }
+
+### Panfleto em PDF de 1 página (RN13): tipo "PDF", urlArquivo termina em .pdf
+POST {{base}}/painel/filiais/{{filialId}}/panfletos
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=limite
+
+--limite
+Content-Disposition: form-data; name="imagem"; filename="panfleto.pdf"
+Content-Type: application/pdf
+
+< ./panfleto.pdf
+--limite--
+
+### Liga "mostrar só o panfleto" (RN44)
+PATCH {{base}}/painel/lojista/identidade
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "sePanfleto": true }
+
+### Página pública (lojista ATIVO): com a chave e panfleto vigente, só o panfleto
+GET {{base}}/publico/filiais/{{codigo}}
+
+### Desliga a chave: página montada, sem panfleto
+PATCH {{base}}/painel/lojista/identidade
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "sePanfleto": false }
+
+###
+GET {{base}}/publico/filiais/{{codigo}}

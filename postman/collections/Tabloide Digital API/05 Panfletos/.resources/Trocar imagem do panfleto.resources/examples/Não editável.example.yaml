@@ -15,7 +15,7 @@ request:
       - type: file
         key: imagem
         src: "{{arquivoImagem}}"
-        description: Obrigatório. JPEG, PNG ou WebP.
+        description: Obrigatório. JPEG, PNG, WebP ou PDF de 1 página.
 response:
   statusCode: 409
   statusText: Conflict

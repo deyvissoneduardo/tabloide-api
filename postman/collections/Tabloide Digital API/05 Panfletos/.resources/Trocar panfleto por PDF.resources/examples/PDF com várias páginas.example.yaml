@@ -1,0 +1,35 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/filiais/:filialId/panfletos/:id/imagem"
+  method: PUT
+  pathVariables:
+    - key: filialId
+      value: "{{filialId}}"
+      description: Id (UUID v7) da filial do lojista logado.
+    - key: id
+      value: "{{panfletoId}}"
+      description: Id (UUID v7) do panfleto.
+  body:
+    type: formdata
+    content:
+      - type: file
+        key: imagem
+        src: "{{arquivoPdf}}"
+        description: Obrigatório. PDF de exatamente 1 página, sem senha, até 2 MB.
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "erro": {
+          "codigo": "PDF_COM_VARIAS_PAGINAS",
+          "mensagem": "O PDF do panfleto precisa ter só 1 página.",
+          "detalhes": { "paginas": 3 }
+        }
+      }
+order: 2000

@@ -1,6 +1,7 @@
 $kind: http-request
 id: 5b641fa9-e33e-5565-bc1d-604e6acad6f8
-description: Edição parcial de `nomeFantasia` (2–120), `corPrimaria` e `corSecundaria` (`#RRGGBB`; minúsculas são convertidas; `null` remove a cor). Corpo vazio responde 400.
+description: |-
+  Edição parcial de `nomeFantasia` (2–120), `corPrimaria` e `corSecundaria` (`#RRGGBB`; minúsculas são convertidas; `null` remove a cor) e `sePanfleto` (RN44, só `true`/`false`; `null` responde 400). Com `sePanfleto: true`, a página pública de cada filial com panfleto vigente mostra **só o panfleto**; filial sem panfleto vigente mostra os produtos. Vale para todas as filiais. Corpo vazio responde 400.
 url: "{{baseUrl}}/painel/lojista/identidade"
 method: PATCH
 headers:
@@ -11,7 +12,8 @@ body:
     {
       "nomeFantasia": "Mercado Bom Preço",
       "corPrimaria": "#C8102E",
-      "corSecundaria": "#ffd100"
+      "corSecundaria": "#ffd100",
+      "sePanfleto": false
     }
 scripts:
   - type: afterResponse
