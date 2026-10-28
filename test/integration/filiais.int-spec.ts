@@ -272,6 +272,17 @@ describe('Funcionalidade: Filiais no banco real', () => {
       await app.http().get(`/v1/painel/filiais/${alvo.id}`).set(auth()).expect(200);
       const [linhas] = await sql('SELECT excluido FROM itens_teste');
       expect(linhas).toEqual([{ excluido: false }]);
+
+      const [logs] = await sql('SELECT request_id, metodo, rota, mensagem, stack FROM logs_erro');
+      expect(logs).toEqual([
+        {
+          request_id: resposta.headers['x-request-id'],
+          metodo: 'DELETE',
+          rota: `/v1/painel/filiais/${alvo.id}`,
+          mensagem: expect.any(String),
+          stack: expect.any(String),
+        },
+      ]);
     });
   });
 

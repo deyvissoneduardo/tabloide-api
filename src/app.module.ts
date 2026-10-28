@@ -26,6 +26,7 @@ import { CategoriasModule } from './modules/categorias/categorias.module';
 import { EstruturasModule } from './modules/estruturas/estruturas.module';
 import { FiliaisModule } from './modules/filiais/filiais.module';
 import { LojistasModule } from './modules/lojistas/lojistas.module';
+import { LogsErroModule } from './modules/logs-erro/logs-erro.module';
 import { MidiaLocalModule } from './modules/midia/midia-local.module';
 import { PanfletosModule } from './modules/panfletos/panfletos.module';
 import { ProdutosModule } from './modules/produtos/produtos.module';
@@ -58,6 +59,7 @@ import { SaudeModule } from './modules/saude/saude.module';
     TenantModule,
     LimitesModule,
     DatabaseModule,
+    LogsErroModule,
     AuthModule,
     LojistasModule,
     AdminModule,

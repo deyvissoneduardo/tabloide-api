@@ -3,6 +3,7 @@ import { ThrottlerException } from '@nestjs/throttler';
 import type { ArgumentsHost } from '@nestjs/common';
 import type { ValidationError } from 'class-validator';
 import { UniqueConstraintError } from 'sequelize';
+import type { LogsErroService } from '../../../modules/logs-erro/services/logs-erro.service';
 import { AppExceptionFilter } from '../app-exception.filter';
 import { AppError } from '../app.error';
 import { CodigoErro, MENSAGEM_POR_CODIGO, STATUS_POR_CODIGO } from '../codigos-erro';
@@ -12,7 +13,7 @@ import { errosDeValidacaoParaAppError } from '../validacao';
 
 const erroPg = (code: string, constraint?: string) => ({ parent: { code, constraint } });
 
-function hostFalso(reqId = 'req-1', originalUrl = '/v1/painel/x') {
+function hostFalso(reqId = 'req-1', originalUrl = '/v1/painel/x', method = 'GET') {
   const res = {
     status: jest.fn().mockReturnThis(),
     json: jest.fn(),
@@ -21,7 +22,7 @@ function hostFalso(reqId = 'req-1', originalUrl = '/v1/painel/x') {
     getHeader: jest.fn(() => 900),
   };
   const host = {
-    switchToHttp: () => ({ getRequest: () => ({ id: reqId, originalUrl }), getResponse: () => res }),
+    switchToHttp: () => ({ getRequest: () => ({ id: reqId, originalUrl, method }), getResponse: () => res }),
   } as unknown as ArgumentsHost;
   return { host, res };
 }
@@ -194,6 +195,62 @@ describe('Funcionalidade: Contrato de erros', () => {
       expect(corpo).not.toContain('at ');
       expect(log).toHaveBeenCalledWith('Erro inesperado', expect.stringContaining('falha secreta'));
       log.mockRestore();
+    });
+  });
+
+  describe('Funcionalidade: AppExceptionFilter grava erros inesperados em logs_erro', () => {
+    const registrar = jest.fn();
+    const filtro = new AppExceptionFilter({ registrar } as unknown as LogsErroService);
+    let log: jest.SpyInstance;
+
+    beforeEach(() => {
+      registrar.mockReset();
+      log = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    });
+    afterEach(() => log.mockRestore());
+
+    it('Cenário: erro inesperado → grava com request-id, método e URL e só então responde 500', async () => {
+      const ordem: string[] = [];
+      registrar.mockImplementation(async () => void ordem.push('gravou'));
+      const { host, res } = hostFalso('req-9', '/v1/painel/filiais/1?q=x', 'DELETE');
+      res.status.mockImplementation(() => (ordem.push('respondeu'), res));
+      const falha = new Error('boom');
+
+      await filtro.catch(falha, host);
+
+      expect(registrar).toHaveBeenCalledWith(falha, {
+        requestId: 'req-9',
+        metodo: 'DELETE',
+        url: '/v1/painel/filiais/1?q=x',
+      });
+      expect(ordem).toEqual(['gravou', 'respondeu']);
+      expect(res.json.mock.calls[0][0].erro.codigo).toBe('ERRO_INTERNO');
+    });
+
+    it('Cenário: falha ao gravar não impede a resposta 500', async () => {
+      registrar.mockRejectedValue(new Error('banco fora'));
+      const { host, res } = hostFalso();
+
+      await filtro.catch(new Error('boom'), host);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(log).toHaveBeenCalledWith('Falha ao gravar logs_erro', expect.stringContaining('banco fora'));
+    });
+
+    it('Cenário: falha ao gravar que não é Error também é logada', async () => {
+      registrar.mockRejectedValue('texto');
+      const { host, res } = hostFalso('');
+      await filtro.catch(new Error('boom'), host);
+      expect(registrar.mock.calls[0][1].requestId).toBeNull();
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(log).toHaveBeenCalledWith('Falha ao gravar logs_erro', 'texto');
+    });
+
+    it('Cenário: erro de negócio (4xx) não é gravado', () => {
+      const { host, res } = hostFalso();
+      filtro.catch(new AppError(CodigoErro.RECURSO_NAO_ENCONTRADO), host);
+      expect(registrar).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(404);
     });
   });
 });
