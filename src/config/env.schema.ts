@@ -6,6 +6,8 @@ const booleano = z
   .default('false')
   .transform((v) => v === 'true');
 
+const LOCALHOST_COM_PORTA = /^http:\/\/localhost:\d{1,5}$/;
+
 const inteiro = (padrao: number) => z.coerce.number().int().default(padrao);
 
 const envBase = z.object({
@@ -89,12 +91,16 @@ export const envSchema = envBase.superRefine((env, ctx) => {
     if (env.CORS_ORIGENS_PAINEL.length === 0) {
       ctx.addIssue({ code: 'custom', path: ['CORS_ORIGENS_PAINEL'], message: 'obrigatório em production' });
     }
-    // em produção só origens HTTPS explícitas; nada de curinga
-    if (env.CORS_ORIGENS_PAINEL.some((o) => o.includes('*') || !o.startsWith('https://'))) {
+    // em produção só origens HTTPS explícitas ou localhost com porta exata (front local); nada de curinga
+    if (
+      env.CORS_ORIGENS_PAINEL.some(
+        (o) => o.includes('*') || !(o.startsWith('https://') || LOCALHOST_COM_PORTA.test(o)),
+      )
+    ) {
       ctx.addIssue({
         code: 'custom',
         path: ['CORS_ORIGENS_PAINEL'],
-        message: 'use só origens https:// sem *',
+        message: 'use só origens https:// ou http://localhost:<porta>, sem *',
       });
     }
   }

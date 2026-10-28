@@ -130,14 +130,28 @@ describe('Funcionalidade: Validação das variáveis de ambiente', () => {
       ...(cors === undefined ? {} : { CORS_ORIGENS_PAINEL: cors }),
     });
 
-    it.each([undefined, '*', 'http://painel.tabloide.app', 'https://painel.tabloide.app,*'])(
-      'Dado CORS_ORIGENS_PAINEL %p, então a subida falha',
-      (cors) => expect(() => validarEnv(producao(cors))).toThrow('CORS_ORIGENS_PAINEL'),
+    it.each([
+      undefined,
+      '*',
+      'http://painel.tabloide.app',
+      'https://painel.tabloide.app,*',
+      'http://localhost',
+      'http://localhost:*',
+      'http://localhost:5173/',
+      'http://127.0.0.1:5173',
+      'http://localhost:5173.evil.com',
+    ])('Dado CORS_ORIGENS_PAINEL %p, então a subida falha', (cors) =>
+      expect(() => validarEnv(producao(cors))).toThrow('CORS_ORIGENS_PAINEL'),
     );
 
     it('E só HTTPS explícito é aceito', () =>
       expect(validarEnv(producao('https://painel.tabloide.app')).CORS_ORIGENS_PAINEL).toEqual([
         'https://painel.tabloide.app',
       ]));
+
+    it('E localhost com porta exata é aceito junto das origens HTTPS (front local na API de produção)', () =>
+      expect(
+        validarEnv(producao('https://adm-tabloide.vercel.app,http://localhost:5173')).CORS_ORIGENS_PAINEL,
+      ).toEqual(['https://adm-tabloide.vercel.app', 'http://localhost:5173']));
   });
 });
