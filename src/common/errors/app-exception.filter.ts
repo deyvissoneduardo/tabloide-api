@@ -1,6 +1,15 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  HttpStatus,
+  Logger,
+  Optional,
+} from '@nestjs/common';
 import { ThrottlerException } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
+import { LogsErroService } from '../../modules/logs-erro/services/logs-erro.service';
 import { AppError } from './app.error';
 import { CodigoErro } from './codigos-erro';
 import { traduzirErroPg } from './pg-erros';
@@ -28,12 +37,34 @@ function erroDoBodyParser(exception: unknown): AppError | null {
 export class AppExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger('AppExceptionFilter');
 
-  catch(exception: unknown, host: ArgumentsHost): void {
+  constructor(@Optional() private readonly logsErro?: LogsErroService) {}
+
+  catch(exception: unknown, host: ArgumentsHost): void | Promise<void> {
     const ctx = host.switchToHttp();
     const req = ctx.getRequest<Request>();
     const res = ctx.getResponse<Response>();
     const erro = this.paraAppError(exception);
 
+    // grava antes de responder: na Vercel a função pode congelar logo após a resposta
+    if (erro.codigo === CodigoErro.ERRO_INTERNO && this.logsErro) {
+      return this.logsErro
+        .registrar(exception, {
+          requestId: req?.id ? String(req.id) : null,
+          metodo: req?.method,
+          url: req?.originalUrl,
+        })
+        .catch((falha: unknown) =>
+          this.logger.error(
+            'Falha ao gravar logs_erro',
+            falha instanceof Error ? falha.stack : String(falha),
+          ),
+        )
+        .then(() => this.responder(req, res, erro));
+    }
+    this.responder(req, res, erro);
+  }
+
+  private responder(req: Request, res: Response, erro: AppError): void {
     if (req?.id) res.setHeader('x-request-id', String(req.id));
     if (erro.codigo === CodigoErro.MUITAS_TENTATIVAS) this.copiarRetryAfter(res);
     // página pública: o 404 também é cacheável, mas por pouco tempo (lojista recém-ativado)

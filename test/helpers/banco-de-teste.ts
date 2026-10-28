@@ -16,6 +16,7 @@ export const TABELAS = [
   'filiais',
   'lojista_ativacoes',
   'lojistas',
+  'logs_erro',
 ];
 
 export interface BancoDeTeste {
