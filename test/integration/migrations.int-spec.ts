@@ -156,7 +156,29 @@ describe('Funcionalidade: Migrations', () => {
 
     it('E undo da migration e up de novo, sem erro', async () => {
       await banco.migrador.down({ to: '20261105000300-adicionar-tipo-arquivo-panfletos.js' });
-      await expect(banco.migrador.up()).resolves.toHaveLength(1);
+      await expect(banco.migrador.up()).resolves.toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: '20261105000300-adicionar-tipo-arquivo-panfletos.js' }),
+        ]),
+      );
+    });
+  });
+
+  describe('Cenário: tabela logs_erro', () => {
+    it('Então existe com RLS ligado e índice por data', async () => {
+      const [tabela] = await sql(`SELECT relrowsecurity FROM pg_class WHERE relname = 'logs_erro'`);
+      expect(tabela).toEqual([{ relrowsecurity: true }]);
+      const [indices] = await sql(`SELECT indexname FROM pg_indexes WHERE tablename = 'logs_erro'`);
+      expect(indices).toEqual(expect.arrayContaining([{ indexname: 'logs_erro_ocorrido_em_idx' }]));
+    });
+
+    it('E undo da migration e up de novo, sem erro', async () => {
+      await banco.migrador.down({ to: '20261106000000-criar-logs-erro.js' });
+      const [sumiu] = await sql(`SELECT 1 FROM pg_tables WHERE tablename = 'logs_erro'`);
+      expect(sumiu).toEqual([]);
+      await expect(banco.migrador.up()).resolves.toEqual([
+        expect.objectContaining({ name: '20261106000000-criar-logs-erro.js' }),
+      ]);
     });
   });
 
