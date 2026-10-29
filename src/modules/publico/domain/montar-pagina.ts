@@ -1,6 +1,13 @@
 import type { DataISO } from '../../../common/utils/date-only';
 import { compararPorPosicao } from '../../../common/utils/ordem';
 import type { EnderecoFilial } from '../../filiais/domain/endereco';
+import {
+  normalizarConfiguracao,
+  resolverCores,
+  type BannerGuardado,
+  type CoresGuardadas,
+  type CoresResolvidas,
+} from '../../lojistas/domain/configuracao-pagina';
 import type { StatusLojista } from '../../lojistas/models/status-lojista';
 import type { TipoArquivoPanfleto } from '../../panfletos/domain/tipo-arquivo';
 
@@ -14,8 +21,8 @@ export interface FilialPublicaRow {
   lojista: {
     nomeFantasia: string;
     logoPath: string | null;
-    corPrimaria: string | null;
-    corSecundaria: string | null;
+    /** lojistas.configuracao_pagina como está no banco (RN46–RN48); normalizado aqui. */
+    configuracaoPagina: unknown;
     /** RN44: mostrar só o panfleto vigente, quando houver. */
     sePanfleto: boolean;
     status: StatusLojista;
@@ -51,10 +58,37 @@ export interface CategoriaDaPagina {
   produtos: ProdutoRow[];
 }
 
+export interface AparenciaDaPagina {
+  /** Valores crus (null = padrão), só para lojista.corPrimaria/corSecundaria da resposta (T4). */
+  coresEscolhidas: CoresGuardadas;
+  /** RN48: as 10 cores sempre resolvidas. */
+  cores: CoresResolvidas;
+  /** RN47 */
+  exibirNomeCategoria: boolean;
+  /** RN46: null com o banner desligado ou com o panfleto em exibição (U8). */
+  banner: Omit<BannerGuardado, 'exibir'> | null;
+}
+
 export interface PaginaPublica {
   filial: FilialPublicaRow;
   panfleto: PanfletoRow | null;
   categorias: CategoriaDaPagina[];
+  aparencia: AparenciaDaPagina;
+}
+
+/** A regra do banner fica só aqui: o React decide por aparencia.banner != null. */
+export function montarAparencia(
+  configuracaoPagina: unknown,
+  panfleto: PanfletoRow | null,
+): AparenciaDaPagina {
+  const config = normalizarConfiguracao(configuracaoPagina);
+  const { exibir, ...banner } = config.banner;
+  return {
+    coresEscolhidas: config.cores,
+    cores: resolverCores(config.cores),
+    exibirNomeCategoria: config.exibirNomeCategoria,
+    banner: exibir && panfleto === null ? banner : null,
+  };
 }
 
 /**
@@ -83,5 +117,10 @@ export function montarPagina(entrada: {
 
   const categorias = [...grupos.values()].filter((g) => g.produtos.length > 0).sort(compararPorPosicao);
   for (const grupo of categorias) grupo.produtos.sort(compararPorPosicao);
-  return { filial: entrada.filial, panfleto: entrada.panfleto, categorias };
+  return {
+    filial: entrada.filial,
+    panfleto: entrada.panfleto,
+    categorias,
+    aparencia: montarAparencia(entrada.filial.lojista.configuracaoPagina, entrada.panfleto),
+  };
 }

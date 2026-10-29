@@ -51,6 +51,7 @@ export function umLojista() {
   sequencia += 1;
   let email = `lojista${sequencia}@teste.com.br`;
   let status: StatusLojista = StatusLojista.AGUARDANDO_ATIVACAO;
+  let configuracaoPagina: object | undefined;
   const senha = 'senhaForte1';
 
   const builder = {
@@ -62,6 +63,11 @@ export function umLojista() {
       status = valor;
       return builder;
     },
+    /** RN46–RN48: grava o jsonb como está (formato interno, com paths), sem passar pela API. */
+    comConfiguracaoPagina(valor: object) {
+      configuracaoPagina = valor;
+      return builder;
+    },
     async criar(app: AppDeTeste, sequelize: Sequelize): Promise<LojistaCriado> {
       const resposta = await app
         .http()
@@ -71,6 +77,7 @@ export function umLojista() {
         .expect(201);
       const id: string = resposta.body.lojista.id;
       if (status !== StatusLojista.AGUARDANDO_ATIVACAO) await definirStatus(sequelize, id, status);
+      if (configuracaoPagina) await definirConfiguracaoPagina(sequelize, id, configuracaoPagina);
       return { id, email, senha, token: resposta.body.token };
     },
   };
@@ -81,4 +88,13 @@ export function definirStatus(sequelize: Sequelize, lojistaId: string, status: S
   return sequelize.query('UPDATE lojista_ativacoes SET status = :status WHERE lojista_id = :lojistaId', {
     replacements: { status, lojistaId },
   });
+}
+
+export function definirConfiguracaoPagina(sequelize: Sequelize, lojistaId: string, configuracao: object) {
+  return sequelize.query(
+    'UPDATE lojistas SET configuracao_pagina = CAST(:json AS jsonb) WHERE id = :lojistaId',
+    {
+      replacements: { json: JSON.stringify(configuracao), lojistaId },
+    },
+  );
 }

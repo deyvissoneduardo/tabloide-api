@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { ApiDataISO } from '../../../common/swagger/data-iso.decorator';
 import type { DataISO } from '../../../common/utils/date-only';
 import { EnderecoFilialView, enderecoView } from '../../filiais/views/filial.view';
-import type { PaginaPublica, ProdutoRow } from '../domain/montar-pagina';
+import type { AparenciaDaPagina, PaginaPublica, ProdutoRow } from '../domain/montar-pagina';
 
 export class ProdutoPublicoJson {
   nome!: string;
@@ -19,8 +19,49 @@ export class ProdutoPublicoJson {
 export class LojistaPublicoJson {
   nome!: string;
   logoUrl!: string | null;
+  /** Valor cru escolhido (null = padrão), mantido para o React antigo; use aparencia.cores. */
   corPrimaria!: string | null;
   corSecundaria!: string | null;
+}
+
+/** RN48: sempre as 10 cores, já resolvidas (#RRGGBB). */
+export class CoresPublicasJson {
+  @ApiProperty({ example: '#C8102E' }) primaria!: string;
+  @ApiProperty({ example: '#996B00' }) secundaria!: string;
+  @ApiProperty({ example: '#1F1F1F' }) texto!: string;
+  @ApiProperty({ example: '#5C5C5C' }) textoSuave!: string;
+  @ApiProperty({ example: '#FFFFFF' }) fundoCartao!: string;
+  @ApiProperty({ example: '#F3F4F6' }) fundoPagina!: string;
+  @ApiProperty({ example: '#EEEEEE' }) neutra!: string;
+  @ApiProperty({ example: '#FFFFFF' }) sobreCor!: string;
+  @ApiProperty({ example: '#0B3D91' }) fundoBanner!: string;
+  @ApiProperty({ example: '#C8102E' }) categoria!: string;
+}
+
+/** FOTO (16:9) ou DESCRICAO. */
+export class CampanhaPublicaJson {
+  @ApiProperty({ enum: ['FOTO', 'DESCRICAO'] })
+  tipo!: 'FOTO' | 'DESCRICAO';
+  /** Só em FOTO. */
+  fotoUrl?: string;
+  /** Só em DESCRICAO. */
+  descricao?: string;
+}
+
+/** RN46: chaves ausentes quando não há valor; {} = só a faixa na cor fundoBanner. */
+export class BannerPublicoJson {
+  nome?: string;
+  logoUrl?: string;
+  campanha?: CampanhaPublicaJson;
+}
+
+export class AparenciaPublicaJson {
+  cores!: CoresPublicasJson;
+  /** RN47: false = grade única, sem nome, contador nem barra da categoria. */
+  exibirNomeCategoria!: boolean;
+  /** null com o banner desligado ou com o panfleto em exibição (RN46, RN44). */
+  @ApiProperty({ type: () => BannerPublicoJson, nullable: true })
+  banner!: BannerPublicoJson | null;
 }
 
 export class FilialPublicaJson {
@@ -61,6 +102,7 @@ export class PaginaPublicaJson {
   @ApiProperty({ type: () => PanfletoPublicoJson, nullable: true })
   panfleto!: PanfletoPublicoJson | null;
   estrutura!: EstruturaPublicaJson;
+  aparencia!: AparenciaPublicaJson;
   @ApiDataISO()
   hoje!: DataISO;
   geradoEm?: string;
@@ -85,6 +127,26 @@ function produtoJson(p: ProdutoRow, url: UrlPublica): ProdutoPublicoJson {
   };
 }
 
+function aparenciaJson(aparencia: AparenciaDaPagina, url: UrlPublica): AparenciaPublicaJson {
+  const { banner } = aparencia;
+  const campanha = banner?.campanha ?? null;
+  return {
+    cores: { ...aparencia.cores },
+    exibirNomeCategoria: aparencia.exibirNomeCategoria,
+    banner: banner && {
+      ...seHouver('nome', banner.nome),
+      ...seHouver('logoUrl', banner.logoPath === null ? null : url(banner.logoPath)),
+      ...seHouver<'campanha', CampanhaPublicaJson>(
+        'campanha',
+        campanha &&
+          (campanha.tipo === 'FOTO'
+            ? { tipo: 'FOTO', fotoUrl: url(campanha.fotoPath) }
+            : { tipo: 'DESCRICAO', descricao: campanha.descricao }),
+      ),
+    },
+  };
+}
+
 /**
  * Só o que a página precisa (RNF05): nenhum id, tenant, fuso, status, path de storage nem
  * timestamp interno. geradoEm entra depois, fora do cálculo do ETag.
@@ -100,8 +162,8 @@ export function paginaPublicaView(
     lojista: {
       nome: filial.lojista.nomeFantasia,
       logoUrl: filial.lojista.logoPath === null ? null : url(filial.lojista.logoPath),
-      corPrimaria: filial.lojista.corPrimaria,
-      corSecundaria: filial.lojista.corSecundaria,
+      corPrimaria: pagina.aparencia.coresEscolhidas.primaria,
+      corSecundaria: pagina.aparencia.coresEscolhidas.secundaria,
     },
     sePanfleto,
     filial: { nome: filial.nome, endereco: enderecoView(filial.endereco) },
@@ -118,6 +180,7 @@ export function paginaPublicaView(
         produtos: c.produtos.map((p) => produtoJson(p, url)),
       })),
     },
+    aparencia: aparenciaJson(pagina.aparencia, url),
     hoje,
   };
 }

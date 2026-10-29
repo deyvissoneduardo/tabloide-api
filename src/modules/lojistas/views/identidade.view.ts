@@ -1,7 +1,9 @@
+import type { CoresGuardadas } from '../domain/configuracao-pagina';
 import type { Lojista } from '../models/lojista.model';
 
 export class IdentidadeView {
   nomeFantasia!: string;
+  /** Lida de configuracao_pagina.cores (RN48); null = padrão. */
   corPrimaria!: string | null;
   corSecundaria!: string | null;
   urlLogo!: string | null;
@@ -10,11 +12,15 @@ export class IdentidadeView {
 }
 
 /** O logo sempre cabe em 512 px; o front reserva um quadrado com object-fit: contain. */
-export function identidadeView(lojista: Lojista, urlLogo: string | null): IdentidadeView {
+export function identidadeView(
+  lojista: Lojista,
+  cores: Pick<CoresGuardadas, 'primaria' | 'secundaria'>,
+  urlLogo: string | null,
+): IdentidadeView {
   return {
     nomeFantasia: lojista.nomeFantasia,
-    corPrimaria: lojista.corPrimaria ?? null,
-    corSecundaria: lojista.corSecundaria ?? null,
+    corPrimaria: cores.primaria,
+    corSecundaria: cores.secundaria,
     urlLogo,
     sePanfleto: lojista.sePanfleto,
   };

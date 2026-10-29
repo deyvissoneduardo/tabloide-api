@@ -21,3 +21,6 @@ export const TextoOpcional = (vazio: undefined | null = undefined) =>
 
 /** Multipart só tem texto: "1299" vira 1299. "12.5", "abc" e "" seguem como texto e caem no @IsInt. */
 export const InteiroDeFormulario = () => seTexto((v) => (/^-?\d+$/.test(v.trim()) ? Number(v) : v));
+
+/** Cor em maiúsculas, como exige COR_HEX; null segue como null (volta ao padrão). */
+export const CorMaiuscula = () => seTexto((v) => v.trim().toUpperCase());

@@ -1,15 +1,7 @@
 import { ApiHideProperty } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
 import { IsBoolean, IsOptional, IsString, Length, Matches, ValidateIf } from 'class-validator';
-import { NormalizarEspacos } from '../../../common/validators/transformacoes';
-import { AoMenosUmCampo } from '../../../common/validators/validadores';
-
-const COR_HEX = /^#[0-9A-F]{6}$/;
-const MENSAGEM_COR = 'Informe a cor no formato #RRGGBB.';
-
-/** Normaliza para maiúsculas, como exige o CHECK do banco; null segue como null (remove a cor). */
-const CorMaiuscula = () =>
-  Transform(({ value }) => (typeof value === 'string' ? value.trim().toUpperCase() : value));
+import { CorMaiuscula, NormalizarEspacos } from '../../../common/validators/transformacoes';
+import { AoMenosUmCampo, COR_HEX, MENSAGEM_COR } from '../../../common/validators/validadores';
 
 export class EditarIdentidadeDto {
   @NormalizarEspacos()

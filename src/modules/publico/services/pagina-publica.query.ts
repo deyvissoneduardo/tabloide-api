@@ -19,7 +19,7 @@ const SQL_FILIAL_POR_CODIGO = `
   SELECT f.id, f.tenant_id AS "tenantId", f.nome, f.fuso_horario AS "fusoHorario",
          e.cep, e.logradouro, e.numero, e.complemento, e.bairro, e.cidade, e.uf,
          l.nome_fantasia AS "nomeFantasia", l.logo_path AS "logoPath",
-         l.cor_primaria AS "corPrimaria", l.cor_secundaria AS "corSecundaria",
+         l.configuracao_pagina AS "configuracaoPagina",
          l.se_panfleto AS "sePanfleto", a.status
   FROM filiais f
   JOIN lojistas l          ON l.id = f.tenant_id
@@ -38,8 +38,7 @@ interface LinhaFilial extends ColunasEndereco {
   fusoHorario: string;
   nomeFantasia: string;
   logoPath: string | null;
-  corPrimaria: string | null;
-  corSecundaria: string | null;
+  configuracaoPagina: unknown;
   sePanfleto: boolean;
   status: StatusLojista;
 }
@@ -59,7 +58,7 @@ export class PaginaPublicaQuery {
       type: QueryTypes.SELECT,
     });
     if (!linha) return null;
-    const { nomeFantasia, logoPath, corPrimaria, corSecundaria, sePanfleto, status, ...resto } = linha;
+    const { nomeFantasia, logoPath, configuracaoPagina, sePanfleto, status, ...resto } = linha;
     const { cep, logradouro, numero, complemento, bairro, cidade, uf, ...filial } = resto;
     // as colunas são NOT NULL: só vêm null juntas, quando a filial não tem endereço
     const endereco =
@@ -67,7 +66,7 @@ export class PaginaPublicaQuery {
     return {
       ...filial,
       endereco,
-      lojista: { nomeFantasia, logoPath, corPrimaria, corSecundaria, sePanfleto, status },
+      lojista: { nomeFantasia, logoPath, configuracaoPagina, sePanfleto, status },
     };
   }
 

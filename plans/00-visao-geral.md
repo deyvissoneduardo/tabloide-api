@@ -168,7 +168,7 @@ Todas as tabelas de tenant têm `id uuid PK`, `tenant_id uuid NOT NULL FK lojist
 
 | Tabela | Fase | Colunas principais | Restrições e índices |
 | --- | --- | --- | --- |
-| `lojistas` | 1 | `nome_fantasia varchar(120)`, `nome_responsavel varchar(120)`, `email citext`, `senha_hash text`, `whatsapp varchar(20)` (E.164), `cnpj char(14) NULL`, `logo_path text NULL`, `cor_primaria char(7) NULL`, `cor_secundaria char(7) NULL`, `se_panfleto boolean NOT NULL DEFAULT false` (RN44, página pública) | `UNIQUE(email)` (RN37), `CHECK cor ~ '^#[0-9A-F]{6}$'` |
+| `lojistas` | 1 | `nome_fantasia varchar(120)`, `nome_responsavel varchar(120)`, `email citext`, `senha_hash text`, `whatsapp varchar(20)` (E.164), `cnpj char(14) NULL`, `logo_path text NULL`, `cor_primaria char(7) NULL`, `cor_secundaria char(7) NULL` (só até a contração; a fonte de verdade das cores é `configuracao_pagina.cores`), `se_panfleto boolean NOT NULL DEFAULT false` (RN44, página pública), `configuracao_pagina jsonb NOT NULL DEFAULT '{}'` (RN46–RN48: banner, `exibirNomeCategoria` e 10 cores; chave ausente = padrão, lida por `normalizarConfiguracao`) | `UNIQUE(email)` (RN37), `CHECK cor ~ '^#[0-9A-F]{6}$'`; sem CHECK no jsonb (validado no DTO e normalizado na leitura) |
 | `lojista_ativacoes` | 1 | `lojista_id uuid PK FK`, `status enum`, `funcionalidades jsonb DEFAULT '{}'`, `observacao text NULL`, `atualizado_em timestamptz` | criada junto com o lojista, na mesma transação |
 | `filiais` | 2 | `nome varchar(120)`, `endereco varchar(300)`, `fuso_horario varchar(64) DEFAULT 'America/Sao_Paulo'`, `codigo_publico varchar(8)` | `UNIQUE(codigo_publico)`; índice `(tenant_id) WHERE deleted_at IS NULL` |
 | `auditoria_alteracoes` | 2 | `tenant_id`, `entidade varchar(30)`, `entidade_id uuid`, `campo varchar(40)`, `valor_anterior text NULL`, `valor_novo text NULL`, `alterado_em timestamptz`, `request_id varchar(40)` | append-only; índice `(tenant_id, entidade, entidade_id, alterado_em)` |
@@ -310,6 +310,7 @@ Uma interface definida numa fase é a fonte de verdade para as seguintes: as fas
 | `MidiaService.processarPanfleto(tenantId, buffer)`: imagem (WebP) ou PDF de 1 página guardado como veio, decidido pelos magic bytes | `modules/midia` | página pública | 3 (panfletos) |
 | `filtroSituacao(situacoes, hoje)` e `condicaoAgendado/Vigente/Vencido(hoje)`; filtro `situacao` em CSV maiúsculo (`AGENDADO,VIGENTE,VENCIDO,EXCLUIDO`) | `modules/vigencia/consultas/filtro-situacao.ts` | 3 | 4 |
 | Índices `panfletos_periodo_sem_sobreposicao` (GiST) e `produtos_filial_ativos_idx` | migrations | 3, 4 | 5 (consultas públicas) |
+| Aparência da página (RN46–RN48): `normalizarConfiguracao`, `resolverCores`, `aplicarEdicao`, `CORES_PADRAO`; rotas `GET/PATCH /painel/lojista/pagina`, `PUT/DELETE /painel/lojista/pagina/banner/{logo,foto}`; bloco `aparencia` em `GET /publico/filiais/:codigo` (contratos em `docs/plano_pagina_publica_melhorias/plano.md` §4); perfil de mídia `banner` (1600 px) | `modules/lojistas/domain/configuracao-pagina.ts`, `modules/lojistas`, `modules/publico` | página pública (melhorias) | painel, página pública React; `GET/PATCH /painel/lojista/identidade` leem e gravam as cores no JSON |
 
 ## Decisões técnicas tomadas nos planos
 
@@ -356,3 +357,4 @@ Decisões que não estavam nos documentos de regras. As marcadas como **confirma
 | 5 | Imagem Docker `bookworm-slim`; API no pooler do Supabase (6543) e migrations/backup na porta 5432; PostgREST sem acesso às tabelas | técnica |
 | 5 | Backup: `pg_dump` diário criptografado e cópia do bucket para fora do Supabase (ex.: R2), retenção de 30 dias | técnica |
 | 5 | Health em `/v1/saude/vivo` e `/v1/saude/pronto`; métricas em `/v1/admin/metricas` com `X-Admin-Key` | técnica |
+| página | Aparência da página por lojista num `jsonb` (`lojistas.configuracao_pagina`); a API resolve as 10 cores na resposta pública e decide o banner (nulo com o banner desligado ou com o panfleto em exibição); edição sem mudança não grava nem emite evento; sem auditoria (como a identidade) | **confirmada** (29/10/2026) |

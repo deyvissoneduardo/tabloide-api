@@ -25,8 +25,7 @@ export function umaFilialPublica() {
     lojista: {
       nomeFantasia: 'Mercado Bom Preço',
       logoPath: null,
-      corPrimaria: null,
-      corSecundaria: null,
+      configuracaoPagina: {},
       sePanfleto: false,
       status: StatusLojista.ATIVO,
     },
