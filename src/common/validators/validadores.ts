@@ -42,3 +42,7 @@ export function AoMenosUmCampo(opcoes?: ValidationOptions): PropertyDecorator {
       },
     });
 }
+
+/** Cor #RRGGBB em maiúsculas (o CHECK do banco e a aparência da página exigem maiúsculas). */
+export const COR_HEX = /^#[0-9A-F]{6}$/;
+export const MENSAGEM_COR = 'Informe a cor no formato #RRGGBB.';

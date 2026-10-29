@@ -176,9 +176,52 @@ describe('Funcionalidade: Migrations', () => {
       await banco.migrador.down({ to: '20261106000000-criar-logs-erro.js' });
       const [sumiu] = await sql(`SELECT 1 FROM pg_tables WHERE tablename = 'logs_erro'`);
       expect(sumiu).toEqual([]);
-      await expect(banco.migrador.up()).resolves.toEqual([
-        expect.objectContaining({ name: '20261106000000-criar-logs-erro.js' }),
+      await expect(banco.migrador.up()).resolves.toEqual(
+        expect.arrayContaining([expect.objectContaining({ name: '20261106000000-criar-logs-erro.js' })]),
+      );
+    });
+  });
+
+  describe('Funcionalidade: Aparência da página em jsonb (RN46–RN48)', () => {
+    const MIGRATION = '20261107000000-adicionar-configuracao-pagina-lojistas.js';
+    const lojistas = async () => {
+      const [linhas] = await sql(
+        `SELECT email, cor_primaria, cor_secundaria, configuracao_pagina FROM lojistas ORDER BY email`,
+      );
+      return linhas as Array<Record<string, unknown>>;
+    };
+
+    it('Então a coluna é jsonb NOT NULL DEFAULT {} e lojista novo nasce com {}', async () => {
+      const [coluna] = await sql(
+        `SELECT data_type, is_nullable, column_default FROM information_schema.columns
+         WHERE table_name = 'lojistas' AND column_name = 'configuracao_pagina'`,
+      );
+      expect(coluna).toEqual([{ data_type: 'jsonb', is_nullable: 'NO', column_default: "'{}'::jsonb" }]);
+      await inserirLojista();
+      expect((await lojistas())[0]!.configuracao_pagina).toEqual({});
+    });
+
+    it('E o up copia as cores existentes para o JSON; lojista sem cor fica com {}', async () => {
+      await banco.migrador.down({ to: MIGRATION });
+      await inserirLojista({ email: 'a@x.com', cor: '#C8102E' });
+      await inserirLojista({ email: 'b@x.com', whatsapp: '+5511987654322' });
+      await sql(`UPDATE lojistas SET cor_secundaria = '#FFD100' WHERE email = 'a@x.com'`);
+      await banco.migrador.up();
+      expect((await lojistas()).map((l) => l.configuracao_pagina)).toEqual([
+        { cores: { primaria: '#C8102E', secundaria: '#FFD100' } },
+        {},
       ]);
+    });
+
+    it('E o down devolve às colunas as cores editadas no JSON, e o up de novo funciona', async () => {
+      await inserirLojista({ email: 'a@x.com', cor: '#C8102E' });
+      await sql(
+        `UPDATE lojistas SET configuracao_pagina = '{"cores":{"primaria":"#0B3D91","texto":"#112233"}}'`,
+      );
+      await banco.migrador.down({ to: MIGRATION });
+      const [linhas] = await sql('SELECT cor_primaria, cor_secundaria FROM lojistas');
+      expect(linhas).toEqual([{ cor_primaria: '#0B3D91', cor_secundaria: null }]);
+      await expect(banco.migrador.up()).resolves.toEqual([expect.objectContaining({ name: MIGRATION })]);
     });
   });
 

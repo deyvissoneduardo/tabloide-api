@@ -1,0 +1,103 @@
+# Tabloide Digital API — Aparência da página pública (RN46–RN48)
+# Banner, "mostrar nome da categoria" e 10 cores, por lojista (vale para todas as filiais).
+# Contratos: docs/plano_pagina_publica_melhorias/plano.md §4. Ajuste "< ./logo.png" e "< ./banner.jpg"
+# para imagens locais (dentro do limite de imagem do lojista).
+
+@base = http://localhost:3000/v1
+
+### Login
+# @name login
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "ana@bompreco.com.br", "senha": "senhaForte1" }
+
+@token = {{login.response.body.token}}
+
+### Filial (para ver a página pública)
+# @name filial
+POST {{base}}/painel/filiais
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Centro" }
+
+@codigo = {{filial.response.body.codigoPublico}}
+
+### Aparência atual: valores crus (null = padrão)
+GET {{base}}/painel/lojista/pagina
+Authorization: Bearer {{token}}
+
+### Liga o banner com nome e descrição; desliga o nome da categoria; escolhe 3 cores
+PATCH {{base}}/painel/lojista/pagina
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "banner": { "exibir": true, "nome": "Semana do Hortifrúti", "descricao": "Frutas e verduras fresquinhas" },
+  "exibirNomeCategoria": false,
+  "cores": { "primaria": "#c8102e", "fundoBanner": "#0B3D91", "categoria": "#0B8043" }
+}
+
+### Volta uma cor ao padrão (null) e remove o nome do banner
+PATCH {{base}}/painel/lojista/pagina
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "banner": { "nome": null }, "cores": { "categoria": null } }
+
+### Cor inválida → 400 VALIDACAO_INVALIDA (detalhes.campos["cores.texto"])
+PATCH {{base}}/painel/lojista/pagina
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "cores": { "texto": "#12345" } }
+
+### Logo do banner (até 512 px)
+PUT {{base}}/painel/lojista/pagina/banner/logo
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=limite
+
+--limite
+Content-Disposition: form-data; name="imagem"; filename="logo.png"
+Content-Type: image/png
+
+< ./logo.png
+--limite--
+
+### Foto da campanha (16:9, até 1600 px): substitui a descrição
+PUT {{base}}/painel/lojista/pagina/banner/foto
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=limite
+
+--limite
+Content-Disposition: form-data; name="imagem"; filename="banner.jpg"
+Content-Type: image/jpeg
+
+< ./banner.jpg
+--limite--
+
+### Página pública: bloco "aparencia" com as 10 cores resolvidas e o banner (sem paths)
+GET {{base}}/publico/filiais/{{codigo}}
+
+### Remove a foto (campanha FOTO vira null; com DESCRICAO nada muda)
+DELETE {{base}}/painel/lojista/pagina/banner/foto
+Authorization: Bearer {{token}}
+
+### Remove o logo do banner (o arquivo fica no storage)
+DELETE {{base}}/painel/lojista/pagina/banner/logo
+Authorization: Bearer {{token}}
+
+### Identidade (compatível): corPrimaria/corSecundaria lidas de configuracao_pagina.cores
+GET {{base}}/painel/lojista/identidade
+Authorization: Bearer {{token}}
+
+### Desliga o banner: a página volta ao cabeçalho (aparencia.banner = null)
+PATCH {{base}}/painel/lojista/pagina
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "banner": { "exibir": false } }
+
+###
+GET {{base}}/publico/filiais/{{codigo}}

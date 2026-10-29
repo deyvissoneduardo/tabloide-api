@@ -1,7 +1,12 @@
 import { umEndereco } from '../../../../../test/factories/endereco-filial.factory';
 import type { DataISO } from '../../../../common/utils/date-only';
 import { StatusLojista } from '../../../lojistas/models/status-lojista';
-import type { PaginaPublica, PanfletoRow, ProdutoRow } from '../../domain/montar-pagina';
+import {
+  montarAparencia,
+  type PaginaPublica,
+  type PanfletoRow,
+  type ProdutoRow,
+} from '../../domain/montar-pagina';
 import { paginaPublicaView } from '../pagina-publica.view';
 
 const HOJE = '2026-10-18' as DataISO;
@@ -24,25 +29,26 @@ const umProduto = (dados: Partial<ProdutoRow> = {}): ProdutoRow => ({
 
 const umaPagina = (
   dados: { produtos?: ProdutoRow[]; panfleto?: PanfletoRow | null; lojista?: object } = {},
-) =>
-  ({
+) => {
+  const lojista = {
+    nomeFantasia: 'Mercado Bom Preço',
+    logoPath: 'logos/x.webp',
+    configuracaoPagina: { cores: { primaria: '#C8102E', secundaria: '#FFD100' } } as unknown,
+    sePanfleto: false,
+    status: StatusLojista.ATIVO,
+    ...dados.lojista,
+  };
+  const panfleto = dados.panfleto === undefined ? null : dados.panfleto;
+  return {
     filial: {
       id: '0192f0b4-0000-7000-8000-000000000001',
       tenantId: '0192f0a1-0000-7000-8000-000000000001',
       nome: 'Centro',
       endereco: umEndereco(),
       fusoHorario: 'America/Sao_Paulo',
-      lojista: {
-        nomeFantasia: 'Mercado Bom Preço',
-        logoPath: 'logos/x.webp',
-        corPrimaria: '#C8102E',
-        corSecundaria: '#FFD100',
-        sePanfleto: false,
-        status: StatusLojista.ATIVO,
-        ...dados.lojista,
-      },
+      lojista,
     },
-    panfleto: dados.panfleto === undefined ? null : dados.panfleto,
+    panfleto,
     categorias: [
       {
         id: '0192f0c1-0000-7000-8000-000000000001',
@@ -51,7 +57,9 @@ const umaPagina = (
         produtos: dados.produtos ?? [umProduto()],
       },
     ],
-  }) as PaginaPublica;
+    aparencia: montarAparencia(lojista.configuracaoPagina, panfleto),
+  } as PaginaPublica;
+};
 
 const primeiroProduto = (pagina: PaginaPublica) =>
   paginaPublicaView(pagina, false, url, HOJE).estrutura.categorias[0]!.produtos[0]!;
@@ -130,7 +138,15 @@ describe('Funcionalidade: View pública com campos mínimos (RN28, RN31, RN32, R
       expect(json.estrutura.categorias.map((c) => c.nome)).toEqual(['Bebidas']);
       expect(json).not.toHaveProperty('categorias');
       expect(json.panfleto).not.toHaveProperty('imagemUrl');
-      expect(Object.keys(json)).toEqual(['lojista', 'sePanfleto', 'filial', 'panfleto', 'estrutura', 'hoje']);
+      expect(Object.keys(json)).toEqual([
+        'lojista',
+        'sePanfleto',
+        'filial',
+        'panfleto',
+        'estrutura',
+        'aparencia',
+        'hoje',
+      ]);
     });
   });
 
@@ -193,7 +209,7 @@ describe('Funcionalidade: View pública com campos mínimos (RN28, RN31, RN32, R
     it('Então logoUrl, corPrimaria e corSecundaria são null', () =>
       expect(
         paginaPublicaView(
-          umaPagina({ lojista: { logoPath: null, corPrimaria: null, corSecundaria: null } }),
+          umaPagina({ lojista: { logoPath: null, configuracaoPagina: {} } }),
           false,
           url,
           HOJE,
@@ -247,5 +263,118 @@ describe('Funcionalidade: View pública com campos mínimos (RN28, RN31, RN32, R
       for (const v of valores)
         expect(String(v)).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
     });
+  });
+});
+
+describe('Funcionalidade: Aparência na resposta pública (RN46, RN47, RN48)', () => {
+  const PANFLETO: PanfletoRow = {
+    tipoArquivo: 'IMAGEM',
+    imagemPath: 't/panfleto/p.webp',
+    imagemLargura: 1,
+    imagemAltura: 1,
+    dataLimite: null,
+  };
+  const aparencia = (configuracaoPagina: unknown, panfleto: PanfletoRow | null = null) =>
+    paginaPublicaView(umaPagina({ lojista: { configuracaoPagina }, panfleto }), false, url, HOJE).aparencia;
+
+  describe('Cenário: lojista sem configuração', () => {
+    it('Então as 10 cores de hoje, nome da categoria ligado e sem banner', () =>
+      expect(aparencia({})).toEqual({
+        cores: {
+          primaria: '#1565C0',
+          secundaria: '#996B00',
+          texto: '#1F1F1F',
+          textoSuave: '#5C5C5C',
+          fundoCartao: '#FFFFFF',
+          fundoPagina: '#F3F4F6',
+          neutra: '#EEEEEE',
+          sobreCor: '#FFFFFF',
+          fundoBanner: '#1565C0',
+          categoria: '#1565C0',
+        },
+        exibirNomeCategoria: true,
+        banner: null,
+      }));
+  });
+
+  describe('Cenário: cores escolhidas', () => {
+    it('Então saem exatas, e fundoBanner/categoria seguem a primária escolhida', () =>
+      expect(aparencia({ cores: { primaria: '#FFD100', texto: '#112233' } }).cores).toMatchObject({
+        primaria: '#FFD100',
+        texto: '#112233',
+        fundoBanner: '#FFD100',
+        categoria: '#FFD100',
+      }));
+
+    it('E lojista.corPrimaria/corSecundaria trazem o valor cru do JSON (null = padrão)', () =>
+      expect(
+        paginaPublicaView(
+          umaPagina({ lojista: { configuracaoPagina: { cores: { primaria: '#FFD100' } } } }),
+          false,
+          url,
+          HOJE,
+        ).lojista,
+      ).toMatchObject({ corPrimaria: '#FFD100', corSecundaria: null }));
+  });
+
+  describe('Cenário: nome da categoria desligado', () => {
+    it('Então exibirNomeCategoria é false', () =>
+      expect(aparencia({ exibirNomeCategoria: false }).exibirNomeCategoria).toBe(false));
+  });
+
+  describe('Cenário: banner desligado', () => {
+    it('Então banner é null mesmo com conteúdo', () =>
+      expect(aparencia({ banner: { exibir: false, nome: 'Semana' } }).banner).toBeNull());
+  });
+
+  describe('Cenário: banner ligado com o panfleto em exibição (RN44)', () => {
+    it('Então banner é null', () =>
+      expect(aparencia({ banner: { exibir: true, nome: 'Semana' } }, PANFLETO).banner).toBeNull());
+  });
+
+  describe('Cenário: banner ligado sem nada', () => {
+    it('Então banner é {} (só a faixa de cor)', () =>
+      expect(aparencia({ banner: { exibir: true } }).banner).toEqual({}));
+  });
+
+  describe('Cenário: banner com nome, logo e foto', () => {
+    it('Então URLs públicas, sem path', () =>
+      expect(
+        aparencia({
+          banner: {
+            exibir: true,
+            nome: 'Semana do Hortifrúti',
+            logoPath: 't/logo/l.webp',
+            campanha: { tipo: 'FOTO', fotoPath: 't/banner/b.webp' },
+          },
+        }).banner,
+      ).toEqual({
+        nome: 'Semana do Hortifrúti',
+        logoUrl: 'https://cdn/t/logo/l.webp',
+        campanha: { tipo: 'FOTO', fotoUrl: 'https://cdn/t/banner/b.webp' },
+      }));
+  });
+
+  describe('Cenário: campanha com descrição', () => {
+    it('Então campanha.tipo é DESCRICAO com o texto', () =>
+      expect(
+        aparencia({ banner: { exibir: true, campanha: { tipo: 'DESCRICAO', descricao: 'Tudo fresco' } } })
+          .banner,
+      ).toEqual({ campanha: { tipo: 'DESCRICAO', descricao: 'Tudo fresco' } }));
+  });
+
+  describe('Cenário: nenhum path no bloco aparencia (RNF05)', () => {
+    it('Então nenhuma chave termina em Path', () =>
+      expect(
+        JSON.stringify(
+          aparencia({
+            banner: {
+              exibir: true,
+              logoPath: 't/logo/l.webp',
+              campanha: { tipo: 'FOTO', fotoPath: 't/banner/b.webp' },
+            },
+          }),
+        ),
+      ).not.toMatch(/Path"/));
   });
 });

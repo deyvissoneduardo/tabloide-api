@@ -32,8 +32,7 @@ describe('Funcionalidade: Consultas da página pública', () => {
           ...umEndereco(),
           nomeFantasia: 'M',
           logoPath: null,
-          corPrimaria: '#C8102E',
-          corSecundaria: null,
+          configuracaoPagina: { cores: { primaria: '#C8102E' } },
           sePanfleto: true,
           status: 'ATIVO',
         },
@@ -47,8 +46,7 @@ describe('Funcionalidade: Consultas da página pública', () => {
         lojista: {
           nomeFantasia: 'M',
           logoPath: null,
-          corPrimaria: '#C8102E',
-          corSecundaria: null,
+          configuracaoPagina: { cores: { primaria: '#C8102E' } },
           sePanfleto: true,
           status: 'ATIVO',
         },
@@ -56,6 +54,7 @@ describe('Funcionalidade: Consultas da página pública', () => {
       const [sql, opcoes] = sequelize.query.mock.calls[0]!;
       expect(sql).toContain('f.deleted_at IS NULL');
       expect(sql).toContain('l.se_panfleto AS "sePanfleto"');
+      expect(sql).toContain('l.configuracao_pagina AS "configuracaoPagina"');
       expect(sql).toContain(
         'LEFT JOIN filial_enderecos e ON e.filial_id = f.id AND e.tenant_id = f.tenant_id',
       );

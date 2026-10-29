@@ -48,6 +48,7 @@ describe('Funcionalidade: Processar imagem enviada (RNF02, RNF05)', () => {
       ['panfleto', 2400],
       ['produto', 800],
       ['logo', 512],
+      ['banner', 1600],
     ])('Dado o perfil %s, o lado maior é %i', async (perfil, max) => {
       const r = await processador().processar(await imagens.jpeg(5000, 5000), perfil);
       expect(Math.max(r.largura, r.altura)).toBe(max);

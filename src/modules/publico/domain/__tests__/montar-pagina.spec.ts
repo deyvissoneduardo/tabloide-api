@@ -11,8 +11,7 @@ const FILIAL: FilialPublicaRow = {
   lojista: {
     nomeFantasia: 'M',
     logoPath: null,
-    corPrimaria: null,
-    corSecundaria: null,
+    configuracaoPagina: {},
     sePanfleto: false,
     status: StatusLojista.ATIVO,
   },
@@ -145,5 +144,38 @@ describe('Funcionalidade: Montagem da página pública (RN29, RN30, RN41, RN45)'
       expect(
         resumo(montar([produto('1', 'X', ['c1', 'Bebidas'])], [{ id: 'c9', nome: 'Vazia', posicao: 0 }])),
       ).toEqual([['Bebidas', ['X']]]));
+  });
+});
+
+describe('Funcionalidade: Aparência montada junto da página (RN46, RN44)', () => {
+  const comBanner = {
+    ...FILIAL,
+    lojista: { ...FILIAL.lojista, configuracaoPagina: { banner: { exibir: true } } },
+  };
+
+  describe('Cenário: banner ligado e página montada', () => {
+    it('Então aparencia.banner existe', () =>
+      expect(montarPagina({ filial: comBanner, panfleto: null, produtos: [] }).aparencia.banner).toEqual({
+        nome: null,
+        logoPath: null,
+        campanha: null,
+      }));
+  });
+
+  describe('Cenário: banner ligado e panfleto em exibição', () => {
+    it('Então aparencia.banner é null', () =>
+      expect(
+        montarPagina({
+          filial: comBanner,
+          panfleto: {
+            tipoArquivo: 'IMAGEM',
+            imagemPath: 't/panfleto/p.webp',
+            imagemLargura: 1,
+            imagemAltura: 1,
+            dataLimite: null,
+          },
+          produtos: [],
+        }).aparencia.banner,
+      ).toBeNull());
   });
 });

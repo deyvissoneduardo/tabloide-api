@@ -161,6 +161,24 @@ describe('Funcionalidade: Documentação OpenAPI', () => {
       expect(pagina.categorias).toBeUndefined();
     });
 
+    it('E a aparência da página tem as rotas do painel e o bloco aparencia na pública (RN46–RN48)', () => {
+      const rota = spec.paths['/v1/painel/lojista/pagina']!;
+      expect(rota.get!.security).toEqual([{ jwt: [] }]);
+      expect(rota.patch).toBeDefined();
+      for (const imagem of ['logo', 'foto']) {
+        const banner = spec.paths[`/v1/painel/lojista/pagina/banner/${imagem}`]!;
+        expect(banner.delete).toBeDefined();
+        const corpo = banner.put!.requestBody!.content['multipart/form-data']!.schema;
+        expect(corpo.properties!.imagem!.format).toBe('binary');
+      }
+      const aparencia = spec.components.schemas.AparenciaPublicaJson!.properties!;
+      expect(Object.keys(spec.components.schemas.CoresPublicasJson!.properties!)).toHaveLength(10);
+      expect(aparencia.banner!.nullable).toBe(true);
+      expect(JSON.stringify(spec.components.schemas.PaginaPublicaJson!.properties!.aparencia)).toContain(
+        '#/components/schemas/AparenciaPublicaJson',
+      );
+    });
+
     it('E o panfleto aceita os erros de PDF (RN13)', () => {
       const respostas = spec.paths['/v1/painel/filiais/{filialId}/panfletos']!.post!.responses;
       expect(Object.keys(respostas['422']!.content!['application/json']!.examples!)).toEqual(

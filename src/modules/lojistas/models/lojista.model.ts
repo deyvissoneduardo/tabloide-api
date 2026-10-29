@@ -1,5 +1,6 @@
 import type { CreationOptional } from 'sequelize';
 import { Column, DataType, HasOne, Model, PrimaryKey, Table } from 'sequelize-typescript';
+import type { ConfiguracaoPaginaGuardada } from '../domain/configuracao-pagina';
 import { LojistaAtivacao } from './lojista-ativacao.model';
 
 export interface AtributosLojista {
@@ -14,13 +15,21 @@ export interface AtributosLojista {
   corPrimaria: string | null;
   corSecundaria: string | null;
   sePanfleto: boolean;
+  /** RN46–RN48: aparência da página; lida sempre por normalizarConfiguracao (pode faltar chave). */
+  configuracaoPagina: ConfiguracaoPaginaGuardada;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export type AtributosCriacaoLojista = Omit<
   AtributosLojista,
-  'logoPath' | 'corPrimaria' | 'corSecundaria' | 'sePanfleto' | 'createdAt' | 'updatedAt'
+  | 'logoPath'
+  | 'corPrimaria'
+  | 'corSecundaria'
+  | 'sePanfleto'
+  | 'configuracaoPagina'
+  | 'createdAt'
+  | 'updatedAt'
 >;
 
 /** Lojista é o próprio tenant (tenant_id = lojistas.id); por isso não é @TenantScoped. */
@@ -65,6 +74,13 @@ export class Lojista extends Model<AtributosLojista, AtributosCriacaoLojista> {
   /** RN44: a página pública mostra só o panfleto vigente, quando houver. */
   @Column(DataType.BOOLEAN)
   declare sePanfleto: CreationOptional<boolean>;
+
+  /**
+   * RN46–RN48: banner, nome da categoria e 10 cores (jsonb, DEFAULT '{}'). Fonte de verdade das
+   * cores; corPrimaria/corSecundaria ficam só até a contração.
+   */
+  @Column({ type: DataType.JSONB, field: 'configuracao_pagina', allowNull: false, defaultValue: {} })
+  declare configuracaoPagina: CreationOptional<ConfiguracaoPaginaGuardada>;
 
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
