@@ -1,7 +1,7 @@
 $kind: http-request
 id: 5b641fa9-e33e-5565-bc1d-604e6acad6f8
 description: |-
-  Edição parcial de `nomeFantasia` (2–120), `corPrimaria` e `corSecundaria` (`#RRGGBB`; minúsculas são convertidas; `null` remove a cor) e `sePanfleto` (RN44, só `true`/`false`; `null` responde 400). Com `sePanfleto: true`, a página pública de cada filial com panfleto vigente mostra **só o panfleto**; filial sem panfleto vigente mostra os produtos. Vale para todas as filiais. Corpo vazio responde 400.
+  Edição parcial de `nomeFantasia` (2–120), `corPrimaria` e `corSecundaria` (`#RRGGBB`; minúsculas são convertidas; `null` volta ao padrão; grava em `cores.primaria`/`cores.secundaria` da **Aparência da página** sem mexer nas outras cores) e `sePanfleto` (RN44, só `true`/`false`; `null` responde 400). Com `sePanfleto: true`, a página pública de cada filial com panfleto vigente mostra **só o panfleto**; filial sem panfleto vigente mostra os produtos. Vale para todas as filiais. Corpo vazio responde 400.
 url: "{{baseUrl}}/painel/lojista/identidade"
 method: PATCH
 headers:

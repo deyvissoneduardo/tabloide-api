@@ -1,0 +1,30 @@
+$kind: http-request
+id: 53c0eab9-8c1a-5c2b-9c85-a57e4a41a9c2
+description: |-
+  Remove a foto da campanha (`campanha` vira `null`). Se a campanha for **descrição** (ou não houver campanha), nada muda e responde 200. O arquivo continua no storage.
+url: "{{baseUrl}}/painel/lojista/pagina/banner/foto"
+method: DELETE
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+      if (pm.response.code === 200) {
+        const corpo = pm.response.json();
+        pm.test('Formato da aparência', () => {
+          pm.expect(corpo).to.have.all.keys('banner', 'exibirNomeCategoria', 'cores');
+          pm.expect(corpo.banner).to.have.all.keys('exibir', 'nome', 'urlLogo', 'campanha');
+          pm.expect(corpo.exibirNomeCategoria).to.be.a('boolean');
+        });
+        pm.test('As 10 cores, #RRGGBB maiúsculo ou null', () => {
+          pm.expect(corpo.cores).to.have.all.keys('primaria', 'secundaria', 'texto', 'textoSuave', 'fundoCartao', 'fundoPagina', 'neutra', 'sobreCor', 'fundoBanner', 'categoria');
+          Object.values(corpo.cores).forEach((cor) => { if (cor !== null) pm.expect(cor).to.match(/^#[0-9A-F]{6}$/); });
+        });
+        pm.test('Sem tenant nem path de storage (RNF05)', () => {
+          pm.expect(pm.response.text()).to.not.match(/tenantId|Path"/);
+        });
+        pm.test('Campanha removida', () => pm.expect(corpo.banner.campanha).to.eql(null));
+      }
+    language: text/javascript
+examples: ./.resources/Remover foto do banner.resources/examples
+order: 8000

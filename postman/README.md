@@ -13,7 +13,7 @@ Coleção com todas as rotas da API, separada por módulo, com documentação, e
 | `arquivos/exemplo.jpg` | Imagem usada nos uploads |
 | `arquivos/exemplo.pdf` | PDF de 1 página usado em **Panfletos → Trocar panfleto por PDF** |
 
-Módulos (pastas): `01 Auth`, `02 Lojista`, `03 Identidade visual`, `04 Filiais`, `05 Panfletos`, `06 Categorias`, `07 Produtos`, `08 Auditoria`, `09 Página pública`, `10 Saúde`, `11 Admin`, `12 Estrutura da página` (ordem das categorias e produtos da página de cada filial). A visão geral (autenticação, contrato de erros com "como tratar", rate limits e convenções) está na descrição da coleção.
+Módulos (pastas): `01 Auth`, `02 Lojista`, `03 Identidade visual`, `04 Filiais`, `05 Panfletos`, `06 Categorias`, `07 Produtos`, `08 Auditoria`, `09 Página pública`, `10 Saúde`, `11 Admin`, `12 Estrutura da página` (ordem das categorias e produtos da página de cada filial), `13 Aparência da página` (banner, nome da categoria e as 10 cores da página pública, RN46–RN48). A visão geral (autenticação, contrato de erros com "como tratar", rate limits e convenções) está na descrição da coleção.
 
 ## Variáveis
 
@@ -39,7 +39,7 @@ postman collection run "postman/collections/Tabloide Digital API" \
   --env-var "adminKey=$ADMIN_API_KEY" --working-dir .
 ```
 
-A página pública só responde 200 para lojista **ATIVO**: depois do cadastro, ative o lojista no banco (`src/database/admin-ativacao.sql`). **Admin → Redefinir senha** troca a senha do lojista para `novaSenha`.
+A página pública (pastas 09 e **13 → Conferir na página pública**) só responde 200 para lojista **ATIVO**: depois do cadastro, ative o lojista no banco (`src/database/admin-ativacao.sql`). **Admin → Redefinir senha** troca a senha do lojista para `novaSenha`.
 
 As exclusões de filial e de categoria criam um recurso temporário no script de pré-requisição e excluem ele, para a coleção rodar de ponta a ponta sem apagar a filial e a categoria usadas pelos módulos seguintes.
 

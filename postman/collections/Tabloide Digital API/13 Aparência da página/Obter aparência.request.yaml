@@ -1,0 +1,29 @@
+$kind: http-request
+id: 519e19a4-2ad2-5c3a-8dc0-4d51e4572fe0
+description: |-
+  Banner, `exibirNomeCategoria` e as 10 cores **cruas** (`null` = padrão). Lojista sem configuração recebe tudo padrão: banner desligado, nome da categoria ligado e as 10 cores `null`.
+url: "{{baseUrl}}/painel/lojista/pagina"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+      if (pm.response.code === 200) {
+        const corpo = pm.response.json();
+        pm.test('Formato da aparência', () => {
+          pm.expect(corpo).to.have.all.keys('banner', 'exibirNomeCategoria', 'cores');
+          pm.expect(corpo.banner).to.have.all.keys('exibir', 'nome', 'urlLogo', 'campanha');
+          pm.expect(corpo.exibirNomeCategoria).to.be.a('boolean');
+        });
+        pm.test('As 10 cores, #RRGGBB maiúsculo ou null', () => {
+          pm.expect(corpo.cores).to.have.all.keys('primaria', 'secundaria', 'texto', 'textoSuave', 'fundoCartao', 'fundoPagina', 'neutra', 'sobreCor', 'fundoBanner', 'categoria');
+          Object.values(corpo.cores).forEach((cor) => { if (cor !== null) pm.expect(cor).to.match(/^#[0-9A-F]{6}$/); });
+        });
+        pm.test('Sem tenant nem path de storage (RNF05)', () => {
+          pm.expect(pm.response.text()).to.not.match(/tenantId|Path"/);
+        });
+      }
+    language: text/javascript
+examples: ./.resources/Obter aparência.resources/examples
+order: 1000

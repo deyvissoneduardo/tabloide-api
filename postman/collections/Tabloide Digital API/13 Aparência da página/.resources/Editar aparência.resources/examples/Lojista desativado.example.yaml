@@ -1,0 +1,38 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/lojista/pagina"
+  method: PATCH
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "banner": {
+          "exibir": true,
+          "nome": "Semana do Hortifrúti",
+          "descricao": "Frutas e verduras fresquinhas"
+        },
+        "exibirNomeCategoria": false,
+        "cores": {
+          "primaria": "#c8102e",
+          "fundoBanner": "#0B3D91",
+          "categoria": "#0B8043"
+        }
+      }
+response:
+  statusCode: 403
+  statusText: Forbidden
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "erro": {
+          "codigo": "LOJISTA_DESATIVADO",
+          "mensagem": "Sua conta está desativada. O painel está disponível só para consulta."
+        }
+      }
+order: 2000

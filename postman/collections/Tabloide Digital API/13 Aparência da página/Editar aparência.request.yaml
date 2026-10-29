@@ -1,0 +1,59 @@
+$kind: http-request
+id: 3f6a7d4f-6ff9-5afb-a21d-f5ed3214d326
+description: |-
+  Edição parcial: campo ausente fica como está (inclusive dentro de `banner` e `cores`); corpo vazio responde 400.
+
+  - `banner.exibir` e `exibirNomeCategoria`: só `true`/`false` (`null` responde 400).
+  - `banner.nome` (1–120) e `banner.descricao` (1–280): `null` remove. Descrição nova **substitui a foto** da campanha; `descricao: null` não mexe na foto.
+  - `cores.<chave>`: `#RRGGBB` (minúsculas viram maiúsculas) ou `null` (volta ao padrão).
+
+  Responde a aparência inteira, como em **Obter aparência**.
+url: "{{baseUrl}}/painel/lojista/pagina"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "banner": {
+        "exibir": true,
+        "nome": "Semana do Hortifrúti",
+        "descricao": "Frutas e verduras fresquinhas"
+      },
+      "exibirNomeCategoria": false,
+      "cores": {
+        "primaria": "#c8102e",
+        "fundoBanner": "#0B3D91",
+        "categoria": "#0B8043"
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+      if (pm.response.code === 200) {
+        const corpo = pm.response.json();
+        pm.test('Formato da aparência', () => {
+          pm.expect(corpo).to.have.all.keys('banner', 'exibirNomeCategoria', 'cores');
+          pm.expect(corpo.banner).to.have.all.keys('exibir', 'nome', 'urlLogo', 'campanha');
+          pm.expect(corpo.exibirNomeCategoria).to.be.a('boolean');
+        });
+        pm.test('As 10 cores, #RRGGBB maiúsculo ou null', () => {
+          pm.expect(corpo.cores).to.have.all.keys('primaria', 'secundaria', 'texto', 'textoSuave', 'fundoCartao', 'fundoPagina', 'neutra', 'sobreCor', 'fundoBanner', 'categoria');
+          Object.values(corpo.cores).forEach((cor) => { if (cor !== null) pm.expect(cor).to.match(/^#[0-9A-F]{6}$/); });
+        });
+        pm.test('Sem tenant nem path de storage (RNF05)', () => {
+          pm.expect(pm.response.text()).to.not.match(/tenantId|Path"/);
+        });
+        pm.test('Gravou o banner e a campanha DESCRICAO', () => {
+          pm.expect(corpo.banner).to.include({ exibir: true, nome: 'Semana do Hortifrúti' });
+          pm.expect(corpo.banner.campanha).to.eql({ tipo: 'DESCRICAO', descricao: 'Frutas e verduras fresquinhas' });
+        });
+        pm.test('Desligou o nome da categoria', () => pm.expect(corpo.exibirNomeCategoria).to.eql(false));
+        pm.test('Cor em minúsculas virou maiúscula', () => pm.expect(corpo.cores).to.include({ primaria: '#C8102E', fundoBanner: '#0B3D91', categoria: '#0B8043' }));
+      }
+    language: text/javascript
+examples: ./.resources/Editar aparência.resources/examples
+order: 2000

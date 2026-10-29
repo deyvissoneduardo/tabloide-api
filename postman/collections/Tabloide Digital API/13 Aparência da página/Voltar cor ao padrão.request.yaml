@@ -1,0 +1,48 @@
+$kind: http-request
+id: 1b3007d6-7d58-5561-a784-1d8830f750c2
+description: |-
+  `null` volta a cor ao padrão e remove o nome do banner. Os campos não enviados (as outras cores, a descrição, `exibir`) ficam como estão.
+url: "{{baseUrl}}/painel/lojista/pagina"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "banner": {
+        "nome": null
+      },
+      "cores": {
+        "categoria": null
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+      if (pm.response.code === 200) {
+        const corpo = pm.response.json();
+        pm.test('Formato da aparência', () => {
+          pm.expect(corpo).to.have.all.keys('banner', 'exibirNomeCategoria', 'cores');
+          pm.expect(corpo.banner).to.have.all.keys('exibir', 'nome', 'urlLogo', 'campanha');
+          pm.expect(corpo.exibirNomeCategoria).to.be.a('boolean');
+        });
+        pm.test('As 10 cores, #RRGGBB maiúsculo ou null', () => {
+          pm.expect(corpo.cores).to.have.all.keys('primaria', 'secundaria', 'texto', 'textoSuave', 'fundoCartao', 'fundoPagina', 'neutra', 'sobreCor', 'fundoBanner', 'categoria');
+          Object.values(corpo.cores).forEach((cor) => { if (cor !== null) pm.expect(cor).to.match(/^#[0-9A-F]{6}$/); });
+        });
+        pm.test('Sem tenant nem path de storage (RNF05)', () => {
+          pm.expect(pm.response.text()).to.not.match(/tenantId|Path"/);
+        });
+        pm.test('Nome do banner removido', () => pm.expect(corpo.banner.nome).to.eql(null));
+        pm.test('categoria voltou ao padrão (null)', () => pm.expect(corpo.cores.categoria).to.eql(null));
+        pm.test('Campos ausentes ficaram', () => {
+          pm.expect(corpo.banner.exibir).to.eql(true);
+          pm.expect(corpo.cores).to.include({ primaria: '#C8102E', fundoBanner: '#0B3D91' });
+        });
+      }
+    language: text/javascript
+examples: ./.resources/Voltar cor ao padrão.resources/examples
+order: 3000

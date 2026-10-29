@@ -1,6 +1,6 @@
 $kind: http-request
 id: cf701438-266e-50e0-ab9e-31920590b590
-description: Nome fantasia, cores (`#RRGGBB` ou `null`) e URL pública do logo (ou `null`).
+description: Nome fantasia, cores (`#RRGGBB` ou `null` = padrão; lidas de `cores.primaria`/`cores.secundaria` da **Aparência da página**) e URL pública do logo (ou `null`).
 url: "{{baseUrl}}/painel/lojista/identidade"
 method: GET
 scripts:
