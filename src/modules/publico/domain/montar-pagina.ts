@@ -18,13 +18,13 @@ export interface FilialPublicaRow {
   nome: string;
   endereco: EnderecoFilial | null;
   fusoHorario: string;
+  /** RN44: mostrar só o panfleto vigente desta filial, quando houver. */
+  sePanfleto: boolean;
   lojista: {
     nomeFantasia: string;
     logoPath: string | null;
     /** lojistas.configuracao_pagina como está no banco (RN46–RN48); normalizado aqui. */
     configuracaoPagina: unknown;
-    /** RN44: mostrar só o panfleto vigente, quando houver. */
-    sePanfleto: boolean;
     status: StatusLojista;
   };
 }

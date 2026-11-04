@@ -34,7 +34,6 @@ const umaPagina = (
     nomeFantasia: 'Mercado Bom Preço',
     logoPath: 'logos/x.webp',
     configuracaoPagina: { cores: { primaria: '#C8102E', secundaria: '#FFD100' } } as unknown,
-    sePanfleto: false,
     status: StatusLojista.ATIVO,
     ...dados.lojista,
   };
@@ -46,6 +45,7 @@ const umaPagina = (
       nome: 'Centro',
       endereco: umEndereco(),
       fusoHorario: 'America/Sao_Paulo',
+      sePanfleto: false,
       lojista,
     },
     panfleto,

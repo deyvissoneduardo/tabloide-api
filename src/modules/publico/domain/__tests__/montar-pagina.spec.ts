@@ -8,11 +8,11 @@ const FILIAL: FilialPublicaRow = {
   nome: 'Centro',
   endereco: umEndereco(),
   fusoHorario: 'America/Sao_Paulo',
+  sePanfleto: false,
   lojista: {
     nomeFantasia: 'M',
     logoPath: null,
     configuracaoPagina: {},
-    sePanfleto: false,
     status: StatusLojista.ATIVO,
   },
 };

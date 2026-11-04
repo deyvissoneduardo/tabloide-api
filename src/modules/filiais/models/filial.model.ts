@@ -9,12 +9,18 @@ export interface AtributosFilial {
   nome: string;
   fusoHorario: string;
   codigoPublico: string;
+  /** RN44: mostrar só o panfleto vigente na página pública desta filial. */
+  sePanfleto: boolean;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
 }
 
-export type AtributosCriacaoFilial = Omit<AtributosFilial, 'createdAt' | 'updatedAt' | 'deletedAt'>;
+export type AtributosCriacaoFilial = Omit<
+  AtributosFilial,
+  'sePanfleto' | 'createdAt' | 'updatedAt' | 'deletedAt'
+> &
+  Partial<Pick<AtributosFilial, 'sePanfleto'>>;
 
 /** Vitrine independente do lojista (RN09–RN11). Exclusão lógica (RN25). */
 @TenantScoped()
@@ -35,6 +41,9 @@ export class Filial extends Model<AtributosFilial, AtributosCriacaoFilial> {
 
   @Column(DataType.STRING(8))
   declare codigoPublico: string;
+
+  @Column(DataType.BOOLEAN)
+  declare sePanfleto: CreationOptional<boolean>;
 
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
