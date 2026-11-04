@@ -104,7 +104,14 @@ Content-Type: application/pdf
 < ./panfleto.pdf
 --limite--
 
-### Liga "mostrar só o panfleto" (RN44)
+### Liga "mostrar só o panfleto" só nesta filial (RN44)
+PATCH {{base}}/painel/filiais/{{filialId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "sePanfleto": true }
+
+### Compatibilidade (apps antigos): liga a chave em todas as filiais do lojista
 PATCH {{base}}/painel/lojista/identidade
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -114,8 +121,8 @@ Content-Type: application/json
 ### Página pública (lojista ATIVO): com a chave e panfleto vigente, só o panfleto
 GET {{base}}/publico/filiais/{{codigo}}
 
-### Desliga a chave: página montada, sem panfleto
-PATCH {{base}}/painel/lojista/identidade
+### Desliga a chave da filial: página montada, sem panfleto
+PATCH {{base}}/painel/filiais/{{filialId}}
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
