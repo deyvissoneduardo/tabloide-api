@@ -22,11 +22,11 @@ export function umaFilialPublica() {
     nome: 'Centro',
     endereco: umEndereco(),
     fusoHorario: 'America/Sao_Paulo',
+    sePanfleto: false,
     lojista: {
       nomeFantasia: 'Mercado Bom Preço',
       logoPath: null,
       configuracaoPagina: {},
-      sePanfleto: false,
       status: StatusLojista.ATIVO,
     },
   };
@@ -40,7 +40,7 @@ export function umaFilialPublica() {
       return builder;
     },
     comSePanfleto(valor = true) {
-      filial.lojista.sePanfleto = valor;
+      filial.sePanfleto = valor;
       return builder;
     },
     build: () => structuredClone(filial),

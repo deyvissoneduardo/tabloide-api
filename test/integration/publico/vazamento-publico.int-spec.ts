@@ -111,6 +111,41 @@ describe('Funcionalidade: A página pública nunca expõe dados de outro tenant 
     });
   });
 
+  describe('Cenário: a chave "só o panfleto" de uma filial não vaza (RN44)', () => {
+    it('Então ligar em FA mostra o panfleto só em FA; FA2 e FB não mudam, nem o ETag de FB', async () => {
+      const antesFb = await publica(fb.codigoPublico);
+      const chave = (valor: boolean) =>
+        app
+          .http()
+          .patch(`/v1/painel/filiais/${fa.id}`)
+          .set('Authorization', `Bearer ${a.token}`)
+          .send({ sePanfleto: valor })
+          .expect(200);
+      await chave(true);
+      try {
+        expect((await publica(fa.codigoPublico)).body.panfleto).not.toBeNull();
+        const deFa2 = await publica(fa2.codigoPublico);
+        expect(deFa2.body.sePanfleto).toBe(false);
+        expect(nomes(deFa2.body)).toEqual(['Bebidas/Cola A2']);
+        const depoisFb = await publica(fb.codigoPublico);
+        expect(depoisFb.body.sePanfleto).toBe(false);
+        expect(depoisFb.headers.etag).toBe(antesFb.headers.etag);
+      } finally {
+        await chave(false);
+      }
+    });
+
+    it('E B não consegue ligar a chave numa filial de A (404)', async () => {
+      await app
+        .http()
+        .patch(`/v1/painel/filiais/${fa.id}`)
+        .set('Authorization', `Bearer ${b.token}`)
+        .send({ sePanfleto: true })
+        .expect(404);
+      expect((await publica(fa.codigoPublico)).body.sePanfleto).toBe(false);
+    });
+  });
+
   describe('Cenário: cache não cruza tenants', () => {
     it('Então editar a identidade de A não muda a página nem o ETag de FB', async () => {
       const antes = await publica(fb.codigoPublico);

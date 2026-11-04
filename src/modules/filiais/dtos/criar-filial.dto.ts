@@ -1,11 +1,13 @@
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsDefined,
   IsObject,
   IsOptional,
   IsString,
   Length,
   MaxLength,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { NormalizarEspacos } from '../../../common/validators/transformacoes';
@@ -28,4 +30,9 @@ export class CriarFilialDto {
   @IsString({ message: 'fusoHorario deve ser texto' })
   @MaxLength(64, { message: 'fusoHorario deve ter até 64 caracteres' })
   fusoHorario?: string;
+
+  /** RN44: true = a página pública desta filial mostra só o panfleto vigente. null é recusado. */
+  @ValidateIf((o: CriarFilialDto) => o.sePanfleto !== undefined)
+  @IsBoolean({ message: 'sePanfleto deve ser verdadeiro ou falso.' })
+  sePanfleto?: boolean;
 }

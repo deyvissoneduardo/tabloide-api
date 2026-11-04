@@ -15,6 +15,7 @@ description: |-
   | `endereco.cidade` | obrigatório, até 100 |
   | `endereco.uf` | obrigatório, 2 caracteres (a sigla é validada no front) |
   | `fusoHorario` | opcional, fuso IANA (ex.: `America/Manaus`); padrão `FUSO_HORARIO_PADRAO` |
+  | `sePanfleto` | opcional, `true`/`false` (RN44); padrão `false`; `null` dá 400 |
 
   Responde 201 com `Location`. Pode responder 409 `LIMITE_DO_PLANO_ATINGIDO` se o lojista tiver limite de filiais.
 url: "{{baseUrl}}/painel/filiais"

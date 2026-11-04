@@ -155,6 +155,10 @@ describe('Funcionalidade: Documentação OpenAPI', () => {
 
     it('E a identidade expõe sePanfleto e a página pública tem sePanfleto e estrutura (RN44)', () => {
       expect(spec.components.schemas.IdentidadeView!.properties!.sePanfleto).toBeDefined();
+      // a chave é por filial: a filial devolve e aceita sePanfleto
+      expect(spec.components.schemas.FilialView!.properties!.sePanfleto).toBeDefined();
+      expect(spec.components.schemas.EditarFilialDto!.properties!.sePanfleto).toBeDefined();
+      expect(spec.components.schemas.CriarFilialDto!.properties!.sePanfleto).toBeDefined();
       const pagina = spec.components.schemas.PaginaPublicaJson!.properties!;
       expect(pagina.sePanfleto).toBeDefined();
       expect(pagina.estrutura).toBeDefined();

@@ -27,7 +27,15 @@ import { GERADOR_CODIGO_PUBLICO, type GeradorCodigoPublico } from './gerador-cod
 export const MAX_TENTATIVAS_CODIGO = 5;
 const CONSTRAINT_CODIGO_PUBLICO = 'filiais_codigo_publico_uk';
 
-const ATRIBUTOS_LISTAGEM = ['id', 'nome', 'fusoHorario', 'codigoPublico', 'createdAt', 'updatedAt'];
+const ATRIBUTOS_LISTAGEM = [
+  'id',
+  'nome',
+  'fusoHorario',
+  'codigoPublico',
+  'sePanfleto',
+  'createdAt',
+  'updatedAt',
+];
 
 const CAMPOS_EDITAVEIS = ['nome', 'fusoHorario'] as const;
 
@@ -121,7 +129,7 @@ export class FiliaisService {
     return this.sequelize.transaction(async (transaction) => {
       await this.limites.verificarCriacaoFilial(tenantId, { transaction });
       const filial = await this.criarComCodigoUnico(
-        { id: uuidv7(), tenantId, nome: dto.nome, fusoHorario },
+        { id: uuidv7(), tenantId, nome: dto.nome, fusoHorario, sePanfleto: dto.sePanfleto ?? false },
         transaction,
       );
       filial.endereco = await this.enderecoModel.create(
@@ -151,7 +159,7 @@ export class FiliaisService {
     return this.sequelize.transaction(async (transaction) => {
       const filial = await this.obter(tenantId, id, { transaction, lock: transaction.LOCK.UPDATE });
       const antes = { fusoHorario: filial.fusoHorario };
-      filial.set(novos);
+      filial.set(dto.sePanfleto === undefined ? novos : { ...novos, sePanfleto: dto.sePanfleto });
       await filial.save({ transaction });
       filial.endereco = await this.salvarEndereco(tenantId, id, dto.endereco, transaction);
 

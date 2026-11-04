@@ -43,17 +43,19 @@ describe('Funcionalidade: Consultas da página pública', () => {
         nome: 'Centro',
         endereco: umEndereco(),
         fusoHorario: 'America/Sao_Paulo',
+        sePanfleto: true,
         lojista: {
           nomeFantasia: 'M',
           logoPath: null,
           configuracaoPagina: { cores: { primaria: '#C8102E' } },
-          sePanfleto: true,
           status: 'ATIVO',
         },
       });
       const [sql, opcoes] = sequelize.query.mock.calls[0]!;
       expect(sql).toContain('f.deleted_at IS NULL');
-      expect(sql).toContain('l.se_panfleto AS "sePanfleto"');
+      // RN44: a chave vem da filial, não do lojista
+      expect(sql).toContain('f.se_panfleto AS "sePanfleto"');
+      expect(sql).not.toContain('l.se_panfleto');
       expect(sql).toContain('l.configuracao_pagina AS "configuracaoPagina"');
       expect(sql).toContain(
         'LEFT JOIN filial_enderecos e ON e.filial_id = f.id AND e.tenant_id = f.tenant_id',

@@ -94,7 +94,7 @@ export class EstruturaPublicaJson {
 
 export class PaginaPublicaJson {
   lojista!: LojistaPublicoJson;
-  /** RN44: a escolha do lojista; a API já aplicou a regra em panfleto e estrutura. */
+  /** RN44: a escolha da filial; a API já aplicou a regra em panfleto e estrutura. */
   sePanfleto!: boolean;
   filial!: FilialPublicaJson;
   /** Só quando sePanfleto e há panfleto vigente; senão null. */

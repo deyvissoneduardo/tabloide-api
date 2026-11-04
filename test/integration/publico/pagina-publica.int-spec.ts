@@ -29,14 +29,14 @@ describe('Funcionalidade: Página pública ponta a ponta', () => {
       categoriaId: categoria.id,
       ...campos,
     });
-  const panfleto = (inicio: string, limite: string | null, excluido = false) =>
+  const panfleto = (inicio: string, limite: string | null, excluido = false, filialId = filial.id) =>
     sql(
       `INSERT INTO panfletos (id, tenant_id, filial_id, imagem_path, imagem_largura, imagem_altura, data_inicio, data_limite, deleted_at)
        VALUES (:id, :t, :f, :caminho, 1600, 2263, :inicio, :limite, :deletedAt)`,
       {
         id: uuidv7(),
         t: lojista.id,
-        f: filial.id,
+        f: filialId,
         caminho: `${lojista.id}/panfleto/${inicio}.webp`,
         inicio,
         limite,
@@ -45,7 +45,15 @@ describe('Funcionalidade: Página pública ponta a ponta', () => {
     );
   const nomes = (body: { estrutura: { categorias: Array<{ produtos: Array<{ nome: string }> }> } }) =>
     body.estrutura.categorias.flatMap((c) => c.produtos.map((p) => p.nome));
-  /** RN44: liga ou desliga "mostrar só o panfleto" pela rota real (o evento invalida o cache). */
+  /** RN44: liga a chave de uma filial só, pela rota real (o evento invalida o cache dela). */
+  const sePanfletoDaFilial = (filialId: string, valor: boolean) =>
+    app
+      .http()
+      .patch(`/v1/painel/filiais/${filialId}`)
+      .set(auth())
+      .send({ sePanfleto: valor })
+      .expect(200);
+  /** RN44 (compatibilidade): a rota da identidade liga ou desliga em todas as filiais do lojista. */
   const sePanfleto = (valor: boolean) =>
     app.http().patch('/v1/painel/lojista/identidade').set(auth()).send({ sePanfleto: valor }).expect(200);
 
@@ -245,6 +253,55 @@ describe('Funcionalidade: Página pública ponta a ponta', () => {
         expect(r.body.sePanfleto).toBe(false);
         expect(r.body.panfleto).toBeNull();
         expect(nomes(r.body)).toEqual(['Leite']);
+      });
+    });
+
+    describe('Cenário: chave por filial — uma com produtos, outra só com o panfleto', () => {
+      it('Então cada código mostra o conteúdo da sua filial, e a chave de uma não muda a outra', async () => {
+        const outra = await criarFilial(app, lojista.token, { nome: 'Bairro' });
+        await produto({ nome: 'Leite', inicio: '2026-10-01', limite: null });
+        await panfleto('2026-10-10', '2026-10-25', false, outra.id);
+        // cache aquecido antes de ligar a chave: a edição da filial invalida só ela
+        expect((await publica(outra.codigoPublico)).body.panfleto).toBeNull();
+        await publica().expect(200);
+
+        const editada = await sePanfletoDaFilial(outra.id, true);
+        expect(editada.body.sePanfleto).toBe(true);
+
+        const comProdutos = await publica();
+        expect(comProdutos.body.sePanfleto).toBe(false);
+        expect(comProdutos.body.panfleto).toBeNull();
+        expect(nomes(comProdutos.body)).toEqual(['Leite']);
+
+        const soPanfleto = await publica(outra.codigoPublico);
+        expect(soPanfleto.body.sePanfleto).toBe(true);
+        expect(soPanfleto.body.panfleto).toMatchObject({ tipo: 'IMAGEM', validoAte: '2026-10-25' });
+        expect(soPanfleto.body.estrutura).toEqual({ categorias: [] });
+      });
+    });
+
+    describe('Cenário: chave da filial ligada com panfleto vigente e desligada na outra, que também tem panfleto', () => {
+      it('Então só a filial ligada mostra o panfleto', async () => {
+        const outra = await criarFilial(app, lojista.token, { nome: 'Bairro' });
+        await produto({ nome: 'Leite', inicio: '2026-10-01', limite: null });
+        await panfleto('2026-10-10', '2026-10-25');
+        await panfleto('2026-10-10', '2026-10-25', false, outra.id);
+        await sePanfletoDaFilial(outra.id, true);
+
+        expect((await publica()).body.panfleto).toBeNull();
+        expect((await publica(outra.codigoPublico)).body.panfleto).toMatchObject({ tipo: 'IMAGEM' });
+      });
+    });
+
+    describe('Cenário: a rota da identidade liga a chave em todas as filiais (compatibilidade)', () => {
+      it('Então as duas filiais mostram o panfleto', async () => {
+        const outra = await criarFilial(app, lojista.token, { nome: 'Bairro' });
+        await panfleto('2026-10-10', '2026-10-25');
+        await panfleto('2026-10-10', '2026-10-25', false, outra.id);
+        await sePanfleto(true);
+
+        expect((await publica()).body.sePanfleto).toBe(true);
+        expect((await publica(outra.codigoPublico)).body.panfleto).toMatchObject({ tipo: 'IMAGEM' });
       });
     });
 

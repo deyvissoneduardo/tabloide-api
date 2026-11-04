@@ -221,6 +221,62 @@ describe('Funcionalidade: Migrations', () => {
       await banco.migrador.down({ to: MIGRATION });
       const [linhas] = await sql('SELECT cor_primaria, cor_secundaria FROM lojistas');
       expect(linhas).toEqual([{ cor_primaria: '#0B3D91', cor_secundaria: null }]);
+      // as migrations posteriores também são revertidas e reaplicadas
+      await expect(banco.migrador.up()).resolves.toEqual(
+        expect.arrayContaining([expect.objectContaining({ name: MIGRATION })]),
+      );
+    });
+  });
+
+  describe('Funcionalidade: "mostrar só o panfleto" por filial (RN44)', () => {
+    const MIGRATION = '20261108000000-adicionar-se-panfleto-filiais.js';
+    const inserirFilial = (email: string, codigo: string) =>
+      sql(
+        `INSERT INTO filiais (id, tenant_id, nome, codigo_publico)
+         SELECT gen_random_uuid(), id, 'F', :codigo FROM lojistas WHERE email = :email`,
+        { email, codigo },
+      );
+    const filiais = async () => {
+      const [linhas] = await sql(
+        `SELECT codigo_publico, se_panfleto FROM filiais ORDER BY codigo_publico`,
+      );
+      return linhas as Array<{ codigo_publico: string; se_panfleto: boolean }>;
+    };
+
+    it('Então filiais.se_panfleto é boolean NOT NULL DEFAULT false e lojistas.se_panfleto continua', async () => {
+      const [coluna] = await sql(
+        `SELECT data_type, is_nullable, column_default FROM information_schema.columns
+         WHERE table_name = 'filiais' AND column_name = 'se_panfleto'`,
+      );
+      expect(coluna).toEqual([{ data_type: 'boolean', is_nullable: 'NO', column_default: 'false' }]);
+      const [antiga] = await sql(
+        `SELECT 1 FROM information_schema.columns WHERE table_name = 'lojistas' AND column_name = 'se_panfleto'`,
+      );
+      expect(antiga).toHaveLength(1);
+    });
+
+    it('E o up copia a chave do lojista para todas as filiais dele; os outros lojistas ficam false', async () => {
+      await banco.migrador.down({ to: MIGRATION });
+      await inserirLojista({ email: 'a@x.com' });
+      await inserirLojista({ email: 'b@x.com', whatsapp: '+5511987654322' });
+      await sql(`UPDATE lojistas SET se_panfleto = true WHERE email = 'a@x.com'`);
+      await inserirFilial('a@x.com', 'aaaaaaa2');
+      await inserirFilial('a@x.com', 'aaaaaaa3');
+      await inserirFilial('b@x.com', 'bbbbbbb2');
+      await banco.migrador.up();
+      expect(await filiais()).toEqual([
+        { codigo_publico: 'aaaaaaa2', se_panfleto: true },
+        { codigo_publico: 'aaaaaaa3', se_panfleto: true },
+        { codigo_publico: 'bbbbbbb2', se_panfleto: false },
+      ]);
+    });
+
+    it('E o down remove só a coluna da filial, e o up de novo funciona', async () => {
+      await banco.migrador.down({ to: MIGRATION });
+      const [colunas] = await sql(
+        `SELECT table_name FROM information_schema.columns WHERE column_name = 'se_panfleto' ORDER BY 1`,
+      );
+      expect(colunas).toEqual([{ table_name: 'lojistas' }]);
       await expect(banco.migrador.up()).resolves.toEqual([expect.objectContaining({ name: MIGRATION })]);
     });
   });
