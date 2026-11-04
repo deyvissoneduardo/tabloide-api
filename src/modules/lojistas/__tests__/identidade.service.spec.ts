@@ -4,6 +4,7 @@ import type { Sequelize } from 'sequelize-typescript';
 import { sequelizeFake, transacaoFake } from '../../../../test/helpers/transacao-fake';
 import { AppError } from '../../../common/errors/app.error';
 import { CodigoErro } from '../../../common/errors/codigos-erro';
+import type { Filial } from '../../filiais/models/filial.model';
 import type { MidiaService } from '../../midia/services/midia.service';
 import type { Lojista } from '../models/lojista.model';
 import { IdentidadeService } from '../services/identidade.service';
@@ -12,6 +13,7 @@ const EVENTO = 'filial.conteudo-alterado';
 
 describe('Funcionalidade: Identidade visual do lojista (RN06)', () => {
   const lojistaModel = { findOne: jest.fn(), update: jest.fn() };
+  const filialModel = { update: jest.fn() };
   const midia = { processar: jest.fn(), salvar: jest.fn(), urlPublica: jest.fn() };
   const eventos = { emit: jest.fn() };
   let transacao = transacaoFake();
@@ -19,6 +21,7 @@ describe('Funcionalidade: Identidade visual do lojista (RN06)', () => {
   const service = new IdentidadeService(
     sequelize as unknown as Sequelize,
     lojistaModel as unknown as typeof Lojista,
+    filialModel as unknown as typeof Filial,
     midia as unknown as MidiaService,
     eventos as unknown as EventEmitter2,
   );
@@ -131,7 +134,8 @@ describe('Funcionalidade: Identidade visual do lojista (RN06)', () => {
   describe('Funcionalidade: Chave "mostrar só o panfleto" (RN44)', () => {
     describe('Cenário: ligar a chave', () => {
       it('Então grava sePanfleto true, emite o evento só com tenantId e responde com a chave', async () => {
-        lojistaModel.findOne.mockResolvedValue({
+        // 1º: valor atual (com trava); 2º: a resposta
+        lojistaModel.findOne.mockResolvedValueOnce({ id: 't1', sePanfleto: false }).mockResolvedValue({
           id: 't1',
           nomeFantasia: 'Mercado',
           logoPath: null,
@@ -139,8 +143,36 @@ describe('Funcionalidade: Identidade visual do lojista (RN06)', () => {
         });
         const resposta = await service.editar('t1', { sePanfleto: true });
         expect(lojistaModel.update).toHaveBeenCalledWith({ sePanfleto: true }, comTransacao);
+        // compatibilidade: a chave é por filial, então o app antigo liga em todas as filiais do tenant
+        expect(filialModel.update).toHaveBeenCalledWith(
+          { sePanfleto: true },
+          { where: { tenantId: 't1' }, transaction: expect.anything() },
+        );
         expect(eventos.emit).toHaveBeenCalledWith(EVENTO, { tenantId: 't1' });
         expect(resposta.sePanfleto).toBe(true);
+      });
+    });
+
+    describe('Cenário: app antigo reenvia a chave sem mudar o valor', () => {
+      it('Então as escolhas por filial não são sobrescritas', async () => {
+        lojistaModel.findOne.mockResolvedValue({ id: 't1', nomeFantasia: 'Mercado', sePanfleto: true });
+        await service.editar('t1', { nomeFantasia: 'Mercado', sePanfleto: true });
+        expect(lojistaModel.findOne).toHaveBeenCalledWith({
+          where: { id: 't1' },
+          attributes: ['id', 'sePanfleto'],
+          transaction: expect.anything(),
+          lock: 'UPDATE',
+        });
+        expect(filialModel.update).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('Cenário: lojista sumiu antes de gravar a chave', () => {
+      it('Então RECURSO_NAO_ENCONTRADO e nada é gravado', async () => {
+        lojistaModel.findOne.mockResolvedValue(null);
+        await expect(service.editar('t1', { sePanfleto: true })).rejects.toBeInstanceOf(AppError);
+        expect(lojistaModel.update).not.toHaveBeenCalled();
+        expect(filialModel.update).not.toHaveBeenCalled();
       });
     });
 
@@ -148,6 +180,7 @@ describe('Funcionalidade: Identidade visual do lojista (RN06)', () => {
       it('Então sePanfleto não está nos campos gravados', async () => {
         await service.editar('t1', { corPrimaria: '#C8102E' });
         expect(lojistaModel.update.mock.calls[0]![0]).not.toHaveProperty('sePanfleto');
+        expect(filialModel.update).not.toHaveBeenCalled();
       });
     });
   });

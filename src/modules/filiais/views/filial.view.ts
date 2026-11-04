@@ -39,6 +39,8 @@ export class FilialView {
   endereco!: EnderecoFilialView | null;
   fusoHorario!: string;
   codigoPublico!: string;
+  /** RN44: a página pública desta filial mostra só o panfleto vigente. */
+  sePanfleto!: boolean;
   urlPublica!: string;
   criadaEm!: string;
   atualizadaEm!: string;
@@ -52,6 +54,7 @@ export function filialView(filial: Filial, baseUrlPublica: string): FilialView {
     endereco: enderecoView(filial.endereco),
     fusoHorario: filial.fusoHorario,
     codigoPublico: filial.codigoPublico,
+    sePanfleto: filial.sePanfleto,
     urlPublica: urlPublicaDaFilial(baseUrlPublica, filial.codigoPublico),
     criadaEm: filial.createdAt.toISOString(),
     atualizadaEm: filial.updatedAt.toISOString(),

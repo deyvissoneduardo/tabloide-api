@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { StatusLojista } from '../../src/modules/lojistas/models/status-lojista';
+import { criarFilial } from '../factories/filial.factory';
 import { umLojista } from '../factories/lojista.factory';
 import { criarApp, type AppDeTeste } from '../helpers/app-de-teste';
 import { encerrarBanco, iniciarBanco, type BancoDeTeste } from '../helpers/banco-de-teste';
@@ -88,6 +89,48 @@ describe('Funcionalidade: Identidade visual pela API (RN06)', () => {
         expect(
           (await app.http().get('/v1/painel/lojista/identidade').set(comoA).expect(200)).body.sePanfleto,
         ).toBe(true);
+      });
+    });
+
+    describe('Cenário: PATCH da identidade aplica a chave em todas as filiais do lojista (compatibilidade)', () => {
+      it('Então as filiais de A ficam ligadas e as de B não mudam', async () => {
+        const a = await umLojista().comStatus(StatusLojista.ATIVO).criar(app, banco.sequelize);
+        const b = await umLojista().comStatus(StatusLojista.ATIVO).criar(app, banco.sequelize);
+        await criarFilial(app, a.token, { nome: 'A1' });
+        await criarFilial(app, a.token, { nome: 'A2' });
+        await criarFilial(app, b.token, { nome: 'B1' });
+        await app
+          .http()
+          .patch('/v1/painel/lojista/identidade')
+          .set({ Authorization: `Bearer ${a.token}` })
+          .send({ sePanfleto: true })
+          .expect(200);
+        const chaves = async (token: string) =>
+          (
+            (await app.http().get('/v1/painel/filiais').set({ Authorization: `Bearer ${token}` }).expect(200))
+              .body.itens as Array<{ sePanfleto: boolean }>
+          ).map((f) => f.sePanfleto);
+        expect(await chaves(a.token)).toEqual([true, true]);
+        expect(await chaves(b.token)).toEqual([false]);
+      });
+    });
+
+    describe('Cenário: app antigo salva o Perfil reenviando a mesma chave', () => {
+      it('Então a chave ligada só numa filial continua como estava', async () => {
+        const a = await umLojista().comStatus(StatusLojista.ATIVO).criar(app, banco.sequelize);
+        const comoA = { Authorization: `Bearer ${a.token}` };
+        const ligada = await criarFilial(app, a.token, { nome: 'A1', sePanfleto: true });
+        const desligada = await criarFilial(app, a.token, { nome: 'A2' });
+        await app
+          .http()
+          .patch('/v1/painel/lojista/identidade')
+          .set(comoA)
+          .send({ nomeFantasia: 'Mercado Novo', sePanfleto: false })
+          .expect(200);
+        const chave = async (id: string) =>
+          (await app.http().get(`/v1/painel/filiais/${id}`).set(comoA).expect(200)).body.sePanfleto;
+        expect(await chave(ligada.id)).toBe(true);
+        expect(await chave(desligada.id)).toBe(false);
       });
     });
 

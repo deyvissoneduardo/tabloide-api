@@ -7,6 +7,7 @@ description: |-
   - `ETag` fraco (não muda se os dados não mudarem)
   - `hoje` no fuso da filial; `validoAte` em panfleto e produtos só quando há data limite; `precoOriginalCentavos` só quando há "de/por".
   - `panfleto` só quando `sePanfleto` está ligado e há panfleto vigente; nesse caso `estrutura.categorias` vem vazia. PDF: `largura`/`altura` em pontos.
+  - `aparencia` (RN46–RN48, pasta **13 Aparência da página**): `cores` sempre com as 10 cores já resolvidas (`#RRGGBB`), `exibirNomeCategoria` e `banner` (`null` com o banner desligado ou com o panfleto em exibição; chaves ausentes quando não há valor). `lojista.corPrimaria`/`corSecundaria` seguem com o valor cru (`null` = padrão) para o front antigo; use `aparencia.cores`.
 
   Mudanças no painel aparecem na hora (o cache do servidor é invalidado). Desativar o lojista no banco leva até 60 s para tirar a página do ar.
 url: "{{baseUrl}}/publico/filiais/:codigo"
@@ -26,7 +27,24 @@ scripts:
     code: |-
       pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
       pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
-      if (pm.response.code === 200) pm.environment.set('etag', pm.response.headers.get('ETag'));
+      if (pm.response.code === 200) {
+        pm.environment.set('etag', pm.response.headers.get('ETag'));
+        const corpo = pm.response.json();
+        pm.test('Tem Cache-Control público e ETag', () => {
+          pm.expect(pm.response.headers.get('Cache-Control')).to.include('public');
+          pm.response.to.have.header('ETag');
+        });
+        pm.test('Aparência com as 10 cores resolvidas (RN48)', () => {
+          pm.expect(corpo.aparencia.cores).to.have.all.keys('primaria', 'secundaria', 'texto', 'textoSuave', 'fundoCartao', 'fundoPagina', 'neutra', 'sobreCor', 'fundoBanner', 'categoria');
+          Object.values(corpo.aparencia.cores).forEach((cor) => pm.expect(cor).to.match(/^#[0-9A-F]{6}$/));
+          pm.expect(corpo.aparencia.exibirNomeCategoria).to.be.a('boolean');
+        });
+        pm.test('Banner null com panfleto em exibição (RN44, RN46)', () => {
+          if (corpo.panfleto !== null) pm.expect(corpo.aparencia.banner).to.eql(null);
+          else if (corpo.aparencia.banner !== null) pm.expect(corpo.aparencia.banner).to.be.an('object');
+        });
+        pm.test('Sem tenant nem path de storage (RNF05)', () => pm.expect(pm.response.text()).to.not.match(/tenantId|Path"/));
+      }
     language: text/javascript
 examples: ./.resources/Página da filial.resources/examples
 order: 1000

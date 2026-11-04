@@ -5,6 +5,7 @@ import { umEnderecoDto } from './endereco-filial.factory';
 export interface FilialCriada {
   id: string;
   codigoPublico: string;
+  sePanfleto: boolean;
   fusoHorario: string;
   endereco: EnderecoFilial | null;
 }
@@ -13,7 +14,12 @@ export interface FilialCriada {
 export async function criarFilial(
   app: AppDeTeste,
   token: string,
-  dados: { nome?: string; endereco?: Record<string, unknown>; fusoHorario?: string } = {},
+  dados: {
+    nome?: string;
+    endereco?: Record<string, unknown>;
+    fusoHorario?: string;
+    sePanfleto?: boolean;
+  } = {},
 ): Promise<FilialCriada> {
   const resposta = await app
     .http()

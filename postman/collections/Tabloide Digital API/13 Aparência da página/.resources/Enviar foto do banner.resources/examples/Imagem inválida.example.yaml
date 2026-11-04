@@ -1,0 +1,27 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/painel/lojista/pagina/banner/foto"
+  method: PUT
+  body:
+    type: formdata
+    content:
+      - type: file
+        key: imagem
+        src: "{{arquivoImagem}}"
+        description: JPEG, PNG ou WebP; até MAX_IMAGEM_BYTES (10 MB) ou o limite do lojista.
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json; charset=utf-8
+    x-request-id: 0192f0f0-1111-7000-8000-00000000abcd
+  body:
+    type: json
+    content: |-
+      {
+        "erro": {
+          "codigo": "IMAGEM_INVALIDA",
+          "mensagem": "Envie uma imagem JPEG, PNG ou WebP válida."
+        }
+      }
+order: 2000

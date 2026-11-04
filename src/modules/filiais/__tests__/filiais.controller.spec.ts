@@ -23,6 +23,7 @@ const filial = {
   },
   fusoHorario: 'America/Sao_Paulo',
   codigoPublico: 'k7Qm2xPa',
+  sePanfleto: false,
   createdAt: new Date('2026-10-18T15:00:00Z'),
   updatedAt: new Date('2026-10-18T15:00:00Z'),
   deletedAt: null,
@@ -82,6 +83,7 @@ describe('Funcionalidade: Rotas de filiais', () => {
         endereco: umEndereco(),
         fusoHorario: 'America/Sao_Paulo',
         codigoPublico: 'k7Qm2xPa',
+        sePanfleto: false,
         urlPublica: 'https://tabloide.app/f/k7Qm2xPa',
         criadaEm: '2026-10-18T15:00:00.000Z',
         atualizadaEm: '2026-10-18T15:00:00.000Z',
@@ -195,6 +197,36 @@ describe('Funcionalidade: Rotas de filiais', () => {
       const resposta = await http().patch(`/v1/painel/filiais/${ID}`).send({ fusoHorario: 'America/Manaus' });
       expect(resposta.status).toBe(200);
       expect(filiais.editar).toHaveBeenCalledWith('T1', ID, { fusoHorario: 'America/Manaus' });
+    });
+  });
+
+  describe('Cenário: PATCH só com sePanfleto é aceito (RN44)', () => {
+    it('Então o service recebe { sePanfleto: true }', async () => {
+      await http().patch(`/v1/painel/filiais/${ID}`).send({ sePanfleto: true }).expect(200);
+      expect(filiais.editar).toHaveBeenCalledWith('T1', ID, { sePanfleto: true });
+    });
+  });
+
+  describe.each([
+    ['null', null],
+    ['texto', 'sim'],
+    ['número', 1],
+  ])('Cenário: sePanfleto não booleano (%s)', (_rotulo, valor) => {
+    it('Então 400 com detalhe em sePanfleto e o service não é chamado', async () => {
+      const resposta = await http().patch(`/v1/painel/filiais/${ID}`).send({ sePanfleto: valor });
+      await esperaValidacao(resposta);
+      expect(JSON.stringify(resposta.body.erro.detalhes)).toContain('sePanfleto');
+      expect(filiais.editar).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Cenário: POST com sePanfleto', () => {
+    it('Então o service recebe a chave', async () => {
+      await http()
+        .post('/v1/painel/filiais')
+        .send({ nome: 'Centro', endereco: umEnderecoDto(), sePanfleto: true })
+        .expect(201);
+      expect(filiais.criar).toHaveBeenCalledWith('T1', expect.objectContaining({ sePanfleto: true }));
     });
   });
 

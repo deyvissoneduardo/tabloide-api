@@ -13,7 +13,7 @@ description: |
 
   1. Escolha o ambiente **Tabloide — dev** (API local em `http://localhost:3000/v1`) ou **Tabloide — prod**.
   2. Rode **Auth → Cadastrar lojista** (ou **Login**). O script da requisição grava `token` e `lojistaId` no ambiente; as demais rotas do painel usam o `token` automaticamente (auth Bearer herdada da coleção).
-  3. Rode **Filiais → Criar filial**: grava `filialId` e `codigoPublico`. Os módulos de panfletos, categorias e produtos usam esses ids, e cada "criar" grava o id do recurso criado (`panfletoId`, `categoriaId`, `produtoId`). A pasta **12 Estrutura da página** usa `categoriaId` e `produtoId` para gravar a ordem da página.
+  3. Rode **Filiais → Criar filial**: grava `filialId` e `codigoPublico`. Os módulos de panfletos, categorias e produtos usam esses ids, e cada "criar" grava o id do recurso criado (`panfletoId`, `categoriaId`, `produtoId`). A pasta **12 Estrutura da página** usa `categoriaId` e `produtoId` para gravar a ordem da página; a **13 Aparência da página** liga o banner, troca as cores, confere a página pública e desfaz no fim.
   4. A **página pública** só aparece para lojista **ATIVO**. Um lojista recém-cadastrado fica `AGUARDANDO_ATIVACAO` até o administrador ativá-lo no banco (veja `docs/operacao/runbook.md`).
   5. As rotas de **Admin** usam o header `X-Admin-Key` com a variável secreta `adminKey`; sem ela respondem 404.
 

@@ -1,0 +1,12 @@
+$kind: collection
+description: |-
+  Aparência da página pública (RN46–RN48), por lojista: vale para **todas** as filiais. É o que a seção "Aparência" do painel lê e grava.
+
+  - **Banner** (RN46): liga/desliga, nome próprio, logo próprio (até 512 px) e uma campanha que é **foto** (16:9, até 1600 px) **ou** descrição (até 280 caracteres): uma substitui a outra. Com o panfleto em exibição (`sePanfleto`, RN44) o banner não aparece.
+  - **Nome da categoria** (RN47): `exibirNomeCategoria: false` mostra uma grade única, sem nome, contador nem barra da categoria.
+  - **10 cores** (RN48): `#RRGGBB` (minúsculas são convertidas) ou `null` = padrão. `fundoBanner` e `categoria` seguem a primária quando `null`. `corPrimaria`/`corSecundaria` da **Identidade visual** são as mesmas `cores.primaria`/`cores.secundaria` daqui.
+  - O painel recebe os valores crus (`null` = padrão); a página pública recebe `aparencia` com as 10 cores já resolvidas.
+  - Toda alteração invalida o cache das páginas públicas na hora; não é auditada. Imagens antigas ficam no storage.
+
+  As requisições rodam em sequência: ligam o banner, trocam cores, enviam logo e foto, conferem a página pública e desfazem (remover foto, remover logo, desligar o banner). **Conferir na página pública** precisa do lojista **ATIVO**, como a pasta 09.
+order: 13000

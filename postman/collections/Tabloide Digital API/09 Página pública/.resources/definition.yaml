@@ -2,7 +2,7 @@ $kind: collection
 description: |-
   O que o consumidor vê ao ler o QR Code (RN23, RN27–RN32, RN35, RN41). Sem autenticação, 300 requisições por minuto por IP.
 
-  Em uma resposta: identidade do lojista, `sePanfleto`, filial e **ou** o panfleto **ou** a página montada (RN29, RN44):
+  Em uma resposta: identidade do lojista, `sePanfleto` (a escolha **da filial**), filial e **ou** o panfleto **ou** a página montada (RN29, RN44):
 
   | `sePanfleto` | Panfleto vigente | `panfleto` | `estrutura.categorias` |
   | --- | --- | --- | --- |

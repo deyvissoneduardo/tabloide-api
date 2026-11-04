@@ -223,6 +223,49 @@ describe('Funcionalidade: Filiais no banco real', () => {
     });
   });
 
+  describe('Funcionalidade: "mostrar só o panfleto" por filial (RN44)', () => {
+    it('Então a filial nasce desligada; PATCH liga só ela e GET, lista e banco confirmam', async () => {
+      const filial = await criarFilial(app, lojista.token, { nome: 'Centro' });
+      const outra = await criarFilial(app, lojista.token, { nome: 'Bairro' });
+      expect(filial).toMatchObject({ sePanfleto: false });
+
+      const editada = await app
+        .http()
+        .patch(`/v1/painel/filiais/${filial.id}`)
+        .set(auth())
+        .send({ sePanfleto: true })
+        .expect(200);
+      expect(editada.body).toMatchObject({ sePanfleto: true, nome: 'Centro', endereco: umEndereco() });
+
+      const detalhe = await app.http().get(`/v1/painel/filiais/${filial.id}`).set(auth()).expect(200);
+      expect(detalhe.body.sePanfleto).toBe(true);
+      const lista = await app.http().get('/v1/painel/filiais').set(auth()).expect(200);
+      expect(
+        Object.fromEntries(
+          (lista.body.itens as Array<{ id: string; sePanfleto: boolean }>).map((f) => [f.id, f.sePanfleto]),
+        ),
+      ).toEqual({ [filial.id]: true, [outra.id]: false });
+    });
+
+    it('E POST com sePanfleto true cria a filial ligada', async () => {
+      const filial = await criarFilial(app, lojista.token, { sePanfleto: true });
+      expect(filial).toMatchObject({ sePanfleto: true });
+    });
+
+    it('E PATCH com sePanfleto null dá 400 sem mudar a filial', async () => {
+      const filial = await criarFilial(app, lojista.token);
+      const r = await app
+        .http()
+        .patch(`/v1/painel/filiais/${filial.id}`)
+        .set(auth())
+        .send({ sePanfleto: null })
+        .expect(400);
+      expect(r.body.erro.codigo).toBe('VALIDACAO_INVALIDA');
+      const detalhe = await app.http().get(`/v1/painel/filiais/${filial.id}`).set(auth()).expect(200);
+      expect(detalhe.body.sePanfleto).toBe(false);
+    });
+  });
+
   describe('Cenário: fuso inválido pela API', () => {
     it('Então 422 FUSO_HORARIO_INVALIDO com o campo', async () => {
       const resposta = await app

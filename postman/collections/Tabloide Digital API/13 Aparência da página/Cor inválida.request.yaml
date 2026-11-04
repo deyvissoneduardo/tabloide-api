@@ -1,0 +1,29 @@
+$kind: http-request
+id: f893276e-d749-5e42-964c-a77705d5fc53
+description: |-
+  Cenário de erro: cor fora de `#RRGGBB` responde **400** `VALIDACAO_INVALIDA` com o campo em `detalhes.campos["cores.texto"]` e nada é gravado.
+url: "{{baseUrl}}/painel/lojista/pagina"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "cores": {
+        "texto": "#12345"
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (400)', () => pm.expect(pm.response.code).to.be.oneOf([400]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+      if (pm.response.code === 400) {
+        const erro = pm.response.json().erro;
+        pm.test('VALIDACAO_INVALIDA', () => pm.expect(erro.codigo).to.eql('VALIDACAO_INVALIDA'));
+        pm.test('Aponta o campo cores.texto', () => pm.expect(erro.detalhes.campos).to.have.property('cores.texto'));
+      }
+    language: text/javascript
+examples: ./.resources/Cor inválida.resources/examples
+order: 4000

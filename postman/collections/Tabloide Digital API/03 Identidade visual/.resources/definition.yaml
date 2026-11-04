@@ -1,3 +1,4 @@
 $kind: collection
-description: Nome, cores e logo exibidos na página pública de **todas** as filiais do lojista (RN06, RN28). Toda alteração invalida o cache das páginas públicas na hora.
+description: |-
+  Nome, cores e logo exibidos na página pública de **todas** as filiais do lojista (RN06, RN28). Toda alteração invalida o cache das páginas públicas na hora. `corPrimaria`/`corSecundaria` são as mesmas `cores.primaria`/`cores.secundaria` da pasta **13 Aparência da página** (RN48): mudar aqui muda lá, e vice-versa.
 order: 3000

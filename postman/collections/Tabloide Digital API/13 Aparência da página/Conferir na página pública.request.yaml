@@ -1,0 +1,46 @@
+$kind: http-request
+id: 13e8663d-b796-5e06-9f3d-e4a8a507961c
+description: |-
+  Mesma rota de **Página da filial**, para conferir o bloco `aparencia` depois das edições acima (o cache do servidor é invalidado na hora):
+
+  - `cores`: sempre as 10, já resolvidas (`categoria: null` vira a primária).
+  - `banner`: chaves ausentes quando não há valor (`{}` = só a faixa na cor `fundoBanner`); `null` com o banner desligado ou com o panfleto em exibição.
+  - Sem path de storage: só URLs públicas.
+
+  Precisa do lojista **ATIVO**.
+url: "{{baseUrl}}/publico/filiais/:codigo"
+method: GET
+pathVariables:
+  - key: codigo
+    value: "{{codigoPublico}}"
+    description: Código público da filial (8 caracteres, alfabeto sem 0 1 i l o I O).
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+      if (pm.response.code === 200) {
+        const corpo = pm.response.json();
+        const aparencia = corpo.aparencia;
+        pm.test('As 10 cores resolvidas', () => {
+          pm.expect(aparencia.cores).to.have.all.keys('primaria', 'secundaria', 'texto', 'textoSuave', 'fundoCartao', 'fundoPagina', 'neutra', 'sobreCor', 'fundoBanner', 'categoria');
+          Object.values(aparencia.cores).forEach((cor) => pm.expect(cor).to.match(/^#[0-9A-F]{6}$/));
+        });
+        pm.test('Reflete as edições', () => {
+          pm.expect(aparencia.exibirNomeCategoria).to.eql(false);
+          pm.expect(aparencia.cores).to.include({ primaria: '#C8102E', fundoBanner: '#0B3D91', categoria: '#C8102E' });
+          pm.expect(corpo.lojista.corPrimaria).to.eql('#C8102E');
+        });
+        pm.test('Banner com logo e foto, sem nome (removido)', () => {
+          if (corpo.panfleto !== null) return pm.expect(aparencia.banner).to.eql(null);
+          pm.expect(aparencia.banner).to.have.all.keys('logoUrl', 'campanha');
+          pm.expect(aparencia.banner.campanha.tipo).to.eql('FOTO');
+          pm.expect(aparencia.banner.campanha.fotoUrl).to.be.a('string');
+        });
+        pm.test('Sem tenant nem path de storage (RNF05)', () => pm.expect(pm.response.text()).to.not.match(/tenantId|Path"/));
+      }
+    language: text/javascript
+examples: ./.resources/Conferir na página pública.resources/examples
+order: 7000

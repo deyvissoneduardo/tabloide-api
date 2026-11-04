@@ -109,6 +109,7 @@ describe('Funcionalidade: Gestão de filiais', () => {
           nome: 'Centro',
           fusoHorario: 'America/Sao_Paulo',
           codigoPublico: 'k7Qm2xPa',
+          sePanfleto: false,
         });
         expect(dados).not.toHaveProperty('endereco');
         expect(opcoes).toEqual({ transaction: t });
@@ -147,6 +148,13 @@ describe('Funcionalidade: Gestão de filiais', () => {
 
       it('E após o commit emite filial.conteudo-alterado', () =>
         expect(eventos.emit).toHaveBeenCalledWith(EVENTO, { tenantId: 'T1', filialId: filial.id }));
+    });
+
+    describe('Cenário: cria filial com "mostrar só o panfleto" ligado (RN44)', () => {
+      it('Então create recebe sePanfleto true', async () => {
+        await service.criar('T1', { nome: 'Centro', endereco: ENDERECO, sePanfleto: true });
+        expect(filialModel.create.mock.calls[0]![0]).toMatchObject({ sePanfleto: true });
+      });
     });
 
     describe('Cenário: normaliza o fuso informado', () => {
@@ -274,6 +282,7 @@ describe('Funcionalidade: Gestão de filiais', () => {
         ]);
         expect(opcoes.order[0][0].val).toBe('nome COLLATE "pt-BR-x-icu"');
         expect(opcoes.order[1]).toEqual(['id', 'ASC']);
+        expect(opcoes.attributes).toContain('sePanfleto');
         expect(opcoes.attributes).not.toContain('tenantId');
         expect(opcoes.attributes).not.toContain('deletedAt');
       });
@@ -349,6 +358,29 @@ describe('Funcionalidade: Gestão de filiais', () => {
         expect(editada.endereco).toBe(endereco);
         expect(auditoria.registrarAlteracoes).not.toHaveBeenCalled();
         expect(eventos.emit).toHaveBeenCalledWith(EVENTO, { tenantId: 'T1', filialId: 'F1' });
+      });
+    });
+
+    describe('Cenário: liga "mostrar só o panfleto" só nesta filial (RN44)', () => {
+      it('Então grava sePanfleto, não audita e emite o evento só desta filial', async () => {
+        const filial = umaFilial();
+        filialModel.findOne.mockResolvedValue(filial);
+
+        await service.editar('T1', 'F1', { sePanfleto: true });
+
+        expect(filial.set).toHaveBeenCalledWith({ sePanfleto: true });
+        expect(filial.save).toHaveBeenCalledWith({ transaction: t });
+        expect(auditoria.registrarAlteracoes).not.toHaveBeenCalled();
+        expect(eventos.emit).toHaveBeenCalledWith(EVENTO, { tenantId: 'T1', filialId: 'F1' });
+      });
+
+      it('E junto com o nome grava os dois campos', async () => {
+        const filial = umaFilial();
+        filialModel.findOne.mockResolvedValue(filial);
+
+        await service.editar('T1', 'F1', { nome: 'Centro Novo', sePanfleto: false });
+
+        expect(filial.set).toHaveBeenCalledWith({ nome: 'Centro Novo', sePanfleto: false });
       });
     });
 

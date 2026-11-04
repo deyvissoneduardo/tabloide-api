@@ -1,0 +1,41 @@
+$kind: http-request
+id: 88d104ab-e0b1-5f85-9c8d-3bb7bff8cd96
+description: |-
+  Envia ou troca a **foto da campanha** (`multipart/form-data`, campo `imagem`), exibida em 16:9 na largura da página; reduzida a 1600 px e gravada em WebP. A foto **substitui a descrição** (`campanha.tipo` vira `FOTO`). A foto anterior continua no storage.
+url: "{{baseUrl}}/painel/lojista/pagina/banner/foto"
+method: PUT
+body:
+  type: formdata
+  content:
+    - type: file
+      key: imagem
+      src: "{{arquivoImagem}}"
+      description: JPEG, PNG ou WebP; até MAX_IMAGEM_BYTES (10 MB) ou o limite do lojista.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+      if (pm.response.code === 200) {
+        const corpo = pm.response.json();
+        pm.test('Formato da aparência', () => {
+          pm.expect(corpo).to.have.all.keys('banner', 'exibirNomeCategoria', 'cores');
+          pm.expect(corpo.banner).to.have.all.keys('exibir', 'nome', 'urlLogo', 'campanha');
+          pm.expect(corpo.exibirNomeCategoria).to.be.a('boolean');
+        });
+        pm.test('As 10 cores, #RRGGBB maiúsculo ou null', () => {
+          pm.expect(corpo.cores).to.have.all.keys('primaria', 'secundaria', 'texto', 'textoSuave', 'fundoCartao', 'fundoPagina', 'neutra', 'sobreCor', 'fundoBanner', 'categoria');
+          Object.values(corpo.cores).forEach((cor) => { if (cor !== null) pm.expect(cor).to.match(/^#[0-9A-F]{6}$/); });
+        });
+        pm.test('Sem tenant nem path de storage (RNF05)', () => {
+          pm.expect(pm.response.text()).to.not.match(/tenantId|Path"/);
+        });
+        pm.test('Campanha virou FOTO', () => {
+          pm.expect(corpo.banner.campanha.tipo).to.eql('FOTO');
+          pm.expect(corpo.banner.campanha.urlFoto).to.match(/\/banner\/[^/]+\.webp$/);
+          pm.expect(corpo.banner.campanha).to.not.have.property('descricao');
+        });
+      }
+    language: text/javascript
+examples: ./.resources/Enviar foto do banner.resources/examples
+order: 6000

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SequelizeModule } from '@nestjs/sequelize';
 import type { Env } from '../../config/env.schema';
+import { Filial } from '../filiais/models/filial.model';
 import { MidiaModule } from '../midia/midia.module';
 import { ConfiguracaoPaginaController } from './controllers/configuracao-pagina.controller';
 import { IdentidadeController } from './controllers/identidade.controller';
@@ -15,7 +16,7 @@ import { SenhaService } from './services/senha.service';
 import { StatusLojistaCache } from './services/status-lojista.cache';
 
 @Module({
-  imports: [SequelizeModule.forFeature([Lojista, LojistaAtivacao]), MidiaModule],
+  imports: [SequelizeModule.forFeature([Lojista, LojistaAtivacao, Filial]), MidiaModule],
   controllers: [PainelLojistaController, IdentidadeController, ConfiguracaoPaginaController],
   providers: [
     LojistasService,

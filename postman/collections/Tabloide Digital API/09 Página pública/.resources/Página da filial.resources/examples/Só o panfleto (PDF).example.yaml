@@ -51,6 +51,22 @@ response:
         "estrutura": {
           "categorias": []
         },
+        "aparencia": {
+          "cores": {
+            "primaria": "#C8102E",
+            "secundaria": "#FFD100",
+            "texto": "#1F1F1F",
+            "textoSuave": "#5C5C5C",
+            "fundoCartao": "#FFFFFF",
+            "fundoPagina": "#F3F4F6",
+            "neutra": "#EEEEEE",
+            "sobreCor": "#FFFFFF",
+            "fundoBanner": "#C8102E",
+            "categoria": "#C8102E"
+          },
+          "exibirNomeCategoria": true,
+          "banner": null
+        },
         "hoje": "2026-10-18",
         "geradoEm": "2026-10-18T15:04:05.123Z"
       }

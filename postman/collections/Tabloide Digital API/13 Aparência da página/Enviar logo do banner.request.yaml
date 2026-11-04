@@ -1,0 +1,37 @@
+$kind: http-request
+id: 4bc36a2e-76ac-5b67-8d45-e094d1406425
+description: |-
+  Envia ou troca o logo **do banner** (`multipart/form-data`, arquivo no campo `imagem`); é outro logo, separado do logo da **Identidade visual**. Validado pelo conteúdo real, reduzido a 512 px e gravado em WebP com transparência. O logo anterior continua no storage.
+url: "{{baseUrl}}/painel/lojista/pagina/banner/logo"
+method: PUT
+body:
+  type: formdata
+  content:
+    - type: file
+      key: imagem
+      src: "{{arquivoImagem}}"
+      description: JPEG, PNG ou WebP; até MAX_IMAGEM_BYTES (10 MB) ou o limite do lojista.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status esperado (200)', () => pm.expect(pm.response.code).to.be.oneOf([200]));
+      pm.test('Tem x-request-id', () => pm.response.to.have.header('x-request-id'));
+      if (pm.response.code === 200) {
+        const corpo = pm.response.json();
+        pm.test('Formato da aparência', () => {
+          pm.expect(corpo).to.have.all.keys('banner', 'exibirNomeCategoria', 'cores');
+          pm.expect(corpo.banner).to.have.all.keys('exibir', 'nome', 'urlLogo', 'campanha');
+          pm.expect(corpo.exibirNomeCategoria).to.be.a('boolean');
+        });
+        pm.test('As 10 cores, #RRGGBB maiúsculo ou null', () => {
+          pm.expect(corpo.cores).to.have.all.keys('primaria', 'secundaria', 'texto', 'textoSuave', 'fundoCartao', 'fundoPagina', 'neutra', 'sobreCor', 'fundoBanner', 'categoria');
+          Object.values(corpo.cores).forEach((cor) => { if (cor !== null) pm.expect(cor).to.match(/^#[0-9A-F]{6}$/); });
+        });
+        pm.test('Sem tenant nem path de storage (RNF05)', () => {
+          pm.expect(pm.response.text()).to.not.match(/tenantId|Path"/);
+        });
+        pm.test('urlLogo em WebP', () => pm.expect(corpo.banner.urlLogo).to.match(/\/logo\/[^/]+\.webp$/));
+      }
+    language: text/javascript
+examples: ./.resources/Enviar logo do banner.resources/examples
+order: 5000

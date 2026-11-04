@@ -17,10 +17,10 @@ import type { FilialPublicaRow, PanfletoRow, ProdutoRow } from '../domain/montar
  */
 const SQL_FILIAL_POR_CODIGO = `
   SELECT f.id, f.tenant_id AS "tenantId", f.nome, f.fuso_horario AS "fusoHorario",
+         f.se_panfleto AS "sePanfleto",
          e.cep, e.logradouro, e.numero, e.complemento, e.bairro, e.cidade, e.uf,
          l.nome_fantasia AS "nomeFantasia", l.logo_path AS "logoPath",
-         l.configuracao_pagina AS "configuracaoPagina",
-         l.se_panfleto AS "sePanfleto", a.status
+         l.configuracao_pagina AS "configuracaoPagina", a.status
   FROM filiais f
   JOIN lojistas l          ON l.id = f.tenant_id
   JOIN lojista_ativacoes a ON a.lojista_id = l.id
@@ -36,10 +36,10 @@ interface LinhaFilial extends ColunasEndereco {
   tenantId: string;
   nome: string;
   fusoHorario: string;
+  sePanfleto: boolean;
   nomeFantasia: string;
   logoPath: string | null;
   configuracaoPagina: unknown;
-  sePanfleto: boolean;
   status: StatusLojista;
 }
 
@@ -58,7 +58,7 @@ export class PaginaPublicaQuery {
       type: QueryTypes.SELECT,
     });
     if (!linha) return null;
-    const { nomeFantasia, logoPath, configuracaoPagina, sePanfleto, status, ...resto } = linha;
+    const { nomeFantasia, logoPath, configuracaoPagina, status, ...resto } = linha;
     const { cep, logradouro, numero, complemento, bairro, cidade, uf, ...filial } = resto;
     // as colunas são NOT NULL: só vêm null juntas, quando a filial não tem endereço
     const endereco =
@@ -66,7 +66,7 @@ export class PaginaPublicaQuery {
     return {
       ...filial,
       endereco,
-      lojista: { nomeFantasia, logoPath, configuracaoPagina, sePanfleto, status },
+      lojista: { nomeFantasia, logoPath, configuracaoPagina, status },
     };
   }
 
