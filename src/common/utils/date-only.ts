@@ -72,6 +72,24 @@ export function segundosAteMeiaNoite(fuso: string, agora: Date): number {
   return Math.max(1, 86_400 - (hora * 3600 + minuto * 60 + segundo));
 }
 
+/** Data e hora (0–23) locais no fuso. RN51/RN53: o painel de acessos agrega pela hora da filial. */
+export function dataEHoraNoFuso(fuso: string, agora: Date): { data: DataISO; hora: number } {
+  return { data: hojeNoFuso(fuso, agora), hora: Number(relogioDoFuso(fuso).format(agora).slice(0, 2)) };
+}
+
+/** Aritmética sobre a data pura, em UTC: sem horário de verão. */
+export function somarDias(data: DataISO, dias: number): DataISO {
+  const ms = Date.UTC(Number(data.slice(0, 4)), Number(data.slice(5, 7)) - 1, Number(data.slice(8, 10)));
+  return new Date(ms + dias * 86_400_000).toISOString().slice(0, 10) as DataISO;
+}
+
+/** fim − inicio em dias (negativo quando fim < inicio). */
+export function diasEntre(inicio: DataISO, fim: DataISO): number {
+  const utc = (d: DataISO) =>
+    Date.UTC(Number(d.slice(0, 4)), Number(d.slice(5, 7)) - 1, Number(d.slice(8, 10)));
+  return Math.round((utc(fim) - utc(inicio)) / 86_400_000);
+}
+
 export function ehFusoValido(fuso: string): boolean {
   try {
     new Intl.DateTimeFormat('en-US', { timeZone: fuso });
