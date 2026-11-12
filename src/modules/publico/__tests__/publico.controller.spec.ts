@@ -1,18 +1,23 @@
 import { gzipSync } from 'node:zlib';
 import type { INestApplication } from '@nestjs/common';
 import { criarAppDeController } from '../../../../test/helpers/app-de-controller';
+import { RegistroAcessosService } from '../../acessos/services/registro-acessos.service';
 import { PublicoController } from '../controllers/publico.controller';
 import { paginaNaoEncontrada, PublicoService } from '../services/publico.service';
 
 describe('Funcionalidade: Respostas HTTP da página pública', () => {
   const publico = { obterPagina: jest.fn() };
+  const registroAcessos = { registrar: jest.fn() };
   let app: INestApplication;
   let http: Awaited<ReturnType<typeof criarAppDeController>>['http'];
 
   beforeAll(async () => {
     ({ app, http } = await criarAppDeController({
       controllers: [PublicoController],
-      providers: [{ provide: PublicoService, useValue: publico }],
+      providers: [
+        { provide: PublicoService, useValue: publico },
+        { provide: RegistroAcessosService, useValue: registroAcessos },
+      ],
     }));
   });
   beforeEach(() => {
@@ -21,7 +26,11 @@ describe('Funcionalidade: Respostas HTTP da página pública', () => {
       corpo: '{"a":1}',
       corpoGzip: gzipSync('{"a":1}'),
       etag: 'W/"abc"',
+      tenantId: 't1',
+      filialId: 'f1',
+      fuso: 'America/Sao_Paulo',
     });
+    registroAcessos.registrar.mockResolvedValue(undefined);
   });
   afterAll(() => app.close());
 
@@ -87,5 +96,65 @@ describe('Funcionalidade: Respostas HTTP da página pública', () => {
   describe('Cenário: rota pública não exige autenticação (RN27)', () => {
     it('Então a classe é marcada com @Public()', () =>
       expect(Reflect.getMetadata('isPublic', PublicoController)).toBe(true));
+  });
+
+  describe('Funcionalidade: contar o acesso (RN50)', () => {
+    const NAVEGADOR = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) Safari/604.1';
+
+    it('Dado um navegador, então registra com os dados da página montada', async () => {
+      expect((await get().set('User-Agent', NAVEGADOR)).status).toBe(200);
+      expect(registroAcessos.registrar).toHaveBeenCalledWith({
+        tenantId: 't1',
+        filialId: 'f1',
+        fuso: 'America/Sao_Paulo',
+      });
+    });
+
+    it('Dado um 304, então também registra', async () => {
+      const r = await get().set('User-Agent', NAVEGADOR).set('If-None-Match', 'W/"abc"');
+      expect(r.status).toBe(304);
+      expect(registroAcessos.registrar).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ['robô', (r: ReturnType<typeof get>) => r.set('User-Agent', 'WhatsApp/2.23')],
+      ['sem user-agent', (r: ReturnType<typeof get>) => r.set('User-Agent', '')],
+      [
+        'origem=painel',
+        (r: ReturnType<typeof get>) => r.set('User-Agent', NAVEGADOR).query({ origem: 'painel' }),
+      ],
+    ])('Dado %s, então responde 200 e não registra', async (_nome, montar) => {
+      expect((await montar(get())).status).toBe(200);
+      expect(registroAcessos.registrar).not.toHaveBeenCalled();
+    });
+
+    it('Dado HEAD, então não registra', async () => {
+      expect((await http().head('/v1/publico/filiais/k7Qm2xPa').set('User-Agent', NAVEGADOR)).status).toBe(
+        200,
+      );
+      expect(registroAcessos.registrar).not.toHaveBeenCalled();
+    });
+
+    it('Dado origem desconhecida, então registra normalmente', async () => {
+      await get().set('User-Agent', NAVEGADOR).query({ origem: 'qr' });
+      expect(registroAcessos.registrar).toHaveBeenCalledTimes(1);
+    });
+
+    it('Dado 404, então não registra', async () => {
+      publico.obterPagina.mockRejectedValue(paginaNaoEncontrada());
+      expect((await get().set('User-Agent', NAVEGADOR)).status).toBe(404);
+      expect(registroAcessos.registrar).not.toHaveBeenCalled();
+    });
+
+    it('Dado o registro demorando, então a resposta sai quando ele resolve (o limite é do service)', async () => {
+      let liberar!: () => void;
+      registroAcessos.registrar.mockReturnValue(new Promise<void>((r) => (liberar = r)));
+      const pendente = get()
+        .set('User-Agent', NAVEGADOR)
+        .then((r) => r);
+      await new Promise((r) => setTimeout(r, 20));
+      liberar();
+      expect((await pendente).status).toBe(200);
+    });
   });
 });

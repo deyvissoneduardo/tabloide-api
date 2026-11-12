@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AcessosModule } from '../acessos/acessos.module';
 import { CategoriasModule } from '../categorias/categorias.module';
 import { MidiaModule } from '../midia/midia.module';
 import { PanfletosModule } from '../panfletos/panfletos.module';
@@ -9,7 +10,7 @@ import { PublicoService } from './services/publico.service';
 
 /** Página pública lida pelo QR Code. Os models de panfleto, produto e categoria vêm reexportados. */
 @Module({
-  imports: [PanfletosModule, CategoriasModule, MidiaModule],
+  imports: [PanfletosModule, CategoriasModule, MidiaModule, AcessosModule],
   controllers: [PublicoController],
   providers: [PublicoService, PaginaPublicaQuery, PaginaPublicaCache],
 })

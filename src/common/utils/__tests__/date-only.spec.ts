@@ -1,12 +1,15 @@
 import { CodigoErro } from '../../errors/codigos-erro';
 import {
   compararDatas,
+  dataEHoraNoFuso,
+  diasEntre,
   ehDataISO,
   ehFusoValido,
   formatarDiaMes,
   hojeNoFuso,
   paraDataISO,
   segundosAteMeiaNoite,
+  somarDias,
   type DataISO,
 } from '../date-only';
 
@@ -123,5 +126,43 @@ describe('Funcionalidade: Datas sem hora', () => {
         '2026-10-18',
       ]);
     });
+  });
+
+  describe('Esquema do Cenário: data e hora locais na virada do dia (RN51, RN53)', () => {
+    it.each([
+      ['2026-10-19T02:59:59Z', 'America/Sao_Paulo', '2026-10-18', 23],
+      ['2026-10-19T03:00:00Z', 'America/Sao_Paulo', '2026-10-19', 0],
+      ['2026-10-19T03:59:59Z', 'America/Manaus', '2026-10-18', 23],
+      ['2026-10-19T04:00:00Z', 'America/Manaus', '2026-10-19', 0],
+      ['2026-10-19T01:59:59Z', 'America/Noronha', '2026-10-18', 23],
+      ['2026-10-19T02:00:00Z', 'America/Noronha', '2026-10-19', 0],
+      ['2027-01-01T02:30:00Z', 'America/Sao_Paulo', '2026-12-31', 23],
+    ])('Dado %s em %s, então %s às %ih', (agora, fuso, data, hora) =>
+      expect(dataEHoraNoFuso(fuso, new Date(agora))).toEqual({ data, hora }),
+    );
+  });
+
+  describe('Esquema do Cenário: somar dias à data pura', () => {
+    it.each([
+      ['2026-10-18', 0, '2026-10-18'],
+      ['2026-10-31', 1, '2026-11-01'],
+      ['2026-12-31', 1, '2027-01-01'],
+      ['2027-01-01', -1, '2026-12-31'],
+      ['2028-02-28', 1, '2028-02-29'],
+      ['2026-02-28', 1, '2026-03-01'],
+      ['2026-11-09', -29, '2026-10-11'],
+    ])('Dado %s + %i, então %s', (data, dias, esperado) => expect(somarDias(d(data), dias)).toBe(esperado));
+  });
+
+  describe('Esquema do Cenário: dias entre duas datas', () => {
+    it.each([
+      ['2026-10-18', '2026-10-18', 0],
+      ['2026-10-18', '2026-10-19', 1],
+      ['2026-10-19', '2026-10-18', -1],
+      ['2026-12-31', '2027-01-01', 1],
+      ['2028-01-01', '2028-12-31', 365],
+      ['2026-01-01', '2026-12-31', 364],
+      ['2026-10-01', '2026-11-30', 60],
+    ])('Dado %s → %s, então %i', (inicio, fim, dias) => expect(diasEntre(d(inicio), d(fim))).toBe(dias));
   });
 });

@@ -4,6 +4,9 @@
 // 3. k6 run -e BASE=http://localhost:3300 -e CENARIO=quente test/carga/pagina-publica.k6.js
 //    CENARIO: quente (500 req/s) | fria (100 req/s, subir a API com PUBLICO_CACHE_DESATIVADO=true)
 //             | fila (1 código, 200 VUs juntos)
+//             | linhaQuente (1 código, 50 VUs: disputa de lock no upsert de acessos_filial)
+//    Painel de acessos (RN50): rodar antes e depois da contagem; meta = p95 sobe no máximo 20 ms
+//    com os mesmos VUs. Conferir acessos_registro_falhas_total em /v1/admin/metricas.
 // O rate limit público (300/min por IP) fica alto no compose de carga; o cenário de 429 é
 // conferido à parte, com PUBLICO_RATE_LIMIT_POR_MIN=300.
 import http from 'k6/http';
@@ -29,13 +32,20 @@ const CENARIOS = {
   },
   // 200 pessoas na porta da loja abrindo a página ao mesmo tempo, com o cache vazio
   fila: { executor: 'per-vu-iterations', vus: 200, iterations: 1, maxDuration: '1m' },
+  // todos na mesma filial e na mesma hora: todos os upserts disputam a mesma linha
+  linhaQuente: { executor: 'constant-vus', vus: 50, duration: '1m' },
 };
 
 const LIMITES = {
   quente: ['p(95)<50', 'p(99)<150'],
   fria: ['p(95)<200'],
   fila: ['p(95)<50'],
+  linhaQuente: ['p(95)<70'],
 };
+
+// UA de navegador: o padrão "k6/…" é tratado como robô e não grava o acesso (RN50)
+const USER_AGENT =
+  'Mozilla/5.0 (Linux; Android 14; SM-A546E) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36';
 
 export const options = {
   scenarios: { [CENARIO]: { ...CENARIOS[CENARIO], tags: { cenario: CENARIO } } },
@@ -51,9 +61,11 @@ export default function () {
   const codigo =
     CENARIO === 'fila'
       ? CODIGOS[CODIGOS.length - 1]
+      : CENARIO === 'linhaQuente'
+      ? CODIGOS[0]
       : CODIGOS[Math.floor(Math.random() * (CODIGOS.length - 1))];
   const r = http.get(`${__ENV.BASE}/v1/publico/filiais/${codigo}`, {
-    headers: { 'Accept-Encoding': 'gzip' },
+    headers: { 'Accept-Encoding': 'gzip', 'User-Agent': USER_AGENT },
     tags: { cenario: CENARIO },
   });
   check(r, {
