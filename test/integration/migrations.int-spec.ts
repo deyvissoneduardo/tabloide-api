@@ -237,9 +237,7 @@ describe('Funcionalidade: Migrations', () => {
         { email, codigo },
       );
     const filiais = async () => {
-      const [linhas] = await sql(
-        `SELECT codigo_publico, se_panfleto FROM filiais ORDER BY codigo_publico`,
-      );
+      const [linhas] = await sql(`SELECT codigo_publico, se_panfleto FROM filiais ORDER BY codigo_publico`);
       return linhas as Array<{ codigo_publico: string; se_panfleto: boolean }>;
     };
 
@@ -277,6 +275,42 @@ describe('Funcionalidade: Migrations', () => {
         `SELECT table_name FROM information_schema.columns WHERE column_name = 'se_panfleto' ORDER BY 1`,
       );
       expect(colunas).toEqual([{ table_name: 'lojistas' }]);
+      await expect(banco.migrador.up()).resolves.toEqual(
+        expect.arrayContaining([expect.objectContaining({ name: MIGRATION })]),
+      );
+    });
+  });
+
+  describe('Funcionalidade: contagem de acessos agregada (RN50–RN52)', () => {
+    const MIGRATION = '20261110000000-criar-acessos-filial.js';
+
+    it('Então acessos_filial existe com PK (filial_id, data, hora), índice por tenant e RLS ligado', async () => {
+      const [tabela] = await sql(`SELECT relrowsecurity FROM pg_class WHERE relname = 'acessos_filial'`);
+      expect(tabela).toEqual([{ relrowsecurity: true }]);
+      const [pk] = await sql(
+        `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint
+         WHERE conrelid = 'acessos_filial'::regclass AND contype = 'p'`,
+      );
+      expect(pk).toEqual([{ def: 'PRIMARY KEY (filial_id, data, hora)' }]);
+      const [indices] = await sql(`SELECT indexname FROM pg_indexes WHERE tablename = 'acessos_filial'`);
+      expect(indices).toEqual(expect.arrayContaining([{ indexname: 'acessos_filial_tenant_data_idx' }]));
+      const [colunas] = await sql(
+        `SELECT column_name FROM information_schema.columns WHERE table_name = 'acessos_filial' ORDER BY 1`,
+      );
+      // RN51: nenhum dado pessoal
+      expect((colunas as Array<{ column_name: string }>).map((c) => c.column_name)).toEqual([
+        'data',
+        'filial_id',
+        'hora',
+        'quantidade',
+        'tenant_id',
+      ]);
+    });
+
+    it('E o undo remove a tabela e o up de novo funciona', async () => {
+      await banco.migrador.down({ to: MIGRATION });
+      const [sumiu] = await sql(`SELECT 1 FROM pg_tables WHERE tablename = 'acessos_filial'`);
+      expect(sumiu).toEqual([]);
       await expect(banco.migrador.up()).resolves.toEqual([expect.objectContaining({ name: MIGRATION })]);
     });
   });

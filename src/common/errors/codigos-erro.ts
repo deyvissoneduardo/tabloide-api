@@ -26,6 +26,7 @@ export enum CodigoErro {
   PDF_COM_VARIAS_PAGINAS = 'PDF_COM_VARIAS_PAGINAS',
   PDF_INVALIDO = 'PDF_INVALIDO',
   PDF_MUITO_GRANDE = 'PDF_MUITO_GRANDE',
+  PERIODO_INVALIDO = 'PERIODO_INVALIDO',
 }
 
 export const STATUS_POR_CODIGO: Record<CodigoErro, number> = {
@@ -56,6 +57,7 @@ export const STATUS_POR_CODIGO: Record<CodigoErro, number> = {
   [CodigoErro.PDF_COM_VARIAS_PAGINAS]: 422,
   [CodigoErro.PDF_INVALIDO]: 422,
   [CodigoErro.PDF_MUITO_GRANDE]: 413,
+  [CodigoErro.PERIODO_INVALIDO]: 400,
 };
 
 export const MENSAGEM_POR_CODIGO: Record<CodigoErro, string> = {
@@ -89,4 +91,5 @@ export const MENSAGEM_POR_CODIGO: Record<CodigoErro, string> = {
   [CodigoErro.PDF_COM_VARIAS_PAGINAS]: 'O PDF do panfleto precisa ter só 1 página.',
   [CodigoErro.PDF_INVALIDO]: 'Não foi possível ler o PDF. Envie um PDF sem senha.',
   [CodigoErro.PDF_MUITO_GRANDE]: 'O PDF é maior que o tamanho permitido.',
+  [CodigoErro.PERIODO_INVALIDO]: 'Período inválido.',
 };

@@ -5,6 +5,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
@@ -12,6 +13,8 @@ import { Public } from '../../../common/decorators/public.decorator';
 import { CodigoErro } from '../../../common/errors/codigos-erro';
 import { ApiRespostasDeErro } from '../../../common/swagger/respostas.decorator';
 import { LimitarRequisicoes } from '../../../common/throttle/limites-de-requisicao';
+import { ehAcessoContavel } from '../../acessos/domain/acesso-contavel';
+import { RegistroAcessosService } from '../../acessos/services/registro-acessos.service';
 import { ifNoneMatchContem } from '../domain/etag';
 import { PublicoService } from '../services/publico.service';
 import { PaginaPublicaJson } from '../views/pagina-publica.view';
@@ -25,13 +28,23 @@ export const CACHE_CONTROL_PAGINA = 'public, max-age=30, stale-while-revalidate=
 @LimitarRequisicoes('publico')
 @Controller('publico')
 export class PublicoController {
-  constructor(private readonly publico: PublicoService) {}
+  constructor(
+    private readonly publico: PublicoService,
+    private readonly registroAcessos: RegistroAcessosService,
+  ) {}
 
   /** HEAD também é atendido: o Express responde HEAD nas rotas GET. */
   @Get('filiais/:codigo')
   @ApiOperation({ summary: 'Página pública da filial: panfleto vigente e produtos por categoria (RN27)' })
   @ApiParam({ name: 'codigo', description: 'Código público da filial (o mesmo do QR Code)' })
   @ApiHeader({ name: 'If-None-Match', required: false })
+  @ApiQuery({
+    name: 'origem',
+    required: false,
+    enum: ['painel'],
+    description:
+      'painel = o lojista vendo a própria página: o acesso não conta (RN50). Outro valor é ignorado.',
+  })
   @ApiOkResponse({
     type: PaginaPublicaJson,
     headers: {
@@ -48,6 +61,16 @@ export class PublicoController {
     @Res() res: Response,
   ): Promise<void> {
     const pagina = await this.publico.obterPagina(codigo);
+    // RN50: conta 200 e 304; o 404 sai antes por exceção. A gravação nunca rejeita e tem limite de tempo (D5)
+    if (
+      ehAcessoContavel({ metodo: req.method, userAgent: req.get('user-agent'), origem: req.query.origem })
+    ) {
+      await this.registroAcessos.registrar({
+        tenantId: pagina.tenantId,
+        filialId: pagina.filialId,
+        fuso: pagina.fuso,
+      });
+    }
     res.setHeader('Cache-Control', CACHE_CONTROL_PAGINA);
     res.setHeader('ETag', pagina.etag);
     res.setHeader('Vary', 'Accept-Encoding');

@@ -19,6 +19,7 @@ import { AppConfigModule } from './config/app-config.module';
 import { validarEnv, type Env } from './config/env.schema';
 import { opcoesDoLogger } from './config/logger.config';
 import { DatabaseModule } from './database/database.module';
+import { AcessosModule } from './modules/acessos/acessos.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -70,6 +71,7 @@ import { SaudeModule } from './modules/saude/saude.module';
     ProdutosModule,
     EstruturasModule,
     PublicoModule,
+    AcessosModule,
     SaudeModule,
     MidiaLocalModule,
   ],

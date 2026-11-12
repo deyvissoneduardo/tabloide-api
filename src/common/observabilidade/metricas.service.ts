@@ -3,6 +3,8 @@ import { Counter, Gauge, Histogram, Registry, collectDefaultMetrics } from 'prom
 
 export type ResultadoCachePublico = 'hit' | 'miss' | 'negativo' | 'invalidado';
 
+export type MotivoFalhaRegistroAcesso = 'timeout' | 'erro';
+
 /** Registro próprio (não o global do prom-client): cada app de teste tem o seu. */
 @Injectable()
 export class MetricasService {
@@ -29,6 +31,21 @@ export class MetricasService {
     registers: [this.registro],
   });
 
+  /** RN50: acessos à página pública gravados em acessos_filial. */
+  readonly acessosRegistrados = new Counter({
+    name: 'acessos_registrados_total',
+    help: 'Acessos à página pública gravados',
+    registers: [this.registro],
+  });
+
+  /** A página responde mesmo assim; a contagem daquele acesso se perde. */
+  readonly acessosFalhas = new Counter({
+    name: 'acessos_registro_falhas_total',
+    help: 'Acessos à página pública não gravados, por motivo',
+    labelNames: ['motivo'],
+    registers: [this.registro],
+  });
+
   readonly poolEmUso = new Gauge({
     name: 'db_pool_em_uso',
     help: 'Conexões do pool em uso',
@@ -47,6 +64,14 @@ export class MetricasService {
 
   contarCache(resultado: ResultadoCachePublico): void {
     this.cachePublico.inc({ resultado });
+  }
+
+  contarAcessoRegistrado(): void {
+    this.acessosRegistrados.inc();
+  }
+
+  contarFalhaRegistroAcesso(motivo: MotivoFalhaRegistroAcesso): void {
+    this.acessosFalhas.inc({ motivo });
   }
 
   async texto(): Promise<string> {
