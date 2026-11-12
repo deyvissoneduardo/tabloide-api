@@ -1,0 +1,64 @@
+# Tabloide Digital API — Painel de acessos (RN50–RN58)
+# Contratos: docs/plano_painel_acessos/api.md §3. Os GETs do painel são liberados para lojista desativado.
+
+@base = http://localhost:3000/v1
+
+### Login
+# @name login
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "ana@bompreco.com.br", "senha": "senhaForte1" }
+
+@token = {{login.response.body.token}}
+
+### Filial
+# @name filial
+POST {{base}}/painel/filiais
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Centro" }
+
+@filialId = {{filial.response.body.id}}
+@codigo = {{filial.response.body.codigoPublico}}
+
+### Página pública: conta 1 acesso (user-agent de navegador; curl/k6/robôs não contam)
+GET {{base}}/publico/filiais/{{codigo}}
+User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) Safari/604.1
+
+### Página pública aberta pelo painel: não conta (RN50)
+GET {{base}}/publico/filiais/{{codigo}}?origem=painel
+User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) Safari/604.1
+
+### Resumo do lojista: últimos 30 dias (padrão)
+GET {{base}}/painel/acessos
+Authorization: Bearer {{token}}
+
+### Resumo: hoje
+GET {{base}}/painel/acessos?periodo=1
+Authorization: Bearer {{token}}
+
+### Resumo: últimos 7 dias de uma filial (total, porDia e pico só dela; porFilial com todas)
+GET {{base}}/painel/acessos?periodo=7&filialId={{filialId}}
+Authorization: Bearer {{token}}
+
+### Resumo: período personalizado (até 366 dias, fim ≤ hoje)
+GET {{base}}/painel/acessos?inicio=2026-10-01&fim=2026-10-31
+Authorization: Bearer {{token}}
+
+### Erro: 400 PERIODO_INVALIDO (motivo COMBINACAO)
+GET {{base}}/painel/acessos?periodo=7&inicio=2026-10-01
+Authorization: Bearer {{token}}
+
+### Erro: 400 PERIODO_INVALIDO (motivo FIM_NO_FUTURO)
+GET {{base}}/painel/acessos?inicio=2026-10-01&fim=2099-01-01
+Authorization: Bearer {{token}}
+
+### Acessos por panfleto da filial (últimos 30 dias)
+GET {{base}}/painel/filiais/{{filialId}}/acessos/panfletos
+Authorization: Bearer {{token}}
+
+### Acessos por panfleto: período personalizado
+GET {{base}}/painel/filiais/{{filialId}}/acessos/panfletos?inicio=2026-10-01&fim=2026-10-31
+Authorization: Bearer {{token}}
