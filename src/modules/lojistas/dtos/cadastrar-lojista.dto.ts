@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString, Length, Matches, MaxLength } from 'class-validator';
+import { Equals, IsEmail, IsOptional, IsString, Length, Matches, MaxLength } from 'class-validator';
 import {
   NormalizarCnpj,
   NormalizarEmail,
@@ -42,4 +42,8 @@ export class CadastrarLojistaDto {
   @IsOptional()
   @IsCnpj()
   cnpj?: string | null;
+
+  /** LGPD: aceite dos Termos de Uso e da Política de Privacidade; a versão aceita é a do servidor. */
+  @Equals(true, { message: 'Aceite os Termos de Uso e a Política de Privacidade.' })
+  aceiteTermos!: boolean;
 }

@@ -23,6 +23,7 @@ const cadastroValido = () => ({
   email: 'ana@bompreco.com.br',
   senha: 'senhaForte1',
   whatsapp: '(11) 98765-4321',
+  aceiteTermos: true,
 });
 
 describe('Funcionalidade: Validação do cadastro (RN01)', () => {
@@ -60,8 +61,17 @@ describe('Funcionalidade: Validação do cadastro (RN01)', () => {
     });
   });
 
+  describe('Esquema do Cenário: aceite dos termos diferente de true (LGPD)', () => {
+    it.each([false, 'true', 1, null])('Então %p é recusado com a mensagem de aceite', async (valor) => {
+      const { campos } = await validar(CadastrarLojistaDto, { ...cadastroValido(), aceiteTermos: valor });
+      expect(JSON.stringify(campos.aceiteTermos)).toContain(
+        'Aceite os Termos de Uso e a Política de Privacidade.',
+      );
+    });
+  });
+
   describe('Esquema do Cenário: campo obrigatório ausente', () => {
-    it.each(['nomeFantasia', 'nomeResponsavel', 'email', 'senha', 'whatsapp'])(
+    it.each(['nomeFantasia', 'nomeResponsavel', 'email', 'senha', 'whatsapp', 'aceiteTermos'])(
       'Então há erro em %s',
       async (campo) => {
         const corpo: Record<string, unknown> = cadastroValido();

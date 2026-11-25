@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/sequelize';
 import { Sequelize } from 'sequelize-typescript';
+import { ClockService } from '../../../common/clock/clock.service';
 import { CodigoErro } from '../../../common/errors/codigos-erro';
 import { LojistaAtivacao } from '../models/lojista-ativacao.model';
 import { Lojista } from '../models/lojista.model';
@@ -29,7 +30,10 @@ describe('Funcionalidade: LojistasService', () => {
   let service: LojistasService;
   const escopoComSenha = { findOne: jest.fn() };
   const lojistaModel = { findOne: jest.fn(), update: jest.fn(), scope: jest.fn(() => escopoComSenha) };
-  const ativacaoModel = { findOne: jest.fn() };
+  const ativacaoModel = { findOne: jest.fn(), update: jest.fn() };
+  const transacao = { id: 'tx' };
+  const sequelize = { transaction: jest.fn((cb: (t: unknown) => unknown) => cb(transacao)) };
+  const AGORA = new Date('2026-11-25T12:00:00Z');
   const senhaService = { gerarHash: jest.fn().mockResolvedValue('$argon2id$novo') };
 
   beforeEach(async () => {
@@ -39,8 +43,9 @@ describe('Funcionalidade: LojistasService', () => {
         LojistasService,
         { provide: getModelToken(Lojista), useValue: lojistaModel },
         { provide: getModelToken(LojistaAtivacao), useValue: ativacaoModel },
-        { provide: Sequelize, useValue: {} },
+        { provide: Sequelize, useValue: sequelize },
         { provide: SenhaService, useValue: senhaService },
+        { provide: ClockService, useValue: { agora: () => AGORA } },
       ],
     }).compile();
     service = modulo.get(LojistasService);
@@ -184,6 +189,44 @@ describe('Funcionalidade: LojistasService', () => {
       it('Então devolve null', () => {
         ativacaoModel.findOne.mockResolvedValue(null);
         return expect(service.obterStatus('t1')).resolves.toBeNull();
+      });
+    });
+  });
+
+  describe('Funcionalidade: Encerramento da conta (LGPD)', () => {
+    describe('Cenário: conta ativa', () => {
+      it('Então grava encerradoEm e desativa a ativação na mesma transação', async () => {
+        lojistaModel.findOne.mockResolvedValue({ id: 'id-1', encerradoEm: null });
+        await service.encerrar('id-1');
+        expect(lojistaModel.findOne).toHaveBeenCalledWith(
+          expect.objectContaining({ where: { id: 'id-1' }, transaction: transacao, lock: true }),
+        );
+        expect(lojistaModel.update).toHaveBeenCalledWith(
+          { encerradoEm: AGORA },
+          { where: { id: 'id-1' }, transaction: transacao },
+        );
+        expect(ativacaoModel.update).toHaveBeenCalledWith(
+          { status: StatusLojista.DESATIVADO },
+          { where: { lojistaId: 'id-1' }, transaction: transacao },
+        );
+      });
+    });
+
+    describe('Cenário: conta já encerrada', () => {
+      it('Então não altera nada (mantém a data original)', async () => {
+        lojistaModel.findOne.mockResolvedValue({ id: 'id-1', encerradoEm: new Date('2026-11-01') });
+        await service.encerrar('id-1');
+        expect(lojistaModel.update).not.toHaveBeenCalled();
+        expect(ativacaoModel.update).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('Cenário: lojista inexistente', () => {
+      it('Então lança RECURSO_NAO_ENCONTRADO', () => {
+        lojistaModel.findOne.mockResolvedValue(null);
+        return expect(service.encerrar('id-1')).rejects.toMatchObject({
+          codigo: CodigoErro.RECURSO_NAO_ENCONTRADO,
+        });
       });
     });
   });

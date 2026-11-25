@@ -1,0 +1,15 @@
+# Tabloide Digital API — LGPD e Marco Civil
+# Aceite dos termos no cadastro (fase-1.http: "aceiteTermos": true), registros de acesso ao painel
+# (automáticos), encerramento da conta e exportação dos dados. Rotas admin: sem a chave certa respondem 404.
+
+@base = http://localhost:3000/v1
+@adminKey = {{$dotenv ADMIN_API_KEY}}
+@lojistaId = 00000000-0000-7000-8000-000000000000
+
+### Admin: encerrar a conta a pedido do lojista (página sai do ar, login recusado; idempotente)
+PATCH {{base}}/admin/lojistas/{{lojistaId}}/encerramento
+X-Admin-Key: {{adminKey}}
+
+### Admin: exportar os dados do lojista em JSON (LGPD art. 18, II e V)
+GET {{base}}/admin/lojistas/{{lojistaId}}/dados
+X-Admin-Key: {{adminKey}}

@@ -8,8 +8,12 @@ import { SenhaService } from '../services/senha.service';
 import { Lojista } from '../models/lojista.model';
 import { LojistaAtivacao } from '../models/lojista-ativacao.model';
 import { StatusLojista } from '../models/status-lojista';
+import { ClockService } from '../../../common/clock/clock.service';
 import { CodigoErro } from '../../../common/errors/codigos-erro';
+import { VERSAO_TERMOS } from '../domain/termos';
 import { umCadastroDeLojista } from '../../../../test/factories/lojista.factory';
+
+const AGORA = new Date('2026-11-25T12:00:00Z');
 
 describe('Funcionalidade: Cadastro do lojista (RN01, RN02, RN37)', () => {
   let service: LojistasService;
@@ -32,6 +36,7 @@ describe('Funcionalidade: Cadastro do lojista (RN01, RN02, RN37)', () => {
         { provide: getModelToken(LojistaAtivacao), useValue: ativacaoModel },
         { provide: Sequelize, useValue: sequelize },
         { provide: SenhaService, useValue: senhaService },
+        { provide: ClockService, useValue: { agora: () => AGORA } },
       ],
     }).compile();
     service = modulo.get(LojistasService);
@@ -88,6 +93,15 @@ describe('Funcionalidade: Cadastro do lojista (RN01, RN02, RN37)', () => {
           });
         });
       });
+    });
+  });
+
+  describe('Cenário: aceite dos Termos de Uso e da Política de Privacidade (LGPD)', () => {
+    it('Então grava a versão vigente dos termos e o momento do aceite', async () => {
+      await service.cadastrar(umCadastroDeLojista().build());
+      const [dados] = lojistaModel.create.mock.calls[0];
+      expect(dados).toMatchObject({ termosVersao: VERSAO_TERMOS, termosAceitosEm: AGORA });
+      expect(dados).not.toHaveProperty('aceiteTermos');
     });
   });
 

@@ -311,7 +311,65 @@ describe('Funcionalidade: Migrations', () => {
       await banco.migrador.down({ to: MIGRATION });
       const [sumiu] = await sql(`SELECT 1 FROM pg_tables WHERE tablename = 'acessos_filial'`);
       expect(sumiu).toEqual([]);
-      await expect(banco.migrador.up()).resolves.toEqual([expect.objectContaining({ name: MIGRATION })]);
+      // as migrations posteriores também são revertidas e reaplicadas
+      await expect(banco.migrador.up()).resolves.toEqual(
+        expect.arrayContaining([expect.objectContaining({ name: MIGRATION })]),
+      );
+    });
+  });
+
+  describe('Funcionalidade: LGPD e Marco Civil (aceite, encerramento e registros de acesso)', () => {
+    const MIGRATION_ACEITE = '20261125000100-adicionar-aceite-encerramento-lojistas.js';
+
+    it('Então lojistas ganha termos_versao, termos_aceitos_em e encerrado_em, todas NULL', async () => {
+      const [colunas] = await sql(
+        `SELECT column_name, is_nullable FROM information_schema.columns
+         WHERE table_name = 'lojistas' AND column_name IN ('termos_versao', 'termos_aceitos_em', 'encerrado_em')
+         ORDER BY 1`,
+      );
+      expect(colunas).toEqual([
+        { column_name: 'encerrado_em', is_nullable: 'YES' },
+        { column_name: 'termos_aceitos_em', is_nullable: 'YES' },
+        { column_name: 'termos_versao', is_nullable: 'YES' },
+      ]);
+    });
+
+    it('E registros_acesso_painel existe com RLS ligado, índices e sem user-agent', async () => {
+      const [tabela] = await sql(
+        `SELECT relrowsecurity FROM pg_class WHERE relname = 'registros_acesso_painel'`,
+      );
+      expect(tabela).toEqual([{ relrowsecurity: true }]);
+      const [indices] = await sql(
+        `SELECT indexname FROM pg_indexes WHERE tablename = 'registros_acesso_painel'`,
+      );
+      expect(indices).toEqual(
+        expect.arrayContaining([
+          { indexname: 'registros_acesso_painel_tenant_idx' },
+          { indexname: 'registros_acesso_painel_ocorrido_em_idx' },
+        ]),
+      );
+      const [colunas] = await sql(
+        `SELECT column_name FROM information_schema.columns WHERE table_name = 'registros_acesso_painel' ORDER BY 1`,
+      );
+      expect((colunas as Array<{ column_name: string }>).map((c) => c.column_name)).toEqual([
+        'id',
+        'ip',
+        'metodo',
+        'ocorrido_em',
+        'rota',
+        'tenant_id',
+      ]);
+    });
+
+    it('E o undo remove as colunas e a tabela, e o up de novo funciona', async () => {
+      await banco.migrador.down({ to: MIGRATION_ACEITE });
+      const [tabela] = await sql(`SELECT 1 FROM pg_tables WHERE tablename = 'registros_acesso_painel'`);
+      expect(tabela).toEqual([]);
+      const [coluna] = await sql(
+        `SELECT 1 FROM information_schema.columns WHERE table_name = 'lojistas' AND column_name = 'termos_versao'`,
+      );
+      expect(coluna).toEqual([]);
+      await expect(banco.migrador.up()).resolves.toHaveLength(2);
     });
   });
 

@@ -12,6 +12,7 @@ export function umCadastroDeLojista() {
     senha: 'senhaForte1',
     whatsapp: '+5511987654321',
     cnpj: null,
+    aceiteTermos: true,
   };
   const builder = {
     comEmail(email: string) {
