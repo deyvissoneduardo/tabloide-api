@@ -75,6 +75,20 @@ describe('Funcionalidade: AuthService', () => {
       },
     );
 
+    describe('Cenário: conta encerrada (LGPD)', () => {
+      it('Então lança CREDENCIAIS_INVALIDAS mesmo com a senha certa', () => {
+        const encerrado = umLojista(StatusLojista.DESATIVADO);
+        lojistas.buscarParaLogin.mockResolvedValue({
+          ...encerrado,
+          lojista: { ...encerrado.lojista, encerradoEm: AGORA },
+        });
+        senhaService.verificar.mockResolvedValue(true);
+        return expect(service.login({ email: 'ana@x.com', senha: 'senhaForte1' })).rejects.toMatchObject({
+          codigo: CodigoErro.CREDENCIAIS_INVALIDAS,
+        });
+      });
+    });
+
     describe('Cenário: senha errada', () => {
       it('Então lança CREDENCIAIS_INVALIDAS', () => {
         lojistas.buscarParaLogin.mockResolvedValue(umLojista(StatusLojista.ATIVO));

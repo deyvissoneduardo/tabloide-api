@@ -30,6 +30,7 @@ import { LojistasModule } from './modules/lojistas/lojistas.module';
 import { LogsErroModule } from './modules/logs-erro/logs-erro.module';
 import { MidiaLocalModule } from './modules/midia/midia-local.module';
 import { PanfletosModule } from './modules/panfletos/panfletos.module';
+import { PrivacidadeModule } from './modules/privacidade/privacidade.module';
 import { ProdutosModule } from './modules/produtos/produtos.module';
 import { PublicoModule } from './modules/publico/publico.module';
 import { SaudeModule } from './modules/saude/saude.module';
@@ -72,6 +73,7 @@ import { SaudeModule } from './modules/saude/saude.module';
     EstruturasModule,
     PublicoModule,
     AcessosModule,
+    PrivacidadeModule,
     SaudeModule,
     MidiaLocalModule,
   ],

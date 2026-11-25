@@ -2,9 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Sequelize } from 'sequelize-typescript';
 import { v7 as uuidv7 } from 'uuid';
+import { ClockService } from '../../../common/clock/clock.service';
 import { AppError } from '../../../common/errors/app.error';
 import { CodigoErro } from '../../../common/errors/codigos-erro';
 import { naoEncontrado } from '../../../common/errors/errors';
+import { VERSAO_TERMOS } from '../domain/termos';
 import { CadastrarLojistaDto } from '../dtos/cadastrar-lojista.dto';
 import { EditarLojistaDto } from '../dtos/editar-lojista.dto';
 import { LojistaAtivacao } from '../models/lojista-ativacao.model';
@@ -30,6 +32,7 @@ export class LojistasService {
     @InjectModel(LojistaAtivacao) private readonly ativacaoModel: typeof LojistaAtivacao,
     private readonly sequelize: Sequelize,
     private readonly senhaService: SenhaService,
+    private readonly clock: ClockService,
   ) {}
 
   async cadastrar(dto: CadastrarLojistaDto): Promise<LojistaComStatus> {
@@ -50,6 +53,9 @@ export class LojistasService {
           senhaHash,
           whatsapp: dto.whatsapp,
           cnpj: dto.cnpj ?? null,
+          // o DTO só passa com aceiteTermos === true
+          termosVersao: VERSAO_TERMOS,
+          termosAceitosEm: this.clock.agora(),
         },
         { transaction },
       );
@@ -98,6 +104,30 @@ export class LojistasService {
     const [afetados] = await this.lojistaModel.update({ senhaHash }, { where: { id: lojistaId } });
     if (afetados === 0) throw naoEncontrado();
     this.logger.log({ evento: 'admin.senha_redefinida', lojistaId });
+  }
+
+  /**
+   * LGPD: encerra a conta a pedido do lojista (rota admin). A página sai do ar (DESATIVADO) e o login é
+   * recusado; a anonimização vem 6 meses depois. Idempotente: encerrar de novo mantém a data original.
+   */
+  async encerrar(lojistaId: string): Promise<void> {
+    const agora = this.clock.agora();
+    await this.sequelize.transaction(async (transaction) => {
+      const lojista = await this.lojistaModel.findOne({
+        where: { id: lojistaId },
+        attributes: ['id', 'encerradoEm'],
+        transaction,
+        lock: true,
+      });
+      if (!lojista) throw naoEncontrado();
+      if (lojista.encerradoEm) return;
+      await this.lojistaModel.update({ encerradoEm: agora }, { where: { id: lojistaId }, transaction });
+      await this.ativacaoModel.update(
+        { status: StatusLojista.DESATIVADO },
+        { where: { lojistaId }, transaction },
+      );
+    });
+    this.logger.log({ evento: 'admin.conta_encerrada', lojistaId });
   }
 
   private comStatus(lojista: Lojista | null): LojistaComStatus {

@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import type { Env } from '../../config/env.schema';
 import { LojistasModule } from '../lojistas/lojistas.module';
+import { PrivacidadeModule } from '../privacidade/privacidade.module';
 import { AuthController } from './controllers/auth.controller';
 import { AuthService } from './services/auth.service';
 
@@ -10,6 +11,7 @@ import { AuthService } from './services/auth.service';
 @Module({
   imports: [
     LojistasModule,
+    PrivacidadeModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService<Env, true>) => ({

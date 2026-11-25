@@ -16,7 +16,8 @@ Content-Type: application/json
   "email": "ana@bompreco.com.br",
   "senha": "senhaForte1",
   "whatsapp": "(11) 98765-4321",
-  "cnpj": "11.222.333/0001-81"
+  "cnpj": "11.222.333/0001-81",
+  "aceiteTermos": true
 }
 
 ### Login (RN05): 5 tentativas a cada 15 min por IP + e-mail

@@ -17,6 +17,11 @@ export interface AtributosLojista {
   sePanfleto: boolean;
   /** RN46–RN48: aparência da página; lida sempre por normalizarConfiguracao (pode faltar chave). */
   configuracaoPagina: ConfiguracaoPaginaGuardada;
+  /** LGPD: versão dos termos aceita no cadastro; null para lojistas anteriores ao aceite. */
+  termosVersao: string | null;
+  termosAceitosEm: Date | null;
+  /** LGPD: conta encerrada a pedido do lojista; os dados são anonimizados 6 meses depois. */
+  encerradoEm: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +33,7 @@ export type AtributosCriacaoLojista = Omit<
   | 'corSecundaria'
   | 'sePanfleto'
   | 'configuracaoPagina'
+  | 'encerradoEm'
   | 'createdAt'
   | 'updatedAt'
 >;
@@ -81,6 +87,15 @@ export class Lojista extends Model<AtributosLojista, AtributosCriacaoLojista> {
    */
   @Column({ type: DataType.JSONB, field: 'configuracao_pagina', allowNull: false, defaultValue: {} })
   declare configuracaoPagina: CreationOptional<ConfiguracaoPaginaGuardada>;
+
+  @Column(DataType.STRING(20))
+  declare termosVersao: string | null;
+
+  @Column(DataType.DATE)
+  declare termosAceitosEm: Date | null;
+
+  @Column(DataType.DATE)
+  declare encerradoEm: CreationOptional<Date | null>;
 
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;

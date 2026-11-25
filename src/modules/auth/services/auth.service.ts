@@ -42,6 +42,8 @@ export class AuthService implements OnModuleInit {
     }
     const confere = await this.senhaService.verificar(encontrado.lojista.senhaHash, dto.senha);
     if (!confere) throw credenciaisInvalidas();
+    // LGPD: conta encerrada não entra mais; mesmo erro, para não revelar que a conta existe
+    if (encontrado.lojista.encerradoEm) throw credenciaisInvalidas();
 
     return {
       lojista: lojistaView(encontrado.lojista, encontrado.status),
